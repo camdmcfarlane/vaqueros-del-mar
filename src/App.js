@@ -2596,7 +2596,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
 
 function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const [selectedDay, setDay] = useState(days[Math.max(0,new Date().getDay()-1)]);
+  const todayDayIndex = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
+  const defaultDay = todayDayIndex === 0 ? days[0] : todayDayIndex <= 6 ? days[todayDayIndex-1] : days[0];
+  const [selectedDay, setDay] = useState(defaultDay);
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const iStyle = S.input;
@@ -2627,7 +2629,16 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
         <div>
           <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>{lang==="es"?"Plan Semanal":"Weekly Plan"}</h2>
-          <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>Eduardo Valdés · {lang==="es"?"Semana del 9 Mar":"Week of Mar 9"}</p>
+          <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>Eduardo Valdés · {(() => {
+            const now = new Date();
+            const day = now.getDay();
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+            const saturday = new Date(monday);
+            saturday.setDate(monday.getDate() + 5);
+            const fmt = d => d.toLocaleDateString(lang==="es"?"es-PA":"en-US",{day:"numeric",month:"short"});
+            return `${lang==="es"?"Semana del":"Week of"} ${fmt(monday)} – ${fmt(saturday)}`;
+          })()}</p>
         </div>
         <button onClick={()=>{setEditTask(null);setForm({...emptyForm,day:selectedDay});setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
           <Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Asignar":"Assign"}
