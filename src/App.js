@@ -537,17 +537,17 @@ const USERS = [
   { username:"supervisor",       password:"AGPanama1", role:"supervisor",  name:"Supervisor (test)",initials:"EV",  assignedSystems: null }, // audit account
 
   // ── Level 1 — Vaqueros (real crew) ───────────────────────────────────────────
-  { username:"hilario_migar",    password:"AGPanama1", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
-  { username:"jairo_lorenzo",    password:"AGPanama1", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
-  { username:"charles_ebersole", password:"AGPanama1", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
-  { username:"rodolfo_viquez",   password:"AGPanama1", role:"vaquero",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
-  { username:"rodolfo_banard",   password:"AGPanama1", role:"vaquero",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
-  { username:"romelio_bekar",    password:"AGPanama1", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
-  { username:"joel_valdes",      password:"AGPanama1", role:"vaquero",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
-  { username:"luis_alvarado",    password:"AGPanama1", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
+  { username:"hilario_migar",    password:"1234", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
+  { username:"jairo_lorenzo",    password:"1234", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
+  { username:"charles_ebersole", password:"1234", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
+  { username:"rodolfo_viquez",   password:"1234", role:"vaquero",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
+  { username:"rodolfo_banard",   password:"1234", role:"vaquero",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
+  { username:"romelio_bekar",    password:"1234", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
+  { username:"joel_valdes",      password:"1234", role:"vaquero",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
+  { username:"luis_alvarado",    password:"1234", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
 
   // ── Audit / test accounts ─────────────────────────────────────────────────────
-  { username:"test_vaquero",     password:"AGPanama1", role:"vaquero",     name:"Test Vaquero",     initials:"HM",  assignedSystems: null }, // sees HM's tasks
+  { username:"test_vaquero",     password:"1234", role:"vaquero",     name:"Test Vaquero",     initials:"HM",  assignedSystems: null }, // sees HM's tasks
   { username:"test_supervisor",  password:"AGPanama1", role:"supervisor",  name:"Test Supervisor",  initials:"EV",  assignedSystems: null }, // sees supervisor view
   { username:"test_ceo",         password:"AGPanama1", role:"ceo",         name:"Test CEO",         initials:"JH",  assignedSystems: null }, // sees full L3 view
 ];
@@ -3630,9 +3630,48 @@ function BottomNav({ tab, setTab, role, lang }) {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [lang, setLang]               = useState("es");
-  const [user, setUser]               = useState(null);
-  const [tab, setTab]                 = useState("dashboard");
+  // ── Auth — persist to localStorage, role-aware auto-logout ──────────────────
+  const savedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('vdm_user')); } catch { return null; }
+  })();
+
+  const [lang, setLang]               = useState(localStorage.getItem('vdm_lang') || "es");
+  const [user, setUser]               = useState(savedUser);
+  const [tab, setTab]                 = useState(savedUser?.role==="vaquero" ? "inicio" : "dashboard");
+  const inactivityTimer = useRef(null);
+
+  // Auto-logout timeouts by role (ms)
+  const INACTIVITY_MS = { vaquero: 60*60*1000, supervisor: 30*60*1000, ceo: 30*60*1000, consultant: 30*60*1000 };
+
+  const doLogout = useCallback(() => {
+    localStorage.removeItem('vdm_user');
+    setUser(null);
+    setTab("dashboard");
+    clearTimeout(inactivityTimer.current);
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (!user) return;
+    clearTimeout(inactivityTimer.current);
+    const ms = INACTIVITY_MS[user.role] || 30*60*1000;
+    inactivityTimer.current = setTimeout(doLogout, ms);
+  }, [user, doLogout]);
+
+  // Start/reset timer on any user interaction
+  useEffect(() => {
+    if (!user) return;
+    const events = ['touchstart','mousedown','keydown','scroll'];
+    events.forEach(e => window.addEventListener(e, resetInactivityTimer, { passive:true }));
+    resetInactivityTimer(); // start on login
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetInactivityTimer));
+      clearTimeout(inactivityTimer.current);
+    };
+  }, [user, resetInactivityTimer]);
+
+  // Persist lang preference
+  useEffect(() => { localStorage.setItem('vdm_lang', lang); }, [lang]);
+
   const [systems, setSystems]         = useState(SYSTEMS_DATA);
   const [readings, setReadings]       = useState(INITIAL_READINGS);
   const [assignedTasks, setAssignedTasks]     = useState(SEED_ASSIGNED_TASKS);
@@ -3892,6 +3931,7 @@ export default function App() {
   const isL3       = user?.role === "ceo" || user?.role === "consultant";
 
   const handleLogin = (u) => {
+    localStorage.setItem('vdm_user', JSON.stringify(u));
     setUser(u);
     if(u.role==="vaquero") setTab("inicio");
     else setTab("dashboard");
@@ -3932,7 +3972,7 @@ export default function App() {
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
         {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
-        {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={()=>setUser(null)}/>}
+        {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user}/>}
@@ -3940,7 +3980,7 @@ export default function App() {
         {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} lang={lang}/>}
-        {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={()=>setUser(null)}/>}
+        {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 3 — CEO + Consultant */}
         {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user}/>}
@@ -3948,7 +3988,7 @@ export default function App() {
         {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} lang={lang} user={user}/>}
-        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={()=>setUser(null)}/>}
+        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
       </div>
 
       <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>
