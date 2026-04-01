@@ -1666,6 +1666,7 @@ function MiniSparkline({ data, color="#4ade80", w=60, h=24 }) {
 // ─── CHART: Promedio TDC line chart ──────────────────────────────────────────
 function TDCChart({ lang, data }) {
   const chartData = data || TDC_DATA;
+  const [hovered, setHovered] = useState(null);
   const W = 320, H = 120, PL = 42, PR = 8, PT = 12, PB = 28;
   const cW = W - PL - PR, cH = H - PT - PB;
   const vals = chartData.map(d => d.tdc).filter(v => v !== null);
@@ -1676,12 +1677,21 @@ function TDCChart({ lang, data }) {
 
   const toX = i => PL + i * xStep;
   const toY = v => PT + cH - ((v - minV) / range) * cH;
-
   const pts = chartData.map((d, i) => d.tdc !== null ? `${toX(i)},${toY(d.tdc)}` : null).filter(Boolean).join(" ");
   const ticks = [-1, 0, 1, 2, 3];
 
+  // Derivative: week-over-week change in TDC (acceleration/deceleration)
+  const getDerivative = (i) => {
+    const curr = chartData[i]?.tdc;
+    const prev = chartData[i-1]?.tdc;
+    if (curr === null || prev === null || curr === undefined || prev === undefined) return null;
+    return parseFloat((curr - prev).toFixed(3));
+  };
+
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block",overflow:"visible"}}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`}
+      style={{display:"block",overflow:"visible"}}
+      onMouseLeave={() => setHovered(null)}>
       {/* Y gridlines + labels */}
       {ticks.map(t => {
         const y = toY(t);
@@ -1700,24 +1710,62 @@ function TDCChart({ lang, data }) {
       <text x={PL+cW+2} y={toY(2.5)+3} fontSize="7" fill="#4ade80">obj</text>
       {/* Line */}
       <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Dots */}
-      {chartData.map((d, i) => (
-        <circle key={i} cx={toX(i)} cy={toY(d.tdc)} r={d.harvest ? 4 : 3}
-          fill={d.harvest ? "#f59e0b" : d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0ea5e9" : "#f87171"}
-          stroke="#020c1a" strokeWidth="1"/>
-      ))}
-      {/* X labels — every other one to avoid crowding */}
+      {/* Dots — interactive */}
+      {chartData.map((d, i) => {
+        if (d.tdc === null) return null;
+        const col = d.harvest ? "#f59e0b" : d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0ea5e9" : "#f87171";
+        const isHov = hovered === i;
+        return (
+          <g key={i} style={{cursor:"pointer"}}
+            onMouseEnter={() => setHovered(i)}
+            onClick={() => setHovered(hovered===i ? null : i)}>
+            <circle cx={toX(i)} cy={toY(d.tdc)} r={isHov ? 6 : d.harvest ? 4 : 3}
+              fill={col} stroke="#020c1a" strokeWidth="1"/>
+          </g>
+        );
+      })}
+      {/* X labels — every other one */}
       {chartData.filter((_,i) => i % 2 === 0).map((d, idx) => {
         const i = idx * 2;
-        return <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fontSize="7" fill="#475569">{d.label.split(" ")[0]}</text>;
+        return <text key={i} x={toX(i)} y={H-4} textAnchor="middle" fontSize="7" fill="#475569">{d.label.split(" ")[0]}</text>;
       })}
       {/* Harvest annotation */}
       {chartData.map((d, i) => d.harvest ? (
-        <text key={"h"+i} x={toX(i)} y={toY(d.tdc) - 7} textAnchor="middle" fontSize="7" fill="#f59e0b">🌿</text>
+        <text key={"h"+i} x={toX(i)} y={toY(d.tdc)-7} textAnchor="middle" fontSize="7" fill="#f59e0b">🌿</text>
       ) : null)}
+      {/* Hover tooltip — TDC value + derivative */}
+      {hovered !== null && chartData[hovered]?.tdc !== null && (() => {
+        const d    = chartData[hovered];
+        const deriv = getDerivative(hovered);
+        const cx   = toX(hovered);
+        const cy   = toY(d.tdc);
+        const tipW = 108, tipH = deriv !== null ? 44 : 28;
+        const tipX = Math.min(Math.max(cx - tipW/2, PL), W - PR - tipW);
+        const tipY = cy - tipH - 8;
+        const derivColor = deriv === null ? "#64748b" : deriv > 0 ? "#4ade80" : "#f87171";
+        const derivLabel = deriv === null ? "" : `${deriv > 0 ? "▲" : deriv < 0 ? "▼" : "→"} ${deriv > 0 ? "+" : ""}${deriv.toFixed(2)}% ${lang==="es"?"vs sem. ant.":"vs last wk"}`;
+        return (
+          <g style={{pointerEvents:"none"}}>
+            <rect x={tipX} y={tipY} width={tipW} height={tipH}
+              rx="5" fill="#1e293b" stroke="rgba(148,163,184,.25)" strokeWidth="0.8"/>
+            <text x={tipX+tipW/2} y={tipY+13} textAnchor="middle"
+              fontSize="8" fontWeight="700" fill="#94a3b8">{d.label}</text>
+            <text x={tipX+tipW/2} y={tipY+25} textAnchor="middle"
+              fontSize="9" fontWeight="700"
+              fill={d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0ea5e9" : "#f87171"}>
+              {d.tdc !== null ? `${d.tdc >= 0 ? "+" : ""}${d.tdc.toFixed(3)}%/día` : "—"}
+            </text>
+            {deriv !== null && (
+              <text x={tipX+tipW/2} y={tipY+38} textAnchor="middle"
+                fontSize="8" fill={derivColor}>{derivLabel}</text>
+            )}
+          </g>
+        );
+      })()}
     </svg>
   );
 }
+
 
 // ─── CHART: % Pruebas stacked bar ─────────────────────────────────────────────
 function PruebasChart({ lang, data }) {
@@ -2161,7 +2209,7 @@ function BoardProgressChart({ lang }) {
   );
 }
 
-function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user }) {
+function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate }) {
   const [tab, setDashTab] = useState("resumen");
   const active = systems.filter(s=>s.estado==="Activo");
   const done   = assignedTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
@@ -2317,7 +2365,8 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             const d=mine.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
             const p=mine.length?Math.round((d/mine.length)*100):0;
             return (
-              <div key={c.initials} style={S.card}>
+              <div key={c.initials} style={{...S.card,cursor:"pointer"}}
+                onClick={()=>setDashTab("equipo")}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                   <div style={{display:"flex",alignItems:"center",gap:9}}>
                     <div style={{width:32,height:32,borderRadius:9,background:"rgba(14,165,233,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -2334,6 +2383,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                   </div>
                 </div>
                 {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
+                <div style={{fontSize:9,color:"#334155",marginTop:5,textAlign:"right"}}>
+                  {lang==="es"?"Ver detalle →":"View detail →"}
+                </div>
               </div>
             );
           })}
@@ -2358,7 +2410,8 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             const rate = s.rate;
             const col  = growthColor(rate);
             return (
-              <div key={s.id} style={{...S.card,borderLeft:`3px solid ${col}`}}>
+              <div key={s.id} style={{...S.card,borderLeft:`3px solid ${col}`,cursor:"pointer"}}
+                onClick={()=>onNavigate && onNavigate("sistemas", s.id)}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div style={{flex:1}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
@@ -2411,6 +2464,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                     </div>
                   </div>
                 )}
+                <div style={{fontSize:9,color:"#334155",marginTop:6,textAlign:"right"}}>
+                  {lang==="es"?"Ver sistema →":"View system →"}
+                </div>
               </div>
             );
           })}
@@ -3986,7 +4042,7 @@ export default function App() {
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
-        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user}/>}
+        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
@@ -3994,7 +4050,7 @@ export default function App() {
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 3 — CEO + Consultant */}
-        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user}/>}
+        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
