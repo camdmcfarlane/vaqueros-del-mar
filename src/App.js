@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 // ─── REGIONS & POLYGONS ──────────────────────────────────────────────────────
 const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Isla de Tigre"];
@@ -4059,6 +4060,7 @@ export default function App() {
       </div>
 
       <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>
+      <Analytics />
     </div>
   );
 }
