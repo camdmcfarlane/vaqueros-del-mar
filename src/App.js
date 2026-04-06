@@ -8,23 +8,79 @@ const DEFAULT_SEMILLAS  = ["Brazil","Mixed","Bahía Azul","Yellow","Brown","Spin
 
 // ─── SYSTEMS DATA (enriched with region, polygon, crew) ──────────────────────
 const SYSTEMS_DATA = [
-  { id:"P1",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",      tipo:"Canasta",   familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, notas:"" },
-  { id:"P2",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",      tipo:"Canasta",   familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, notas:"" },
-  { id:"P3",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",      tipo:"Canasta",   familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, notas:"" },
-  { id:"P4",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",      tipo:"Canasta",   familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, notas:"" },
-  { id:"P5-2", region:"Cayo de Agua", poligono:1, pueblo:"Jobori",            tipo:"Long Line", familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",     semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  notas:"" },
-  { id:"P5-3", region:"Cayo de Agua", poligono:1, pueblo:"Jobori",            tipo:"Long Line", familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",     semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  notas:"" },
-  { id:"P5-4", region:"Cayo de Agua", poligono:1, pueblo:"Jobori",            tipo:"Long Line", familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",     semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  notas:"" },
-  { id:"P5-5", region:"Cayo de Agua", poligono:1, pueblo:"Jobori",            tipo:"Long Line", familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",     semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  notas:"" },
-  { id:"P11",  region:"Bahía Azul",   poligono:1, pueblo:"Avispa",            tipo:"Long Line", familia:"Nortizo",      profundidad:"40cm", materiales:"HDPE",    semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°06'55\" O 082°02'44\"", fechaInstalacion:"2025-12-03", capitan:"RBC", buceador:"JL", modulos:6,  notas:"" },
-  { id:"P12-1",region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",       tipo:"Canasta",   familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, notas:"" },
-  { id:"P12-2",region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",       tipo:"Canasta",   familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, notas:"" },
-  { id:"P13-1",region:"Playa Roja",   poligono:1, pueblo:"Tobobe",            tipo:"Canasta",   familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie", semillas:"Mixed",  estado:"Activo",  coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, notas:"" },
-  { id:"P13-2",region:"Playa Roja",   poligono:1, pueblo:"Tobobe",            tipo:"Canasta",   familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie", semillas:"Mixed",  estado:"Activo",  coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, notas:"" },
-  { id:"P14",  region:"Playa Roja",   poligono:1, pueblo:"Gallinazo",         tipo:"Canasta",   familia:"P Celestino*", profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°04'22\" O 082°00'38\"", fechaInstalacion:"2025-12-12", capitan:"RBC", buceador:"JL", modulos:8,  notas:"" },
-  { id:"P15-1",region:"Bahía Azul",   poligono:3, pueblo:"Ensenada",          tipo:"Canasta",   familia:"Eurelia*",     profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°09'10\" O 082°05'02\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  notas:"" },
-  { id:"P16-1",region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica",  tipo:"Canasta",   familia:"P Demetrio",   profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°10'05\" O 082°05'55\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  notas:"" },
-  { id:"P17",  region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",      tipo:"Canasta",   familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie", semillas:"Brazil", estado:"Activo",  coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, notas:"" },
+  // ─── EXISTING SYSTEMS — updated with calendario dates ────────────────────────
+  // Fields added: tamano ("2x2m"|"2x3m"), categoria ("semillero"|"comercial"|"prueba"),
+  //               fechaCosecha, fechaLimpieza
+  { id:"P1",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P2",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P3",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P4",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P5-2",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P5-3",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P5-4",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P5-5",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P11",   region:"Bahía Azul",   poligono:1, pueblo:"Avispa",           tipo:"Long Line",  familia:"Nortizo",      profundidad:"40cm", materiales:"HDPE",         semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°06'55\" O 082°02'44\"", fechaInstalacion:"2025-12-03", capitan:"RBC", buceador:"JL", modulos:6,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P12-1", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P12-2", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P13-1", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
+  { id:"P13-2", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-21", fechaLimpieza:"diaria", notas:"" },
+  { id:"P14",   region:"Playa Roja",   poligono:1, pueblo:"Gallinazo",        tipo:"Canasta",    familia:"P Celestino*", profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°04'22\" O 082°00'38\"", fechaInstalacion:"2025-12-12", capitan:"RBC", buceador:"JL", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-06", fechaLimpieza:"diaria", notas:"" },
+  { id:"P15-1", region:"Bahía Azul",   poligono:3, pueblo:"Ensenada",         tipo:"Canasta",    familia:"Eurelia*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°09'10\" O 082°05'02\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-28", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-1", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"P Demetrio",   profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°10'05\" O 082°05'55\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P17",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+
+  // ─── NEW COMMERCIAL SYSTEMS — from Calendario ────────────────────────────────
+  { id:"P18",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P19",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P20",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P21",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P22",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P23",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
+  { id:"P12-3", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P12-4", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P12-5", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-17", fechaLimpieza:"diaria", notas:"" },
+  { id:"P13-3", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-2", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-3", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-02", fechaLimpieza:"diaria", notas:"" },
+  { id:"P72",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P73",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P74",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P75",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+
+  // ─── PRUEBA / SEMILLERO MODULES — 2x2m, 45-day cycle ────────────────────────
+  { id:"P26-1",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-2",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-3",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-4",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-5",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-03-16", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-6",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Retirado", coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"Retirado por alta infección de Epifitas" },
+  { id:"P26-7",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-8",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-9",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-10", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-11", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-12", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-13", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P26-14", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P26-15", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P36-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P36-2",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P39-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P47-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P63-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
+  { id:"P64-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
+  { id:"P65-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
+  { id:"P70-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
+
+  // ─── SYSTEMS FLAGGED — no dates, needs Eduardo update ────────────────────────
+  { id:"P7",    region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P9-1",  region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P24",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P25",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P27",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P28",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P29",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  { id:"P30",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
 ];
 
 const INITIAL_READINGS = [
@@ -164,7 +220,7 @@ const CREW = [
   { initials:"RV", name:"Rodolfo Viquez",  role:"Capitán",  username:"rodolfo_viquez" },
   { initials:"RBM",name:"Rodolfo Banard",  role:"Capitán",  username:"rodolfo_banard" },
   { initials:"RBC",name:"Romelio Bekar",   role:"Capitán",  username:"romelio_bekar" },
-  { initials:"JV", name:"Joel Valdés",     role:"Colaborador",username:"joel_valdes" },
+  { initials:"JV", name:"Joel Valdés",     role:"Capitán",   username:"joel_valdes" },
   { initials:"LA", name:"Luis A.",         role:"Colaborador",username:"luis_a" },
   { initials:"EV", name:"Eduardo Valdés",  role:"Supervisor",username:"supervisor" },
 ];
@@ -540,10 +596,10 @@ const USERS = [
   { username:"hilario_migar",    password:"1234", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
   { username:"jairo_lorenzo",    password:"1234", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
   { username:"charles_ebersole", password:"1234", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
-  { username:"rodolfo_viquez",   password:"1234", role:"vaquero",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
+  { username:"rodolfo_viquez",   password:"1234", role:"capitan",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
   { username:"rodolfo_banard",   password:"1234", role:"vaquero",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
   { username:"romelio_bekar",    password:"1234", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
-  { username:"joel_valdes",      password:"1234", role:"vaquero",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
+  { username:"joel_valdes",      password:"1234", role:"capitan",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
   { username:"luis_alvarado",    password:"1234", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
 
   // ── Audit / test accounts ─────────────────────────────────────────────────────
@@ -3126,7 +3182,35 @@ function SistemasTab({ systems, setSystems, readings, lang, user,
           <div style={S.card}>
           <div style={{marginBottom:10}}><label style={S.label}>{lang==="es"?"Familia / Propietario":"Family / Owner"}</label><input value={form.familia} onChange={e=>F("familia",e.target.value)} style={S.input}/></div>
           <div style={{marginBottom:10}}><label style={S.label}>GPS</label><input value={form.coordenadas} onChange={e=>F("coordenadas",e.target.value)} placeholder="N 09°07'34 O 082°03'58" style={S.input}/></div>
-          <div style={{marginBottom:10}}><label style={S.label}>{lang==="es"?"Fecha Instalación":"Install Date"}</label><input type="date" value={form.fechaInstalacion} onChange={e=>F("fechaInstalacion",e.target.value)} style={{...S.input,colorScheme:"dark"}}/></div>
+          <div style={{marginBottom:10}}><label style={S.label}>{lang==="es"?"Fecha Instalación / Siembra":"Install / Plant Date"}</label><input type="date" value={form.fechaInstalacion} onChange={e=>F("fechaInstalacion",e.target.value)} style={{...S.input,colorScheme:"dark"}}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div>
+              <label style={S.label}>{lang==="es"?"Próx. Cosecha":"Next Harvest"}</label>
+              <input type="date" value={form.fechaCosecha||""} onChange={e=>F("fechaCosecha",e.target.value)} style={{...S.input,colorScheme:"dark"}}/>
+            </div>
+            <div>
+              <label style={S.label}>{lang==="es"?"Limpieza":"Cleaning"}</label>
+              <input value={form.fechaLimpieza||""} onChange={e=>F("fechaLimpieza",e.target.value)} placeholder="diaria / fecha" style={S.input}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div>
+              <label style={S.label}>{lang==="es"?"Tamaño canasta":"Basket size"}</label>
+              <select value={form.tamano||"2x3m"} onChange={e=>F("tamano",e.target.value)} style={{...S.input,appearance:"none"}}>
+                <option value="2x2m">2x2m — Prueba</option>
+                <option value="2x3m">2x3m — Tubular comercial</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>{lang==="es"?"Categoría":"Category"}</label>
+              <select value={form.categoria||"comercial"} onChange={e=>F("categoria",e.target.value)} style={{...S.input,appearance:"none"}}>
+                <option value="semillero">Semillero</option>
+                <option value="prueba">Prueba</option>
+                <option value="comercial">Comercial</option>
+              </select>
+            </div>
+          </div>
           <div style={{marginBottom:10}}>
             <label style={S.label}>{lang==="es"?"Origen Semillas":"Seed Origin"}</label>
             <AddableSelect value={form.semillas} onChange={v=>F("semillas",v)} options={semillas}
@@ -3168,7 +3252,16 @@ function SistemasTab({ systems, setSystems, readings, lang, user,
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:36,height:36,borderRadius:10,background:`${regionColor[s.region]}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:regionColor[s.region]}}>{s.id}</span></div>
-                      <div><div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div><div style={{fontSize:11,color:"#64748b"}}>{s.tipo} · {s.modulos} {lang==="es"?"módulos":"modules"} · {s.buceador||"–"}</div></div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{s.tipo} · {s.modulos} {lang==="es"?"módulos":"modules"} · {s.buceador||"–"}</div>
+                        <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
+                          {s.categoria && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(14,165,233,.15)":s.categoria==="semillero"?"rgba(74,222,128,.15)":"rgba(251,191,36,.15)",color:s.categoria==="comercial"?"#0ea5e9":s.categoria==="semillero"?"#4ade80":"#fbbf24",fontWeight:700}}>{s.categoria}</span>}
+                          {s.tamano && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>{s.tamano}</span>}
+                          {s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(74,222,128,.08)",color:"#4ade80"}}>🌿 {s.fechaCosecha}</span>}
+                          {!s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(251,191,36,.08)",color:"#fbbf24"}}>⚠ fecha pendiente</span>}
+                        </div>
+                      </div>
                     </div>
                     <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:s.estado==="Activo"?"rgba(74,222,128,.1)":"rgba(148,163,184,.06)",color:s.estado==="Activo"?"#4ade80":"#64748b",fontWeight:600}}>{s.estado}</span>
                   </div>
@@ -3666,9 +3759,15 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
+    capitan: [
+      { id:"dashboard",icon:"chart",    label: "Dashboard" },
+      { id:"sistemas", icon:"grid",     label: "Sistemas" },
+      { id:"mapa",     icon:"map",      label: "Mapa" },
+      { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+    ],
     supervisor: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
-      { id:"plan",     icon:"calendar", label: lang==="es"?"Plan Semanal":"Weekly Plan" },
+      { id:"plan",     icon:"calendar", label: lang==="es"?"Plan":"Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"mapa",     icon:"map",      label: "Mapa" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
@@ -3994,6 +4093,7 @@ export default function App() {
   };
 
   const isVaquero  = user?.role === "vaquero";
+  const isCapitan  = user?.role === "capitan";
   const isSup      = user?.role === "supervisor";
   const isL3       = user?.role === "ceo" || user?.role === "consultant";
 
@@ -4001,14 +4101,25 @@ export default function App() {
     localStorage.setItem('vdm_user', JSON.stringify(u));
     setUser(u);
     if(u.role==="vaquero") setTab("inicio");
+    else if(u.role==="capitan") setTab("dashboard");
     else setTab("dashboard");
   };
 
   if(!user) return <LoginScreen onLogin={handleLogin} lang={lang} setLang={setLang}/>;
 
   return (
-    <div style={{minHeight:"100vh",background:"#020c1a",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+    <div className="vdm-root" style={{minHeight:"100vh",background:"#020c1a",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @media(min-width:600px){
+          .vdm-root{max-width:600px!important;margin:0 auto!important;}
+          .vdm-root nav{max-width:600px!important;left:50%!important;transform:translateX(-50%)!important;right:auto!important;}
+        }
+        @media(min-width:900px){
+          .vdm-root{max-width:720px!important;}
+          .vdm-root nav{max-width:720px!important;}
+        }
+      `}</style>
 
       {/* Top bar */}
       <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(2,8,24,.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(148,163,184,.06)",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -4040,6 +4151,12 @@ export default function App() {
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
         {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+
+        {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
+        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
+        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
+        {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
