@@ -385,7 +385,7 @@ const SEED_EVALUATIONS = {
 
 const T = {
   en: {
-    appName:"Vaqueros del Mar",
+    appName:"AquaOps",
     tagline:"Seaweed Harvest Tracker",
     today:"Today's Dashboard",
     systems:"Systems",
@@ -482,7 +482,7 @@ const T = {
     sick:"Sick",
   },
   es: {
-    appName:"Vaqueros del Mar",
+    appName:"AquaOps",
     tagline:"Rastreador de Cosecha de Algas",
     today:"Panel de Hoy",
     systems:"Sistemas",
@@ -908,7 +908,7 @@ function LoginScreen({ onLogin, lang, setLang }) {
         <div style={{width:76,height:76,borderRadius:20,background:"linear-gradient(135deg,#0ea5e9,#0369a1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 0 40px rgba(14,165,233,.5)"}}>
           <Icon name="wave" size={36} color="#fff"/>
         </div>
-        <h1 style={{color:"#f1f5f9",fontSize:26,fontWeight:900,margin:0}}>Vaqueros del Mar</h1>
+        <h1 style={{color:"#f1f5f9",fontSize:26,fontWeight:900,margin:0}}>AquaOps</h1>
         <p style={{color:"#38bdf8",fontSize:13,margin:"6px 0 0",fontWeight:600}}>{lang==="es"?"Rastreador de Cosecha de Algas":"Seaweed Harvest Tracker"}</p>
       </div>
       <div style={{width:"100%",maxWidth:360,marginBottom:24,zIndex:1}}>
@@ -3048,7 +3048,7 @@ function AddableSelect({ value, onChange, options, onAddOption, lang, label, pla
   );
 }
 
-function SistemasTab({ systems, setSystems, readings, lang, user,
+function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   regions=DEFAULT_REGIONS, setRegions=()=>{},
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
@@ -3058,7 +3058,40 @@ function SistemasTab({ systems, setSystems, readings, lang, user,
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editSys, setEditSys] = useState(null);
+  const [showReadingForm, setShowReadingForm] = useState(false);
+  const [readingForm, setReadingForm] = useState({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
   const regionColor = {"Bahía Azul":"#0ea5e9","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
+
+  // Calculate TDC from two readings: TDC = (ln(p2/p1) / days) * 100
+  const calcTDC = (peso1, fecha1, peso2, fecha2) => {
+    if (!peso1 || !peso2 || !fecha1 || !fecha2) return null;
+    const days = (new Date(fecha2) - new Date(fecha1)) / (1000 * 60 * 60 * 24);
+    if (days <= 0) return null;
+    return parseFloat(((Math.log(peso2 / peso1) / days) * 100).toFixed(4));
+  };
+
+  const handleAddReading = (sistemaId) => {
+    const peso = parseFloat(readingForm.peso);
+    if (!peso || peso <= 0) return;
+    // Get previous reading to calculate TDC
+    const prevReadings = readings.filter(r => r.sistema === sistemaId)
+      .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+    const prev = prevReadings[0] || null;
+    const tdc = prev ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha) : null;
+    const newReading = {
+      id: Date.now(),
+      sistema: sistemaId,
+      fecha: readingForm.fecha,
+      peso: peso,
+      tdc,
+      notas: readingForm.notas || "",
+      sueltos: null, cosechada: null, sembrado: null,
+      aguas: "", condiciones: "", salt: null, ph: null, salinidad: null, temp: null, foto: null,
+    };
+    setReadings(prev => [...prev, newReading]);
+    setShowReadingForm(false);
+    setReadingForm({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
+  };
 
   const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,notas:""};
   const [form, setForm] = useState(EMPTY);
@@ -3113,19 +3146,89 @@ function SistemasTab({ systems, setSystems, readings, lang, user,
             </div>
           ))}
         </div>
-        {lastR&&(
-          <div style={S.card}>
-            <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Última lectura":"Last reading"} · {lastR.fecha}</div>
-            <div style={{display:"flex",gap:8}}>
-              {[["Peso",lastR.peso+"g"],["Sal",lastR.salt+"%"],["pH",lastR.ph],["T°",lastR.temp+"°C"]].map(([l,v])=>(
-                <div key={l} style={{flex:1,background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 8px",textAlign:"center"}}>
-                  <div style={{fontSize:9,color:"#64748b"}}>{l}</div>
-                  <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{v}</div>
-                </div>
-              ))}
+        {/* ── Readings history ─────────────────────────────────────────── */}
+        <div style={S.card}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>
+              {lang==="es"?"Lecturas de Peso":"Weight Readings"}
+              <span style={{marginLeft:6,color:"#334155"}}>({readings.filter(r=>r.sistema===s.id).length})</span>
             </div>
+            {canEdit && (
+              <button onClick={()=>setShowReadingForm(v=>!v)}
+                style={{padding:"4px 10px",borderRadius:8,border:"1px solid rgba(14,165,233,.3)",background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                {showReadingForm?"✕ Cancelar":"+ Nueva Lectura"}
+              </button>
+            )}
           </div>
-        )}
+
+          {/* New reading form */}
+          {showReadingForm && canEdit && (
+            <div style={{background:"rgba(14,165,233,.06)",border:"1px solid rgba(14,165,233,.15)",borderRadius:10,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
+                  <input type="date" value={readingForm.fecha}
+                    onChange={e=>setReadingForm(p=>({...p,fecha:e.target.value}))}
+                    style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                  <input type="number" placeholder="ej. 8500" value={readingForm.peso}
+                    onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
+                    style={{...S.input,fontSize:12}}/>
+                </div>
+              </div>
+              {/* TDC preview */}
+              {readingForm.peso && lastR && (() => {
+                const preview = calcTDC(lastR.peso, lastR.fecha, parseFloat(readingForm.peso), readingForm.fecha);
+                if (preview === null) return null;
+                const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0ea5e9" : "#f87171";
+                return (
+                  <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:11,color:"#64748b"}}>TDC calculado vs lectura anterior</span>
+                    <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview >= 0 ? "+" : ""}{preview}%/día</span>
+                  </div>
+                );
+              })()}
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Notas (opcional)</div>
+                <input placeholder={lang==="es"?"Observaciones...":"Observations..."} value={readingForm.notas}
+                  onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
+                  style={{...S.input,fontSize:12}}/>
+              </div>
+              <button onClick={()=>handleAddReading(s.id)}
+                disabled={!readingForm.peso}
+                style={{width:"100%",padding:10,borderRadius:9,border:"none",background:readingForm.peso?"linear-gradient(135deg,#0ea5e9,#0284c7)":"rgba(148,163,184,.1)",color:readingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:13,cursor:readingForm.peso?"pointer":"default"}}>
+                {lang==="es"?"Guardar Lectura":"Save Reading"}
+              </button>
+            </div>
+          )}
+
+          {/* Reading history list */}
+          {readings.filter(r=>r.sistema===s.id)
+            .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))
+            .map((r,i)=>{
+              const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0ea5e9":"#f87171";
+              return (
+                <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<readings.filter(x=>x.sistema===s.id).length-1?"1px solid rgba(148,163,184,.06)":"none"}}>
+                  <div>
+                    <div style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>{r.fecha}</div>
+                    {r.notas?<div style={{fontSize:10,color:"#64748b",marginTop:1}}>{r.notas}</div>:null}
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>
+                    {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
+                    {i===0&&<div style={{fontSize:9,color:"#334155"}}>← actual</div>}
+                  </div>
+                </div>
+              );
+          })}
+          {readings.filter(r=>r.sistema===s.id).length===0&&(
+            <div style={{fontSize:12,color:"#475569",textAlign:"center",padding:"12px 0"}}>
+              {lang==="es"?"Sin lecturas registradas":"No readings recorded"}
+            </div>
+          )}
+        </div>
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
         {canEdit&&<button onClick={()=>{setForm({...s});setShowForm(true);}} style={{width:"100%",padding:13,borderRadius:11,border:"1px solid rgba(14,165,233,.3)",background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>}
       </div>
@@ -4127,7 +4230,7 @@ export default function App() {
           <div style={{width:30,height:30,borderRadius:8,background:"linear-gradient(135deg,#0ea5e9,#0369a1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <Icon name="wave" size={15} color="#fff"/>
           </div>
-          <span style={{fontWeight:800,fontSize:14,color:"#e2e8f0"}}>Vaqueros del Mar</span>
+          <span style={{fontWeight:800,fontSize:14,color:"#e2e8f0"}}>AquaOps</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:10,color:"#475569",background:"rgba(255,255,255,.04)",padding:"3px 8px",borderRadius:12}}>{user.name.split(" ")[0]}</span>
@@ -4149,19 +4252,19 @@ export default function App() {
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
-        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
         {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
-        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} lang={lang}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
@@ -4169,7 +4272,7 @@ export default function App() {
         {/* Level 3 — CEO + Consultant */}
         {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} lang={lang} user={user}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
