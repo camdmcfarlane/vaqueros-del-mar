@@ -3053,7 +3053,7 @@ function SistemasTab({ systems, setSystems, readings, lang, user,
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{} }) {
-  const canEdit = ["ceo","consultant","supervisor"].includes(user.role);
+  const canEdit = ["ceo","consultant","supervisor","capitan"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
