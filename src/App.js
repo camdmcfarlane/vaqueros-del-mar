@@ -3060,7 +3060,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [editSys, setEditSys] = useState(null);
   const [showReadingForm, setShowReadingForm] = useState(false);
   const [readingForm, setReadingForm] = useState({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
+  const [editingReadingId, setEditingReadingId] = useState(null);
+  const [editReadingForm, setEditReadingForm] = useState({ fecha:"", peso:"", notas:"" });
   const regionColor = {"Bahía Azul":"#0ea5e9","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
+
+  // Only Eduardo, Jason, Cameron can edit existing readings
+  const canEditReadings = ["ceo","consultant","supervisor"].includes(user.role);
 
   // Calculate TDC from two readings: TDC = (ln(p2/p1) / days) * 100
   const calcTDC = (peso1, fecha1, peso2, fecha2) => {
@@ -3070,10 +3075,25 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     return parseFloat(((Math.log(peso2 / peso1) / days) * 100).toFixed(4));
   };
 
+  // Recalculate TDC for all readings of a system after any edit
+  const recalcAllTDC = (allReadings, sistemaId) => {
+    const sorted = allReadings
+      .filter(r => r.sistema === sistemaId)
+      .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+    const updated = sorted.map((r, i) => {
+      const prev = sorted[i-1] || null;
+      const tdc = prev ? calcTDC(prev.peso, prev.fecha, r.peso, r.fecha) : null;
+      return { ...r, tdc };
+    });
+    return allReadings.map(r => {
+      const u = updated.find(x => x.id === r.id);
+      return u || r;
+    });
+  };
+
   const handleAddReading = (sistemaId) => {
     const peso = parseFloat(readingForm.peso);
     if (!peso || peso <= 0) return;
-    // Get previous reading to calculate TDC
     const prevReadings = readings.filter(r => r.sistema === sistemaId)
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     const prev = prevReadings[0] || null;
@@ -3088,9 +3108,22 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       sueltos: null, cosechada: null, sembrado: null,
       aguas: "", condiciones: "", salt: null, ph: null, salinidad: null, temp: null, foto: null,
     };
-    setReadings(prev => [...prev, newReading]);
+    const withNew = [...readings, newReading];
+    setReadings(recalcAllTDC(withNew, sistemaId));
     setShowReadingForm(false);
     setReadingForm({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
+  };
+
+  const handleSaveEditReading = (readingId, sistemaId) => {
+    const peso = parseFloat(editReadingForm.peso);
+    if (!peso || peso <= 0) return;
+    const updated = readings.map(r =>
+      r.id === readingId
+        ? { ...r, peso, fecha: editReadingForm.fecha, notas: editReadingForm.notas }
+        : r
+    );
+    setReadings(recalcAllTDC(updated, sistemaId));
+    setEditingReadingId(null);
   };
 
   const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,notas:""};
@@ -3209,16 +3242,80 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
             .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))
             .map((r,i)=>{
               const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0ea5e9":"#f87171";
+              const isEditing = editingReadingId === r.id;
+              const sysReadings = readings.filter(x=>x.sistema===s.id);
+
+              // ── Inline edit form ──────────────────────────────────────────
+              if (isEditing && canEditReadings) {
+                return (
+                  <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.2)",borderRadius:10,padding:12,marginBottom:6}}>
+                    <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>
+                      ✏️ {lang==="es"?"Editar lectura":"Edit reading"}
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                      <div>
+                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
+                        <input type="date" value={editReadingForm.fecha}
+                          onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
+                          style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso (g)":"Weight (g)"}</div>
+                        <input type="number" value={editReadingForm.peso}
+                          onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))}
+                          style={{...S.input,fontSize:12}}/>
+                      </div>
+                    </div>
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Notas</div>
+                      <input value={editReadingForm.notas}
+                        onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
+                        placeholder={lang==="es"?"Observaciones...":"Observations..."}
+                        style={{...S.input,fontSize:12}}/>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>handleSaveEditReading(r.id, s.id)}
+                        disabled={!editReadingForm.peso}
+                        style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",
+                          background:editReadingForm.peso?"linear-gradient(135deg,#f59e0b,#d97706)":"rgba(148,163,184,.1)",
+                          color:editReadingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:editReadingForm.peso?"pointer":"default"}}>
+                        {lang==="es"?"Guardar":"Save"}
+                      </button>
+                      <button onClick={()=>setEditingReadingId(null)}
+                        style={{padding:"8px 14px",borderRadius:8,border:"1px solid rgba(148,163,184,.15)",
+                          background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>
+                        {lang==="es"?"Cancelar":"Cancel"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // ── Normal reading row ────────────────────────────────────────
               return (
-                <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<readings.filter(x=>x.sistema===s.id).length-1?"1px solid rgba(148,163,184,.06)":"none"}}>
-                  <div>
+                <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"8px 0",borderBottom:i<sysReadings.length-1?"1px solid rgba(148,163,184,.06)":"none"}}>
+                  <div style={{flex:1}}>
                     <div style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>{r.fecha}</div>
                     {r.notas?<div style={{fontSize:10,color:"#64748b",marginTop:1}}>{r.notas}</div>:null}
                   </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>
-                    {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
-                    {i===0&&<div style={{fontSize:9,color:"#334155"}}>← actual</div>}
+                  <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:10}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>
+                      {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
+                      {i===0&&<div style={{fontSize:9,color:"#334155"}}>← actual</div>}
+                    </div>
+                    {canEditReadings && (
+                      <button onClick={()=>{
+                        setEditingReadingId(r.id);
+                        setEditReadingForm({ fecha:r.fecha, peso:String(r.peso), notas:r.notas||"" });
+                        setShowReadingForm(false);
+                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",
+                        background:"rgba(245,158,11,.1)",color:"#f59e0b",
+                        fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                        ✏️
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -3593,7 +3690,113 @@ function TDCUploader({ tdcData, pruebas, biomasa, onUpload, lang }) {
   );
 }
 
-function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assignedTasks, weeklyIncidents, lang, user }) {
+// ─── CSV EXPORT UTILITY ───────────────────────────────────────────────────────
+function exportCSV(rows, filename) {
+  if (!rows || rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const escape  = v => {
+    if (v === null || v === undefined) return "";
+    const s = String(v);
+    return s.includes(",") || s.includes('"') || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [
+    headers.join(","),
+    ...rows.map(r => headers.map(h => escape(r[h])).join(","))
+  ].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8;" }); // BOM for Excel
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Build the two export datasets
+function buildOpsExport(readings, systems) {
+  return readings
+    .slice().sort((a,b) => a.sistema.localeCompare(b.sistema) || a.fecha.localeCompare(b.fecha))
+    .map(r => {
+      const sys = systems.find(s => s.id === r.sistema) || {};
+      return {
+        Sistema:    r.sistema,
+        Región:     sys.region || "",
+        Capitán:    sys.capitan || "",
+        Buceador:   sys.buceador || "",
+        Categoría:  sys.categoria || "",
+        Fecha:      r.fecha,
+        "Peso (g)": r.peso,
+        "Peso (kg)":(r.peso / 1000).toFixed(3),
+        "TDC %/día":r.tdc !== null ? r.tdc : "",
+        Notas:      r.notas || "",
+        "Fecha Cosecha": sys.fechaCosecha || "",
+      };
+    });
+}
+
+function buildHRExport(evaluations, weeklyIncidents, profScores, assignedTasks) {
+  return CREW.filter(c => c.role !== "Supervisor").map(c => {
+    const ev = evaluations[c.initials];
+    const q1  = ev?.quarters?.["Q1 2026"] || {};
+    const inc = weeklyIncidents.filter(i => i.initials === c.initials);
+    const totalTard = inc.reduce((s, i) => s + (i.tardanzas || 0), 0);
+    const totalAus  = inc.reduce((s, i) => s + (i.ausencias  || 0), 0);
+    const prof = profScores.find(p => p.initials === c.initials && p.month === "2026-03");
+    const tasks = assignedTasks.filter(t => t.assignedTo === c.initials);
+    const done  = tasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
+    const pctTasks = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+    const comportVals = Object.values(q1.comportamientos || {});
+    const avgComport  = comportVals.length
+      ? (comportVals.reduce((a,b) => a+b, 0) / comportVals.length).toFixed(2) : "";
+    const gallupAvg   = q1.gallup?.length
+      ? (q1.gallup.reduce((a,b) => a+b, 0) / q1.gallup.length).toFixed(2) : "";
+
+    return {
+      Iniciales:           c.initials,
+      Nombre:              c.name,
+      Rol:                 c.role,
+      "Tareas completadas (%)": pctTasks,
+      Tardanzas:           totalTard,
+      Ausencias:           totalAus,
+      "Puntualidad (1-5)": prof?.puntualidad || "",
+      "Seguridad (1-5)":   prof?.seguridad   || "",
+      "Actitud (1-5)":     prof?.actitud     || "",
+      "Equipo (1-5)":      prof?.equipo      || "",
+      "Comportamientos Q1 (0-1)": avgComport,
+      "Gallup Q1 (1-5)":   gallupAvg,
+      "Fortalezas":        (q1.fortalezas || []).filter(Boolean).join(" | "),
+      "Mejoras":           (q1.mejoras    || []).filter(Boolean).join(" | "),
+      "Notas eval":        q1.notas || "",
+    };
+  });
+}
+
+function ExportButtons({ readings, systems, evaluations, weeklyIncidents, profScores, assignedTasks, lang }) {
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <button onClick={()=>exportCSV(buildOpsExport(readings,systems), `AquaOps_Operaciones_${new Date().toISOString().slice(0,10)}.csv`)}
+        style={{padding:"10px 8px",borderRadius:10,border:"1px solid rgba(14,165,233,.3)",
+          background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:11,cursor:"pointer",
+          display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+        <span style={{fontSize:18}}>📊</span>
+        <span>{lang==="es"?"Exportar Operaciones":"Export Operations"}</span>
+        <span style={{fontSize:9,color:"#64748b",fontWeight:400}}>{lang==="es"?"Lecturas · TDC · Sistemas":"Readings · TDC · Systems"}</span>
+      </button>
+      <button onClick={()=>exportCSV(buildHRExport(evaluations,weeklyIncidents,profScores,assignedTasks), `AquaOps_RRHH_${new Date().toISOString().slice(0,10)}.csv`)}
+        style={{padding:"10px 8px",borderRadius:10,border:"1px solid rgba(245,158,11,.3)",
+          background:"rgba(245,158,11,.06)",color:"#f59e0b",fontWeight:700,fontSize:11,cursor:"pointer",
+          display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+        <span style={{fontSize:18}}>👥</span>
+        <span>{lang==="es"?"Exportar RRHH":"Export HR"}</span>
+        <span style={{fontSize:9,color:"#64748b",fontWeight:400}}>{lang==="es"?"Evaluaciones · Incidencias · Puntaje":"Evals · Incidents · Score"}</span>
+      </button>
+    </div>
+  );
+}
+
+function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assignedTasks, weeklyIncidents, readings, systems, lang, user }) {
   const [view, setView] = useState("overview"); // overview | eval
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedQ, setSelectedQ] = useState(CURRENT_QUARTER);
@@ -3849,6 +4052,23 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
         {Math.abs(poolAmount-totalBono)<0.01&&<div style={{fontSize:10,color:"#4ade80",marginTop:6,textAlign:"center"}}>✓ {lang==="es"?"El pool cuadra exactamente":"Pool ties exactly"}</div>}
         <p style={{fontSize:10,color:"#475569",margin:"8px 0 0",lineHeight:1.4}}>{lang==="es"?"Fórmula: (pts × rendimiento) ÷ Σ(pts × rendimiento) × pool":"Formula: (pts × rendimiento) ÷ Σ(pts × rendimiento) × pool"}</p>
       </div>
+
+      {/* ── EXPORT SECTION ── */}
+      <div style={{height:1,background:"rgba(148,163,184,.08)",margin:"14px 0"}}>
+      </div>
+      <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 10px",textTransform:"uppercase",letterSpacing:1}}>
+        {lang==="es"?"Exportar datos":"Export data"}
+      </div>
+      <ExportButtons
+        readings={readings} systems={systems}
+        evaluations={evaluations} weeklyIncidents={weeklyIncidents}
+        profScores={profScores} assignedTasks={assignedTasks}
+        lang={lang}/>
+      <p style={{fontSize:10,color:"#475569",margin:"0 0 8px",lineHeight:1.5,textAlign:"center"}}>
+        {lang==="es"
+          ?"Los archivos CSV abren directamente en Excel. El reporte de operaciones requiere lecturas registradas por sistema."
+          :"CSV files open directly in Excel. Operations report requires readings logged per system."}
+      </p>
     </div>
   );
 }
@@ -4274,7 +4494,7 @@ export default function App() {
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
-        {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} lang={lang} user={user}/>}
+        {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
       </div>
 
