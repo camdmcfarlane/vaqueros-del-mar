@@ -19,14 +19,14 @@ const SYSTEMS_DATA = [
   { id:"P5-3",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
   { id:"P5-4",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
   { id:"P5-5",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P11",   region:"Bahía Azul",   poligono:1, pueblo:"Avispa",           tipo:"Long Line",  familia:"Nortizo",      profundidad:"40cm", materiales:"HDPE",         semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°06'55\" O 082°02'44\"", fechaInstalacion:"2025-12-03", capitan:"RBC", buceador:"JL", modulos:6,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
+  { id:"P11",   region:"Bahía Azul",   poligono:1, pueblo:"Avispa",           tipo:"Long Line",  familia:"Nortizo",      profundidad:"40cm", materiales:"HDPE",         semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°06'55\" O 082°02'44\"", fechaInstalacion:"2025-12-03", capitan:"JV", buceador:"JL", modulos:6,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
   { id:"P12-1", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
   { id:"P12-2", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
   { id:"P13-1", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
   { id:"P13-2", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-21", fechaLimpieza:"diaria", notas:"" },
   { id:"P14",   region:"Playa Roja",   poligono:1, pueblo:"Gallinazo",        tipo:"Canasta",    familia:"P Celestino*", profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°04'22\" O 082°00'38\"", fechaInstalacion:"2025-12-12", capitan:"RBC", buceador:"JL", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-06", fechaLimpieza:"diaria", notas:"" },
-  { id:"P15-1", region:"Bahía Azul",   poligono:3, pueblo:"Ensenada",         tipo:"Canasta",    familia:"Eurelia*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°09'10\" O 082°05'02\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-28", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-1", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"P Demetrio",   profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°10'05\" O 082°05'55\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P15-1", region:"Bahía Azul",   poligono:3, pueblo:"Ensenada",         tipo:"Canasta",    familia:"Eurelia*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°09'10\" O 082°05'02\"", fechaInstalacion:"2025-12-29", capitan:"JV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-28", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-1", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"P Demetrio",   profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°10'05\" O 082°05'55\"", fechaInstalacion:"2025-12-29", capitan:"JV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
   { id:"P17",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
 
   // ─── NEW COMMERCIAL SYSTEMS — from Calendario ────────────────────────────────
@@ -40,37 +40,37 @@ const SYSTEMS_DATA = [
   { id:"P12-4", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
   { id:"P12-5", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-17", fechaLimpieza:"diaria", notas:"" },
   { id:"P13-3", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-2", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-3", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-02", fechaLimpieza:"diaria", notas:"" },
-  { id:"P72",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P73",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P74",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P75",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-2", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P16-3", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-02", fechaLimpieza:"diaria", notas:"" },
+  { id:"P72",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P73",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P74",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
+  { id:"P75",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
 
   // ─── PRUEBA / SEMILLERO MODULES — 2x2m, 45-day cycle ────────────────────────
-  { id:"P26-1",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-2",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-3",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-4",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-5",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-03-16", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-6",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Retirado", coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"Retirado por alta infección de Epifitas" },
-  { id:"P26-7",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-8",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-9",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-10", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-11", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-12", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-13", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P26-14", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P26-15", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P36-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P36-2",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P39-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P47-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P63-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
-  { id:"P64-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
-  { id:"P65-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
-  { id:"P70-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-1",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-2",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-3",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-4",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-5",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-03-16", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-6",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Retirado", coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"Retirado por alta infección de Epifitas" },
+  { id:"P26-7",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-8",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-9",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-10", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-11", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-12", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
+  { id:"P26-13", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P26-14", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P26-15", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
+  { id:"P36-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P36-2",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P39-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
+  { id:"P47-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
+  { id:"P63-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
+  { id:"P64-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
+  { id:"P65-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
+  { id:"P70-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
 
   // ─── SYSTEMS FLAGGED — no dates, needs Eduardo update ────────────────────────
   { id:"P7",    region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
@@ -338,6 +338,28 @@ const SEED_ANNOUNCEMENTS = [
     message:"No dejes para mañana lo que puedas hacer hoy.",
     date:"2026-03-20", pinned:true },
 ];
+
+// ─── TIMECARD DATA — daily check-in/check-out per employee ───────────────────
+// Each entry: { date, initials, checkIn, checkOut, horasTrabajadas }
+const SEED_TIMECARDS = [
+  { date:"2026-03-09", initials:"HM",  checkIn:"06:15", checkOut:"16:30" },
+  { date:"2026-03-09", initials:"JL",  checkIn:"06:55", checkOut:"16:30" },
+  { date:"2026-03-09", initials:"CE",  checkIn:"06:10", checkOut:"16:30" },
+  { date:"2026-03-09", initials:"RV",  checkIn:"06:00", checkOut:"17:00" },
+  { date:"2026-03-09", initials:"RBM", checkIn:"06:05", checkOut:"17:00" },
+  { date:"2026-03-09", initials:"RBC", checkIn:"06:00", checkOut:"17:00" },
+  { date:"2026-03-09", initials:"JV",  checkIn:"06:00", checkOut:"17:00" },
+  { date:"2026-03-09", initials:"LA",  checkIn:"07:10", checkOut:"16:30" },
+];
+
+function calcHoras(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return null;
+  const [h1,m1] = checkIn.split(":").map(Number);
+  const [h2,m2] = checkOut.split(":").map(Number);
+  const mins = (h2*60+m2) - (h1*60+m1);
+  if (mins <= 0) return null;
+  return (mins/60).toFixed(1);
+}
 
 const SEED_WEEKLY_INCIDENTS = [
   { week:"2026-W09", initials:"HM",  tardanzas:0, ausencias:0, notas:"" },
@@ -764,8 +786,8 @@ const S = {
   card:    { background:"rgba(15,23,42,.8)", border:"1px solid rgba(148,163,184,.08)", borderRadius:14, padding:14, marginBottom:10 },
   input:   { width:"100%", padding:"11px 13px", borderRadius:10, border:"1px solid rgba(148,163,184,.12)", background:"rgba(15,23,42,.8)", color:"#e2e8f0", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" },
   label:   { fontSize:10, color:"#64748b", fontWeight:700, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.6 },
-  btn:     (active) => ({ width:"100%", padding:15, borderRadius:12, border:"none", background:active?"linear-gradient(135deg,#0ea5e9,#0284c7)":"rgba(14,165,233,.12)", color:active?"#fff":"#334155", fontWeight:800, fontSize:15, cursor:active?"pointer":"not-allowed", transition:"all .2s" }),
-  scoreBar:(v,color="#0ea5e9")=>(
+  btn:     (active) => ({ width:"100%", padding:15, borderRadius:12, border:"none", background:active?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(13,148,136,.12)", color:active?"#fff":"#334155", fontWeight:800, fontSize:15, cursor:active?"pointer":"not-allowed", transition:"all .2s" }),
+  scoreBar:(v,color="#0d9488")=>(
     <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden",marginTop:4}}>
       <div style={{height:"100%",width:`${Math.min((v||0)*100,100)}%`,background:color,borderRadius:3,transition:"width .4s"}}/>
     </div>
@@ -823,8 +845,8 @@ function VoiceNoteButton({ voiceNote, onVoiceNote, lang }) {
 
   return (
     <button onPointerDown={start} onPointerUp={stop} onPointerLeave={stop}
-      style={{width:"100%",padding:16,borderRadius:12,border:`2px solid ${recording?"#f87171":"rgba(14,165,233,.25)"}`,background:recording?"rgba(248,113,113,.06)":"rgba(14,165,233,.04)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-      <Icon name="mic" size={28} color={recording?"#f87171":"#0ea5e9"}/>
+      style={{width:"100%",padding:16,borderRadius:12,border:`2px solid ${recording?"#f87171":"rgba(13,148,136,.25)"}`,background:recording?"rgba(248,113,113,.06)":"rgba(13,148,136,.04)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+      <Icon name="mic" size={28} color={recording?"#f87171":"#0d9488"}/>
       {recording ? (
         <div style={{width:"100%"}}>
           <div style={{height:4,borderRadius:2,background:"rgba(248,113,113,.2)",overflow:"hidden",marginBottom:4}}>
@@ -843,9 +865,9 @@ function CondicionPicker({ value, onChange, lang }) {
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
       {CONDICION_EMOJIS.map(c=>(
         <button key={c.value} onClick={()=>onChange(value===c.value?"":c.value)}
-          style={{padding:"10px 4px",borderRadius:12,border:`1.5px solid ${value===c.value?"#0ea5e9":"rgba(148,163,184,.1)"}`,background:value===c.value?"rgba(14,165,233,.12)":"rgba(255,255,255,.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+          style={{padding:"10px 4px",borderRadius:12,border:`1.5px solid ${value===c.value?"#0d9488":"rgba(148,163,184,.1)"}`,background:value===c.value?"rgba(13,148,136,.12)":"rgba(255,255,255,.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
           <span style={{fontSize:24,lineHeight:1}}>{c.emoji}</span>
-          <span style={{fontSize:10,fontWeight:700,color:value===c.value?"#0ea5e9":"#64748b"}}>{lang==="es"?c.label:c.labelEn}</span>
+          <span style={{fontSize:10,fontWeight:700,color:value===c.value?"#0d9488":"#64748b"}}>{lang==="es"?c.label:c.labelEn}</span>
         </button>
       ))}
     </div>
@@ -858,13 +880,13 @@ const AUTH_LSTYLE = { fontSize:11, color:"#64748b", fontWeight:700, display:"blo
 
 function AuthShell({ lang, setLang, children }) {
   return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#020c1a 0%,#041c35 55%,#052e45 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",position:"relative",overflow:"hidden"}}>
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#021c1e 0%,#032d30 55%,#054040 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",bottom:0,left:0,right:0,pointerEvents:"none"}}>
-        {[0,1,2,3].map(i=><div key={i} style={{position:"absolute",bottom:i*24,left:`${-10+i*5}%`,right:`${-10+i*5}%`,height:80,borderRadius:"60% 60% 0 0",background:`rgba(14,165,233,${0.03+i*0.015})`,transform:`scaleX(${1.1-i*0.05})`}}/>)}
+        {[0,1,2,3].map(i=><div key={i} style={{position:"absolute",bottom:i*24,left:`${-10+i*5}%`,right:`${-10+i*5}%`,height:80,borderRadius:"60% 60% 0 0",background:`rgba(13,148,136,${0.03+i*0.015})`,transform:`scaleX(${1.1-i*0.05})`}}/>)}
       </div>
       <div style={{position:"absolute",top:16,right:16,display:"flex",gap:6,zIndex:10}}>
         {["es","en"].map(l=>(
-          <button key={l} onClick={()=>setLang(l)} style={{padding:"5px 13px",borderRadius:20,border:`1px solid ${lang===l?"#0ea5e9":"rgba(148,163,184,.15)"}`,cursor:"pointer",fontWeight:700,fontSize:11,background:lang===l?"rgba(14,165,233,.2)":"transparent",color:lang===l?"#0ea5e9":"#475569"}}>
+          <button key={l} onClick={()=>setLang(l)} style={{padding:"5px 13px",borderRadius:20,border:`1px solid ${lang===l?"#0d9488":"rgba(148,163,184,.15)"}`,cursor:"pointer",fontWeight:700,fontSize:11,background:lang===l?"rgba(13,148,136,.2)":"transparent",color:lang===l?"#0d9488":"#475569"}}>
             {l==="es"?"🇵🇦 ES":"🇺🇸 EN"}
           </button>
         ))}
@@ -905,14 +927,14 @@ function LoginScreen({ onLogin, lang, setLang }) {
   if(screen==="home") return (
     <AuthShell lang={lang} setLang={setLang}>
       <div style={{textAlign:"center",marginBottom:28,zIndex:1}}>
-        <div style={{width:76,height:76,borderRadius:20,background:"linear-gradient(135deg,#0ea5e9,#0369a1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 0 40px rgba(14,165,233,.5)"}}>
-          <Icon name="wave" size={36} color="#fff"/>
+        <div style={{width:96,height:96,borderRadius:22,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",boxShadow:"0 0 36px rgba(13,148,136,.45),0 0 0 1px rgba(13,148,136,.15)"}}>
+          <img src="data:image/jpeg;base64,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" alt="Algas Panameñas" style={{width:86,height:86,objectFit:"contain"}}/>
         </div>
-        <h1 style={{color:"#f1f5f9",fontSize:26,fontWeight:900,margin:0}}>AquaOps</h1>
-        <p style={{color:"#38bdf8",fontSize:13,margin:"6px 0 0",fontWeight:600}}>{lang==="es"?"Rastreador de Cosecha de Algas":"Seaweed Harvest Tracker"}</p>
+        <h1 style={{color:"#f0fdfa",fontSize:26,fontWeight:900,margin:0}}>AquaOps</h1>
+        <p style={{color:"#2dd4bf",fontSize:13,margin:"6px 0 0",fontWeight:600}}>{lang==="es"?"Rastreador de Cosecha de Algas":"Seaweed Harvest Tracker"}</p>
       </div>
       <div style={{width:"100%",maxWidth:360,marginBottom:24,zIndex:1}}>
-        {[["⚡",lang==="es"?"Segundos para registrar tareas":"Seconds to log tasks"],["📶",lang==="es"?"Online y sin conexión":"Works online & offline"],["🎯",lang==="es"?"Tareas asignadas por Eduardo":"Tasks assigned by Eduardo"],["📊",lang==="es"?"Tu progreso semanal":"Your weekly progress"]].map(([e,t],i)=>(
+        {[["🌿",lang==="es"?"Segundos para registrar tareas":"Seconds to log tasks"],["📶",lang==="es"?"Online y sin conexión":"Works online & offline"],["🎯",lang==="es"?"Tareas asignadas por Eduardo":"Tasks assigned by Eduardo"],["📊",lang==="es"?"Tu progreso semanal":"Your weekly progress"]].map(([e,t],i)=>(
           <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid rgba(148,163,184,.05)"}}>
             <span style={{fontSize:18,width:28,textAlign:"center",flexShrink:0}}>{e}</span>
             <span style={{fontSize:13,color:"#cbd5e1"}}>{t}</span>
@@ -920,10 +942,10 @@ function LoginScreen({ onLogin, lang, setLang }) {
         ))}
       </div>
       <div style={{width:"100%",maxWidth:360,display:"flex",flexDirection:"column",gap:10,zIndex:1}}>
-        <button onClick={()=>setScreen("signin")} style={{width:"100%",padding:16,borderRadius:14,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer",boxShadow:"0 0 30px rgba(14,165,233,.35)"}}>
+        <button onClick={()=>setScreen("signin")} style={{width:"100%",padding:16,borderRadius:14,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer",boxShadow:"0 0 30px rgba(13,148,136,.35)"}}>
           {lang==="es"?"Iniciar Sesión":"Sign In"}
         </button>
-        <button onClick={()=>setScreen("register")} style={{width:"100%",padding:16,borderRadius:14,border:"1.5px solid rgba(14,165,233,.3)",background:"rgba(14,165,233,.05)",color:"#38bdf8",fontWeight:800,fontSize:16,cursor:"pointer"}}>
+        <button onClick={()=>setScreen("register")} style={{width:"100%",padding:16,borderRadius:14,border:"1.5px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.05)",color:"#2dd4bf",fontWeight:800,fontSize:16,cursor:"pointer"}}>
           {lang==="es"?"Registrarse":"Register"}
         </button>
       </div>
@@ -933,12 +955,12 @@ function LoginScreen({ onLogin, lang, setLang }) {
   if(screen==="signin") return (
     <AuthShell lang={lang} setLang={setLang}>
       <div style={{width:"100%",maxWidth:360,zIndex:1}}>
-        <button onClick={()=>{setScreen("home");setErr("");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:18,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>{lang==="es"?"Volver":"Back"}
+        <button onClick={()=>{setScreen("home");setErr("");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:18,padding:0}}>
+          <Icon name="back" size={16} color="#0d9488"/>{lang==="es"?"Volver":"Back"}
         </button>
         <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{width:52,height:52,borderRadius:14,background:"linear-gradient(135deg,#0ea5e9,#0369a1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px"}}>
-            <Icon name="wave" size={24} color="#fff"/>
+          <div style={{width:52,height:52,borderRadius:14,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",boxShadow:"0 0 20px rgba(13,148,136,.3)"}}>
+            <img src="data:image/jpeg;base64,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" alt="logo" style={{width:46,height:46,objectFit:"contain"}}/>
           </div>
           <h2 style={{color:"#f1f5f9",fontSize:20,fontWeight:800,margin:0}}>{lang==="es"?"Bienvenido":"Welcome back"}</h2>
         </div>
@@ -952,7 +974,7 @@ function LoginScreen({ onLogin, lang, setLang }) {
             <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={AUTH_ISTYLE} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/>
           </div>
           {err&&<div style={{display:"flex",alignItems:"center",gap:6,color:"#f87171",fontSize:12,marginTop:10,padding:"7px 10px",borderRadius:8,background:"rgba(248,113,113,.08)"}}><Icon name="alert" size={13} color="#f87171"/>{err}</div>}
-          <button onClick={handleLogin} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",marginTop:14}}>
+          <button onClick={handleLogin} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",marginTop:14}}>
             {lang==="es"?"Entrar":"Sign In"}
           </button>
           <div style={{marginTop:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,.03)",border:"1px solid rgba(148,163,184,.08)"}}>
@@ -965,7 +987,7 @@ function LoginScreen({ onLogin, lang, setLang }) {
         </div>
         <p style={{textAlign:"center",color:"#334155",fontSize:11,marginTop:12}}>
           {lang==="es"?"¿No tienes cuenta? ":"No account? "}
-          <span onClick={()=>setScreen("register")} style={{color:"#0ea5e9",cursor:"pointer",fontWeight:700}}>{lang==="es"?"Regístrate":"Register"}</span>
+          <span onClick={()=>setScreen("register")} style={{color:"#0d9488",cursor:"pointer",fontWeight:700}}>{lang==="es"?"Regístrate":"Register"}</span>
         </p>
       </div>
     </AuthShell>
@@ -979,7 +1001,7 @@ function LoginScreen({ onLogin, lang, setLang }) {
         </div>
         <h2 style={{color:"#4ade80",fontSize:22,fontWeight:800,margin:"0 0 8px"}}>{lang==="es"?"¡Solicitud enviada!":"Request submitted!"}</h2>
         <p style={{color:"#94a3b8",fontSize:14,lineHeight:1.6,margin:"0 0 22px"}}>{lang==="es"?`Hola ${primerNombre}, Eduardo aprobará tu acceso antes del primer turno.`:`Hi ${primerNombre}, Eduardo will approve your access before your first shift.`}</p>
-        <button onClick={()=>{resetReg();setScreen("signin");}} style={{padding:"12px 28px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+        <button onClick={()=>{resetReg();setScreen("signin");}} style={{padding:"12px 28px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>
           {lang==="es"?"Ir a Iniciar Sesión":"Go to Sign In"}
         </button>
       </div>
@@ -989,8 +1011,8 @@ function LoginScreen({ onLogin, lang, setLang }) {
   return (
     <AuthShell lang={lang} setLang={setLang}>
       <div style={{width:"100%",maxWidth:360,zIndex:1}}>
-        <button onClick={()=>{setScreen("home");setRegErr("");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>{lang==="es"?"Volver":"Back"}
+        <button onClick={()=>{setScreen("home");setRegErr("");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
+          <Icon name="back" size={16} color="#0d9488"/>{lang==="es"?"Volver":"Back"}
         </button>
         <div style={{textAlign:"center",marginBottom:16}}>
           <h2 style={{color:"#f1f5f9",fontSize:20,fontWeight:800,margin:0}}>{lang==="es"?"Crear cuenta":"Create account"}</h2>
@@ -1003,11 +1025,11 @@ function LoginScreen({ onLogin, lang, setLang }) {
           <div>
             <label style={AUTH_LSTYLE}>{lang==="es"?"Cédula":"Cédula"} <span style={{color:"#475569",fontWeight:400,fontSize:9}}>(opcional)</span></label>
             {noCedula
-              ? <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,border:"1px dashed rgba(148,163,184,.15)",background:"rgba(255,255,255,.02)"}}><span style={{fontSize:12,color:"#475569"}}>{lang==="es"?"Sin cédula":"No cédula"}</span><button onClick={()=>setNoCedula(false)} style={{background:"none",border:"none",color:"#0ea5e9",fontSize:11,cursor:"pointer",fontWeight:700}}>{lang==="es"?"Agregar":"Add"}</button></div>
+              ? <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,border:"1px dashed rgba(148,163,184,.15)",background:"rgba(255,255,255,.02)"}}><span style={{fontSize:12,color:"#475569"}}>{lang==="es"?"Sin cédula":"No cédula"}</span><button onClick={()=>setNoCedula(false)} style={{background:"none",border:"none",color:"#0d9488",fontSize:11,cursor:"pointer",fontWeight:700}}>{lang==="es"?"Agregar":"Add"}</button></div>
               : <><input value={cedula} onChange={e=>setCedula(e.target.value)} placeholder="8-123-4567" style={AUTH_ISTYLE} autoCorrect="off" spellCheck={false}/><button onClick={()=>{setNoCedula(true);setCedula("");}} style={{marginTop:5,background:"none",border:"none",color:"#64748b",fontSize:11,cursor:"pointer",padding:0,textDecoration:"underline dotted"}}>{lang==="es"?"No tengo cédula":"I don't have a cédula"}</button></>}
           </div>
           {regErr&&<div style={{display:"flex",alignItems:"center",gap:6,color:"#f87171",fontSize:12,padding:"7px 10px",borderRadius:8,background:"rgba(248,113,113,.08)"}}><Icon name="alert" size={13} color="#f87171"/>{regErr}</div>}
-          <button onClick={handleRegister} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+          <button onClick={handleRegister} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
             {lang==="es"?"Enviar Solicitud":"Submit Request"}
           </button>
           <p style={{textAlign:"center",color:"#475569",fontSize:11,margin:0}}>{lang==="es"?"Eduardo aprobará tu acceso":"Eduardo will approve your access"}</p>
@@ -1022,7 +1044,7 @@ function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
   const schema = TASK_SCHEMA[task.taskType] || TASK_SCHEMA.parametros;
   const sys    = systems.find(s=>s.id===task.sistema);
   const done   = task.actual !== null || (schema.yesno && task.condicion !== null);
-  const statusColor = done ? "#4ade80" : canEdit ? "#0ea5e9" : "#475569";
+  const statusColor = done ? "#4ade80" : canEdit ? "#0d9488" : "#475569";
 
   return (
     <div style={{...S.card, borderLeft:`3px solid ${statusColor}`, cursor: canEdit ? "pointer" : "default"}}
@@ -1051,8 +1073,8 @@ function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
                 </div>
           ) : (
             <span style={{fontSize:11,padding:"3px 10px",borderRadius:8,
-              background: canEdit?"rgba(14,165,233,.12)":"rgba(148,163,184,.06)",
-              color: canEdit?"#0ea5e9":"#475569",fontWeight:700}}>
+              background: canEdit?"rgba(13,148,136,.12)":"rgba(148,163,184,.06)",
+              color: canEdit?"#0d9488":"#475569",fontWeight:700}}>
               {canEdit?(lang==="es"?"Registrar →":"Log →"):(lang==="es"?"Pendiente":"Pending")}
             </span>
           )}
@@ -1070,7 +1092,7 @@ function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
       {/* Logged evidence */}
       {done && (task.foto || task.voiceNote) && (
         <div style={{display:"flex",gap:6,marginTop:8}}>
-          {task.foto && <span style={{fontSize:10,color:"#0ea5e9",fontWeight:700,background:"rgba(14,165,233,.1)",padding:"2px 8px",borderRadius:6}}>📷 foto</span>}
+          {task.foto && <span style={{fontSize:10,color:"#0d9488",fontWeight:700,background:"rgba(13,148,136,.1)",padding:"2px 8px",borderRadius:6}}>📷 foto</span>}
           {task.voiceNote && <span style={{fontSize:10,color:"#4ade80",fontWeight:700,background:"rgba(74,222,128,.1)",padding:"2px 8px",borderRadius:6}}>🎙 voz</span>}
         </div>
       )}
@@ -1166,7 +1188,7 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
               <input type="number" inputMode="numeric" value={actual}
                 onChange={e=>setActual(e.target.value)}
                 placeholder="0"
-                style={{...S.input,fontSize:48,fontWeight:900,textAlign:"center",padding:"20px 14px",fontFamily:"monospace",color:"#0ea5e9",letterSpacing:-2,border:"2px solid rgba(14,165,233,.2)",borderRadius:14}}
+                style={{...S.input,fontSize:48,fontWeight:900,textAlign:"center",padding:"20px 14px",fontFamily:"monospace",color:"#0d9488",letterSpacing:-2,border:"2px solid rgba(13,148,136,.2)",borderRadius:14}}
               />
               <div style={{textAlign:"center",fontSize:12,color:"#475569",marginTop:6}}>
                 {lang==="es"?schema.unit:schema.unitEn}
@@ -1194,7 +1216,7 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
               </div>
               {/* Optional photo */}
               <button onClick={()=>setFoto(foto?null:`foto_${Date.now()}.jpg`)}
-                style={{width:"100%",padding:14,borderRadius:12,border:`2px dashed ${foto?"rgba(74,222,128,.4)":"rgba(14,165,233,.2)"}`,
+                style={{width:"100%",padding:14,borderRadius:12,border:`2px dashed ${foto?"rgba(74,222,128,.4)":"rgba(13,148,136,.2)"}`,
                   background:foto?"rgba(74,222,128,.04)":"transparent",
                   color:foto?"#4ade80":"#64748b",fontWeight:600,fontSize:13,cursor:"pointer",
                   display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
@@ -1228,7 +1250,7 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
           {/* Save button */}
           <button onClick={handleSave} disabled={!canSave}
             style={{...S.btn(canSave),fontSize:16,padding:16,borderRadius:14,
-              boxShadow:canSave?"0 0 24px rgba(14,165,233,.3)":"none"}}>
+              boxShadow:canSave?"0 0 24px rgba(13,148,136,.3)":"none"}}>
             {lang==="es"?"✓ Marcar como completado":"✓ Mark as complete"}
           </button>
 
@@ -1280,8 +1302,8 @@ function AnunciosPanel({ announcements, setAnnouncements, user, lang }) {
         </span>
         {canPost && !composing && (
           <button onClick={()=>setComposing(true)}
-            style={{fontSize:11,padding:"3px 10px",borderRadius:8,border:"1px solid rgba(14,165,233,.3)",
-              background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,cursor:"pointer"}}>
+            style={{fontSize:11,padding:"3px 10px",borderRadius:8,border:"1px solid rgba(13,148,136,.3)",
+              background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,cursor:"pointer"}}>
             + {lang==="es"?"Nuevo":"New"}
           </button>
         )}
@@ -1289,7 +1311,7 @@ function AnunciosPanel({ announcements, setAnnouncements, user, lang }) {
 
       {/* Compose box */}
       {composing && (
-        <div style={{background:"rgba(14,165,233,.06)",border:"1px solid rgba(14,165,233,.2)",borderRadius:12,padding:12,marginBottom:10}}>
+        <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.2)",borderRadius:12,padding:12,marginBottom:10}}>
           <textarea
             value={draft}
             onChange={e=>setDraft(e.target.value)}
@@ -1301,7 +1323,7 @@ function AnunciosPanel({ announcements, setAnnouncements, user, lang }) {
           <div style={{display:"flex",gap:8}}>
             <button onClick={handlePost} disabled={!draft.trim()}
               style={{flex:1,padding:"9px 0",borderRadius:9,border:"none",
-                background:draft.trim()?"linear-gradient(135deg,#0ea5e9,#0284c7)":"rgba(14,165,233,.12)",
+                background:draft.trim()?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(13,148,136,.12)",
                 color:draft.trim()?"#fff":"#334155",fontWeight:700,fontSize:13,cursor:draft.trim()?"pointer":"not-allowed"}}>
               {lang==="es"?"Publicar":"Post"}
             </button>
@@ -1329,10 +1351,10 @@ function AnunciosPanel({ announcements, setAnnouncements, user, lang }) {
             <div style={{display:"flex",alignItems:"flex-start",gap:9,flex:1}}>
               {/* Avatar */}
               <div style={{width:30,height:30,borderRadius:8,flexShrink:0,
-                background:a.role==="supervisor"?"rgba(14,165,233,.15)":a.role==="ceo"?"rgba(245,158,11,.15)":"rgba(167,139,250,.15)",
+                background:a.role==="supervisor"?"rgba(13,148,136,.15)":a.role==="ceo"?"rgba(245,158,11,.15)":"rgba(167,139,250,.15)",
                 display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <span style={{fontSize:10,fontWeight:800,
-                  color:a.role==="supervisor"?"#0ea5e9":a.role==="ceo"?"#f59e0b":"#a78bfa"}}>
+                  color:a.role==="supervisor"?"#0d9488":a.role==="ceo"?"#f59e0b":"#a78bfa"}}>
                   {a.initials}
                 </span>
               </div>
@@ -1402,11 +1424,11 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
       <AnunciosPanel announcements={announcements} setAnnouncements={()=>{}} user={user} lang={lang}/>
 
       {/* Weekly progress bar */}
-      <div style={{...S.card,background:"rgba(14,165,233,.07)",border:"1px solid rgba(14,165,233,.15)",marginBottom:14}}>
+      <div style={{...S.card,background:"rgba(13,148,136,.07)",border:"1px solid rgba(13,148,136,.15)",marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:8}}>
           <div>
             <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Mi semana":"My week"}</div>
-            <div style={{fontSize:32,fontWeight:900,color:"#0ea5e9",fontFamily:"monospace",lineHeight:1}}>{pct}<span style={{fontSize:14,color:"#64748b"}}>%</span></div>
+            <div style={{fontSize:32,fontWeight:900,color:"#0d9488",fontFamily:"monospace",lineHeight:1}}>{pct}<span style={{fontSize:14,color:"#64748b"}}>%</span></div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{done}/{myTasks.length}</div>
@@ -1414,7 +1436,7 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
           </div>
         </div>
         <div style={{height:7,borderRadius:4,background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#0ea5e9,#4ade80)",borderRadius:4,transition:"width .5s ease"}}/>
+          <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#0d9488,#2dd4bf)",borderRadius:4,transition:"width .5s ease"}}/>
         </div>
       </div>
 
@@ -1422,9 +1444,9 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {[["daily",lang==="es"?"Hoy":"Today"],["weekly",lang==="es"?"Semana":"Week"]].map(([id,label])=>(
           <button key={id} onClick={()=>setView(id)}
-            style={{flex:1,padding:"9px 0",borderRadius:10,border:`1px solid ${view===id?"#0ea5e9":"rgba(148,163,184,.12)"}`,
-              background:view===id?"rgba(14,165,233,.12)":"transparent",
-              color:view===id?"#0ea5e9":"#64748b",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            style={{flex:1,padding:"9px 0",borderRadius:10,border:`1px solid ${view===id?"#0d9488":"rgba(148,163,184,.12)"}`,
+              background:view===id?"rgba(13,148,136,.12)":"transparent",
+              color:view===id?"#0d9488":"#64748b",fontWeight:700,fontSize:13,cursor:"pointer"}}>
             {label}
           </button>
         ))}
@@ -1461,8 +1483,8 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
               <div key={d} style={{marginBottom:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:13,fontWeight:800,color:isToday?"#0ea5e9":"#94a3b8"}}>{d}</span>
-                    {isToday&&<span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"rgba(14,165,233,.15)",color:"#0ea5e9",fontWeight:700}}>HOY</span>}
+                    <span style={{fontSize:13,fontWeight:800,color:isToday?"#0d9488":"#94a3b8"}}>{d}</span>
+                    {isToday&&<span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>HOY</span>}
                   </div>
                   <span style={{fontSize:11,color:dayDone===dayTasks.length?"#4ade80":"#64748b",fontWeight:600}}>
                     {dayDone}/{dayTasks.length} ✓
@@ -1529,11 +1551,11 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
       </div>
 
       {/* Big score card */}
-      <div style={{...S.card,textAlign:"center",padding:24,background:"linear-gradient(135deg,rgba(14,165,233,.07),rgba(2,8,24,.5))",border:"1px solid rgba(14,165,233,.12)",marginBottom:12}}>
-        <div style={{fontSize:68,fontWeight:900,color:"#0ea5e9",fontFamily:"monospace",lineHeight:1}}>{pct}</div>
+      <div style={{...S.card,textAlign:"center",padding:24,background:"linear-gradient(135deg,rgba(13,148,136,.07),rgba(2,8,24,.5))",border:"1px solid rgba(13,148,136,.12)",marginBottom:12}}>
+        <div style={{fontSize:68,fontWeight:900,color:"#0d9488",fontFamily:"monospace",lineHeight:1}}>{pct}</div>
         <div style={{fontSize:16,color:"#64748b",marginTop:2}}>/ 100 {lang==="es"?"tareas":"tasks"}</div>
         <div style={{height:8,borderRadius:4,background:"rgba(255,255,255,.05)",overflow:"hidden",margin:"12px 0 6px"}}>
-          <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${pct>=80?"#4ade80":pct>=60?"#fb923c":"#f87171"},#0ea5e9)`,borderRadius:4,transition:"width .6s ease"}}/>
+          <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${pct>=80?"#4ade80":pct>=60?"#fb923c":"#f87171"},#0d9488)`,borderRadius:4,transition:"width .6s ease"}}/>
         </div>
         <div style={{fontSize:12,color:"#64748b"}}>{done}/{myTasks.length} {lang==="es"?"tareas completadas esta semana":"tasks completed this week"}</div>
       </div>
@@ -1542,7 +1564,7 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:14}}>
         {[["tareas",lang==="es"?"Tareas":"Tasks"],["profesionalismo",lang==="es"?"Profesionalismo":"Prof."],["equipo",lang==="es"?"Equipo":"Team"]].map(([id,label])=>(
           <button key={id} onClick={()=>setScoreTab(id)}
-            style={{padding:"7px 0",borderRadius:9,border:`1px solid ${tab===id?"#0ea5e9":"rgba(148,163,184,.1)"}`,background:tab===id?"rgba(14,165,233,.12)":"transparent",color:tab===id?"#0ea5e9":"#64748b",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+            style={{padding:"7px 0",borderRadius:9,border:`1px solid ${tab===id?"#0d9488":"rgba(148,163,184,.1)"}`,background:tab===id?"rgba(13,148,136,.12)":"transparent",color:tab===id?"#0d9488":"#64748b",fontWeight:700,fontSize:11,cursor:"pointer"}}>
             {label}
           </button>
         ))}
@@ -1610,7 +1632,7 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
               <p style={{color:"#475569",fontSize:12,margin:0}}>{lang==="es"?"Evaluación de comportamientos pendiente para Q3":"Behavior evaluation pending for Q3"}</p>
             </div>
           )}
-          <div style={{...S.card,borderColor:"rgba(14,165,233,.15)",marginTop:4}}>
+          <div style={{...S.card,borderColor:"rgba(13,148,136,.15)",marginTop:4}}>
             <p style={{color:"#64748b",fontSize:11,margin:0,lineHeight:1.5}}>
               {lang==="es"
                 ?"Tu puntaje final de profesionalismo es calculado por RRHH al cierre del trimestre."
@@ -1631,7 +1653,7 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
           {leaderboard.map((c,i)=>{
             const isMe = c.initials===user.initials;
             return (
-              <div key={c.initials} style={{...S.card, borderColor:isMe?"rgba(14,165,233,.35)":"rgba(148,163,184,.08)", background:isMe?"rgba(14,165,233,.07)":"rgba(15,23,42,.8)"}}>
+              <div key={c.initials} style={{...S.card, borderColor:isMe?"rgba(13,148,136,.35)":"rgba(148,163,184,.08)", background:isMe?"rgba(13,148,136,.07)":"rgba(15,23,42,.8)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   {/* Rank */}
                   <div style={{width:28,textAlign:"center",flexShrink:0}}>
@@ -1642,8 +1664,8 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
                   {/* Name */}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{fontSize:13,fontWeight:isMe?800:600,color:isMe?"#0ea5e9":"#e2e8f0"}}>{c.name.split(" ")[0]}</span>
-                      {isMe&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:6,background:"rgba(14,165,233,.2)",color:"#0ea5e9",fontWeight:700}}>TÚ</span>}
+                      <span style={{fontSize:13,fontWeight:isMe?800:600,color:isMe?"#0d9488":"#e2e8f0"}}>{c.name.split(" ")[0]}</span>
+                      {isMe&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:6,background:"rgba(13,148,136,.2)",color:"#0d9488",fontWeight:700}}>TÚ</span>}
                     </div>
                     <div style={{fontSize:10,color:"#64748b"}}>{c.role}</div>
                     {S.scoreBar(c.pct/100,c.pct===100?"#4ade80":c.pct>=70?"#fb923c":"#f87171")}
@@ -1765,18 +1787,18 @@ function TDCChart({ lang, data }) {
       <line x1={PL} y1={toY(2.5)} x2={PL+cW} y2={toY(2.5)} stroke="#4ade8060" strokeWidth="1" strokeDasharray="4,3"/>
       <text x={PL+cW+2} y={toY(2.5)+3} fontSize="7" fill="#4ade80">obj</text>
       {/* Line */}
-      <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points={pts} fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       {/* Dots — interactive */}
       {chartData.map((d, i) => {
         if (d.tdc === null) return null;
-        const col = d.harvest ? "#f59e0b" : d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0ea5e9" : "#f87171";
+        const col = d.harvest ? "#f59e0b" : d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0d9488" : "#f87171";
         const isHov = hovered === i;
         return (
           <g key={i} style={{cursor:"pointer"}}
             onMouseEnter={() => setHovered(i)}
             onClick={() => setHovered(hovered===i ? null : i)}>
             <circle cx={toX(i)} cy={toY(d.tdc)} r={isHov ? 6 : d.harvest ? 4 : 3}
-              fill={col} stroke="#020c1a" strokeWidth="1"/>
+              fill={col} stroke="#021c1e" strokeWidth="1"/>
           </g>
         );
       })}
@@ -1808,7 +1830,7 @@ function TDCChart({ lang, data }) {
               fontSize="8" fontWeight="700" fill="#94a3b8">{d.label}</text>
             <text x={tipX+tipW/2} y={tipY+25} textAnchor="middle"
               fontSize="9" fontWeight="700"
-              fill={d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0ea5e9" : "#f87171"}>
+              fill={d.tdc >= 2.5 ? "#4ade80" : d.tdc >= 0 ? "#0d9488" : "#f87171"}>
               {d.tdc !== null ? `${d.tdc >= 0 ? "+" : ""}${d.tdc.toFixed(3)}%/día` : "—"}
             </text>
             {deriv !== null && (
@@ -1833,7 +1855,7 @@ function PruebasChart({ lang, data }) {
     { key:"r", color:"#f87171", label:"Rojo"     },
     { key:"a", color:"#fbbf24", label:"Amarillo" },
     { key:"v", color:"#4ade80", label:"Verde"    },
-    { key:"b", color:"#3b82f6", label:"Azul"     },
+    { key:"b", color:"#0d9488", label:"Azul"     },
   ];
 
   const W = 320, H = 160;
@@ -1978,7 +2000,7 @@ function BiomasaChart({ lang }) {
             {d.actual && (
               <rect x={x} y={toY(d.actual)} width={barW}
                 height={PT + cH - toY(d.actual)}
-                fill={isHov ? "#60a5fa" : "#3b82f6"} opacity="0.9" rx="2"/>
+                fill={isHov ? "#5eead4" : "#0d9488"} opacity="0.9" rx="2"/>
             )}
             {/* Tooltip on hover/tap */}
             {isHov && (d.actual || d.target) && (() => {
@@ -2010,7 +2032,7 @@ function BiomasaChart({ lang }) {
         const legX = (W - legW) / 2;
         return (
           <g transform={`translate(${legX}, ${H - 4})`}>
-            <rect width="8" height="8" fill="#3b82f6" opacity="0.9" rx="1" y="-8"/>
+            <rect width="8" height="8" fill="#0d9488" opacity="0.9" rx="1" y="-8"/>
             <text x="11" y="-1" fontSize="8" fill="#94a3b8">{lang==="es"?"Real":"Actual"}</text>
             <rect x="55" width="8" height="8" fill="none" stroke="#f59e0b"
               strokeWidth="1.5" strokeDasharray="3,2" rx="1" y="-8"/>
@@ -2053,7 +2075,7 @@ function BoardBiomassVsSalesChart({ lang, data }) {
             {d.bioActual && (
               <rect x={cx + 1} y={toY(d.bioActual)} width={barW}
                 height={PT + cH - toY(d.bioActual)}
-                fill={d.bioActual >= d.bioProy ? "#4ade80" : "#3b82f6"}
+                fill={d.bioActual >= d.bioProy ? "#4ade80" : "#0d9488"}
                 opacity={isHov ? 1 : 0.85} rx="2"/>
             )}
             {/* Tooltip */}
@@ -2081,7 +2103,7 @@ function BoardBiomassVsSalesChart({ lang, data }) {
         const legW = 150; const legX = (W - legW) / 2;
         return (
           <g transform={`translate(${legX}, ${H - 4})`}>
-            <rect width="8" height="8" fill="#3b82f6" opacity="0.85" rx="1" y="-8"/>
+            <rect width="8" height="8" fill="#0d9488" opacity="0.85" rx="1" y="-8"/>
             <text x="11" y="-1" fontSize="8" fill="#94a3b8">{lang==="es"?"Real":"Actual"}</text>
             <rect x="60" width="8" height="8" fill="none" stroke="#f59e0b"
               strokeWidth="1.5" strokeDasharray="3,2" rx="1" y="-8"/>
@@ -2139,7 +2161,7 @@ function BoardRevenueChart({ lang }) {
           {/* Actual dot */}
           {d.actual !== null && (
             <circle cx={toX(i)} cy={toY(d.actual)} r="3.5"
-              fill="#4ade80" stroke="#020c1a" strokeWidth="1"/>
+              fill="#4ade80" stroke="#021c1e" strokeWidth="1"/>
           )}
           {/* X label */}
           <text x={toX(i)} y={H - 10} textAnchor="middle" fontSize="7"
@@ -2238,7 +2260,7 @@ function BoardProgressChart({ lang }) {
           {d.actual !== null && (
             <circle cx={toX(i)} cy={toY(d.actual)} r="4"
               fill={d.actual >= d.target ? "#4ade80" : "#fb923c"}
-              stroke="#020c1a" strokeWidth="1"/>
+              stroke="#021c1e" strokeWidth="1"/>
           )}
           <text x={toX(i)} y={H-8} textAnchor="middle" fontSize="8"
             fill={d.actual !== null ? "#94a3b8" : "#334155"}>{d.label}</text>
@@ -2265,7 +2287,7 @@ function BoardProgressChart({ lang }) {
   );
 }
 
-function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate }) {
+function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson }) {
   const [tab, setDashTab] = useState("resumen");
   const active = systems.filter(s=>s.estado==="Activo");
   const done   = assignedTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
@@ -2321,9 +2343,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:16}}>
         {dashTabs.map(t=>(
           <button key={t.id} onClick={()=>setDashTab(t.id)}
-            style={{padding:"8px 4px",borderRadius:10,border:`1px solid ${tab===t.id?"#0ea5e9":"rgba(148,163,184,.12)"}`,
-              background:tab===t.id?"rgba(14,165,233,.12)":"transparent",
-              color:tab===t.id?"#0ea5e9":"#64748b",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+            style={{padding:"8px 4px",borderRadius:10,border:`1px solid ${tab===t.id?"#0d9488":"rgba(148,163,184,.12)"}`,
+              background:tab===t.id?"rgba(13,148,136,.12)":"transparent",
+              color:tab===t.id?"#0d9488":"#64748b",fontWeight:700,fontSize:11,cursor:"pointer"}}>
             {t.label}
           </button>
         ))}
@@ -2338,7 +2360,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
           {/* KPI grid */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
-              {label:lang==="es"?"Biomasa total":"Total biomass", value:`${(totalBiomass/1000).toFixed(1)}kg`, color:"#0ea5e9", icon:"scale"},
+              {label:lang==="es"?"Biomasa total":"Total biomass", value:`${(totalBiomass/1000).toFixed(1)}kg`, color:"#0d9488", icon:"scale"},
               {label:lang==="es"?"Sistemas activos":"Active systems", value:active.length, color:"#4ade80", icon:"grid"},
               {label:lang==="es"?"En objetivo":"On target", value:onTarget.length, color:"#4ade80", icon:"check"},
               {label:lang==="es"?"Por debajo":"Below target", value:belowTarget.length+noData.length, color:"#f87171", icon:"alert"},
@@ -2422,11 +2444,11 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             const p=mine.length?Math.round((d/mine.length)*100):0;
             return (
               <div key={c.initials} style={{...S.card,cursor:"pointer"}}
-                onClick={()=>setDashTab("equipo")}>
+                onClick={()=>onViewPerson ? onViewPerson(c.initials) : setDashTab("equipo")}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                   <div style={{display:"flex",alignItems:"center",gap:9}}>
-                    <div style={{width:32,height:32,borderRadius:9,background:"rgba(14,165,233,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      <span style={{fontSize:10,fontWeight:800,color:"#0ea5e9"}}>{c.initials}</span>
+                    <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
                     </div>
                     <div>
                       <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
@@ -2516,7 +2538,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                     </div>
                     <div style={{height:4,borderRadius:2,background:"#1e293b",overflow:"hidden"}}>
                       <div style={{height:"100%",width:`${Math.min(100,((HARVEST_CYCLE-(s.daysToHarvest||0))/HARVEST_CYCLE)*100)}%`,
-                        background:s.daysToHarvest<=7?"#4ade80":"#0ea5e9",borderRadius:2}}/>
+                        background:s.daysToHarvest<=7?"#4ade80":"#0d9488",borderRadius:2}}/>
                     </div>
                   </div>
                 )}
@@ -2542,11 +2564,12 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
           {[...crewBiomass].sort((a,b)=>(b.avgRate||0)-(a.avgRate||0)).map((c,i)=>{
             const col = growthColor(c.avgRate);
             return (
-              <div key={c.initials} style={{...S.card,marginBottom:10}}>
+              <div key={c.initials} style={{...S.card,marginBottom:10,cursor:"pointer"}}
+                onClick={()=>onViewPerson && onViewPerson(c.initials)}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                  <div style={{width:38,height:38,borderRadius:11,background:i===0?"rgba(251,191,36,.15)":"rgba(14,165,233,.08)",
+                  <div style={{width:38,height:38,borderRadius:11,background:i===0?"rgba(251,191,36,.15)":"rgba(13,148,136,.08)",
                     display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <span style={{fontSize:11,fontWeight:800,color:i===0?"#fbbf24":"#0ea5e9"}}>{c.initials}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:i===0?"#fbbf24":"#0d9488"}}>{c.initials}</span>
                   </div>
                   <div style={{flex:1}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -2681,7 +2704,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                     </span>
                   </div>
                   <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${harvestPct}%`,background:harvestPct>=90?"#4ade80":"#0ea5e9",borderRadius:3}}/>
+                    <div style={{height:"100%",width:`${harvestPct}%`,background:harvestPct>=90?"#4ade80":"#0d9488",borderRadius:3}}/>
                   </div>
                 </div>
                 <div>
@@ -2752,7 +2775,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
             return `${lang==="es"?"Semana del":"Week of"} ${fmt(monday)} – ${fmt(saturday)}`;
           })()}</p>
         </div>
-        <button onClick={()=>{setEditTask(null);setForm({...emptyForm,day:selectedDay});setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+        <button onClick={()=>{setEditTask(null);setForm({...emptyForm,day:selectedDay});setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
           <Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Asignar":"Assign"}
         </button>
       </div>
@@ -2764,7 +2787,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
           const done=assignedTasks.filter(t=>t.day===d&&(t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null))).length;
           return (
             <button key={d} onClick={()=>setDay(d)}
-              style={{flexShrink:0,padding:"6px 12px",borderRadius:20,border:`1px solid ${selectedDay===d?"#0ea5e9":"rgba(148,163,184,.12)"}`,background:selectedDay===d?"rgba(14,165,233,.15)":"transparent",color:selectedDay===d?"#0ea5e9":"#64748b",fontWeight:600,fontSize:11,cursor:"pointer",position:"relative"}}>
+              style={{flexShrink:0,padding:"6px 12px",borderRadius:20,border:`1px solid ${selectedDay===d?"#0d9488":"rgba(148,163,184,.12)"}`,background:selectedDay===d?"rgba(13,148,136,.15)":"transparent",color:selectedDay===d?"#0d9488":"#64748b",fontWeight:600,fontSize:11,cursor:"pointer",position:"relative"}}>
               {d.slice(0,3)} {cnt>0&&<span style={{fontSize:9,marginLeft:2,color:done===cnt?"#4ade80":"#fb923c"}}>({done}/{cnt})</span>}
             </button>
           );
@@ -2791,7 +2814,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
                 <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:done?"rgba(74,222,128,.1)":"rgba(148,163,184,.06)",color:done?"#4ade80":"#64748b",fontWeight:600}}>{done?(lang==="es"?"Hecho":"Done"):(lang==="es"?"Pendiente":"Pending")}</span>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>handleEdit(t)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(14,165,233,.1)",color:"#0ea5e9",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                  <button onClick={()=>handleEdit(t)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(13,148,136,.1)",color:"#0d9488",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
                   <button onClick={()=>handleDelete(t.id)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
                 </div>
               </div>
@@ -2802,7 +2825,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
                 {t.actual!==null&&<span style={{color:"#4ade80",fontWeight:700}}>{t.actual} {schema.unit}</span>}
                 {t.condicion&&CONDICION_EMOJIS.find(c=>c.value===t.condicion)&&<span>{CONDICION_EMOJIS.find(c=>c.value===t.condicion).emoji}</span>}
                 {t.voiceNote&&<button onClick={()=>{const a=new Audio(t.voiceNote);a.play();}} style={{background:"rgba(74,222,128,.1)",border:"none",color:"#4ade80",fontSize:10,borderRadius:6,padding:"1px 6px",cursor:"pointer"}}>🎙 {lang==="es"?"escuchar":"listen"}</button>}
-                {t.foto&&<span style={{color:"#0ea5e9"}}>📷</span>}
+                {t.foto&&<span style={{color:"#0d9488"}}>📷</span>}
               </div>
             )}
           </div>
@@ -2836,9 +2859,9 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
                 {Object.entries(TASK_SCHEMA).map(([key,schema])=>(
                   <button key={key} onClick={()=>F("taskType",key)}
-                    style={{padding:"10px 4px",borderRadius:10,border:`1.5px solid ${form.taskType===key?"#0ea5e9":"rgba(148,163,184,.1)"}`,background:form.taskType===key?"rgba(14,165,233,.15)":"rgba(255,255,255,.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                    style={{padding:"10px 4px",borderRadius:10,border:`1.5px solid ${form.taskType===key?"#0d9488":"rgba(148,163,184,.1)"}`,background:form.taskType===key?"rgba(13,148,136,.15)":"rgba(255,255,255,.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
                     <span style={{fontSize:20}}>{schema.icon}</span>
-                    <span style={{fontSize:9,fontWeight:700,color:form.taskType===key?"#0ea5e9":"#64748b",lineHeight:1.2,textAlign:"center"}}>{lang==="es"?schema.label.split(" ")[0]:schema.labelEn.split(" ")[0]}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:form.taskType===key?"#0d9488":"#64748b",lineHeight:1.2,textAlign:"center"}}>{lang==="es"?schema.label.split(" ")[0]:schema.labelEn.split(" ")[0]}</span>
                   </button>
                 ))}
               </div>
@@ -2875,105 +2898,468 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   );
 }
 
-function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, lang }) {
-  const [selected, setSelected]   = useState(null);
-  const currentWeek = "2026-W10";
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERSONAL DASHBOARD — unified profile for any crew member
+// Reachable from: Resumen team cards, Equipo list, Biomasa buceador name,
+//                 Capitán task inbox, Plan Semanal assignee name
+// ═══════════════════════════════════════════════════════════════════════════════
+function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
+  weeklyIncidents, timecards, setTimecards, lang, canEdit, user }) {
 
-  // These must be declared unconditionally at the top — initialized to 0/"" and synced when selected changes
-  const [tard, setTard]   = useState(0);
-  const [aus,  setAus]    = useState(0);
-  const [nota, setNota]   = useState("");
+  const member   = CREW.find(c => c.initials === initials);
+  const today    = new Date().toISOString().slice(0,10);
+  const todayName= ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][new Date().getDay()];
 
-  // Sync incident counters whenever the selected person changes
-  useEffect(() => {
-    if (!selected) return;
-    const thisWeek = weeklyIncidents.find(i=>i.initials===selected&&i.week===currentWeek);
-    setTard(thisWeek?.tardanzas||0);
-    setAus(thisWeek?.ausencias||0);
-    setNota(thisWeek?.notas||"");
-  }, [selected]);
+  // ── Tasks ──────────────────────────────────────────────────────────────────
+  const myTasks   = assignedTasks.filter(t => t.assignedTo === initials);
+  const todayTasks= myTasks.filter(t => t.day === todayName || t.date === today);
+  const done      = myTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
+  const pct       = myTasks.length ? Math.round((done/myTasks.length)*100) : 0;
 
-  const logIncidents = (initials, t, a, n) => {
-    setWeeklyIncidents(prev=>{
-      const filtered=prev.filter(i=>!(i.initials===initials&&i.week===currentWeek));
-      return [...filtered,{week:currentWeek,initials,tardanzas:t,ausencias:a,notas:n}];
+  // ── Systems ────────────────────────────────────────────────────────────────
+  const mySystems = systems.filter(s =>
+    (s.capitan === initials || s.buceador === initials) && s.estado === "Activo"
+  );
+
+  // Per-system growth
+  const sysWithRate = mySystems.map(s => {
+    const sysReadings = readings.filter(r=>r.sistema===s.id).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const latest = sysReadings[sysReadings.length-1]||null;
+    const prev   = sysReadings[sysReadings.length-2]||null;
+    let rate = null;
+    if (latest && prev && prev.peso) {
+      const days = Math.max(1,(new Date(latest.fecha)-new Date(prev.fecha))/(1000*60*60*24));
+      rate = parseFloat(((Math.log(latest.peso/prev.peso)/days)*100).toFixed(2));
+    }
+    return { ...s, latest, rate };
+  });
+  const rates     = sysWithRate.map(s=>s.rate).filter(r=>r!==null);
+  const avgRate   = rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) : null;
+
+  // ── Incidents ──────────────────────────────────────────────────────────────
+  const latestInc = weeklyIncidents
+    .filter(i=>i.initials===initials)
+    .sort((a,b)=>b.week.localeCompare(a.week))[0];
+
+  // ── Timecard ───────────────────────────────────────────────────────────────
+  const todayCard = timecards.find(t=>t.date===today&&t.initials===initials);
+  const [checkInVal,  setCheckInVal]  = useState(todayCard?.checkIn  || "");
+  const [checkOutVal, setCheckOutVal] = useState(todayCard?.checkOut || "");
+  const [tcSaved,     setTcSaved]     = useState(false);
+
+  const saveTimecard = () => {
+    setTimecards(prev => {
+      const filtered = prev.filter(t=>!(t.date===today&&t.initials===initials));
+      return [...filtered, { date:today, initials, checkIn:checkInVal, checkOut:checkOutVal }];
     });
+    setTcSaved(true);
+    setTimeout(()=>setTcSaved(false), 1800);
   };
 
-  if(selected) {
-    const member = CREW.find(c=>c.initials===selected);
-    const tasks  = assignedTasks.filter(t=>t.assignedTo===selected);
-    const done   = tasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
-    const pct    = tasks.length?Math.round((done/tasks.length)*100):0;
-    const incidents = weeklyIncidents.filter(i=>i.initials===selected).sort((a,b)=>b.week.localeCompare(a.week));
+  const horas = calcHoras(checkInVal, checkOutVal);
 
-    return (
-      <div style={{padding:"16px 16px 100px"}}>
-        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>{lang==="es"?"Equipo":"Team"}
-        </button>
-        <div style={{...S.card,background:"linear-gradient(135deg,rgba(14,165,233,.08),rgba(2,8,24,.5))",border:"1px solid rgba(14,165,233,.12)",marginBottom:14,textAlign:"center",padding:20}}>
-          <div style={{width:50,height:50,borderRadius:14,background:"rgba(14,165,233,.12)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 8px"}}>
-            <span style={{fontSize:16,fontWeight:800,color:"#0ea5e9"}}>{member?.initials}</span>
+  const roleColor = { Buceador:"#0d9488", Capitán:"#fb923c", Supervisor:"#f59e0b", Colaborador:"#a78bfa" };
+  const col = roleColor[member?.role] || "#64748b";
+  const rateCol = avgRate===null?"#475569":parseFloat(avgRate)>=2.5?"#4ade80":parseFloat(avgRate)>=1?"#fb923c":"#f87171";
+
+  return (
+    <div style={{padding:"16px 16px 100px"}}>
+
+      {/* Back button */}
+      <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,
+        background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,
+        cursor:"pointer",marginBottom:14,padding:0}}>
+        <Icon name="back" size={16} color="#0d9488"/>
+        {lang==="es"?"Volver":"Back"}
+      </button>
+
+      {/* Identity card */}
+      <div style={{...S.card,
+        background:`linear-gradient(135deg,${col}12,rgba(2,8,24,.5))`,
+        border:`1px solid ${col}22`,marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:52,height:52,borderRadius:14,
+            background:`${col}18`,border:`1px solid ${col}30`,
+            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <span style={{fontSize:16,fontWeight:800,color:col}}>{initials}</span>
           </div>
-          <h3 style={{color:"#e2e8f0",fontSize:17,fontWeight:800,margin:"0 0 2px"}}>{member?.name}</h3>
-          <p style={{color:"#64748b",fontSize:12,margin:"0 0 10px"}}>{member?.role}</p>
-          <div style={{fontSize:30,fontWeight:900,color:"#0ea5e9",fontFamily:"monospace"}}>{pct}%</div>
-          <div style={{fontSize:11,color:"#64748b"}}>{done}/{tasks.length} {lang==="es"?"tareas":"tasks"}</div>
-          {S.scoreBar(pct/100)}
+          <div style={{flex:1}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{member?.name}</div>
+            <span style={{fontSize:11,padding:"2px 9px",borderRadius:8,
+              background:`${col}18`,color:col,fontWeight:700}}>{member?.role}</span>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:26,fontWeight:900,color:"#0d9488",fontFamily:"monospace"}}>{pct}%</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{done}/{myTasks.length} {lang==="es"?"tareas":"tasks"}</div>
+          </div>
         </div>
+        {S.scoreBar(pct/100, pct===100?"#4ade80":pct>=70?"#fb923c":"#f87171")}
+      </div>
 
-        {/* Weekly incident logger */}
-        <div style={{...S.card,borderColor:"rgba(248,113,113,.15)"}}>
-          <div style={{fontSize:11,color:"#f87171",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
-            ⏰ {lang==="es"?"Incidencias esta semana":"This week's incidents"}
+      {/* KPI row */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+        {[
+          { label:lang==="es"?"TDC promedio":"Avg TDC", value:avgRate!==null?`${parseFloat(avgRate)>=0?"+":""}${avgRate}%`:"—", color:rateCol },
+          { label:lang==="es"?"Sistemas":"Systems", value:mySystems.length, color:"#94a3b8" },
+          { label:lang==="es"?"Incidencias":"Incidents", value:(latestInc?.tardanzas||0)+(latestInc?.ausencias||0), color:(latestInc?.tardanzas||0)+(latestInc?.ausencias||0)>0?"#f87171":"#4ade80" },
+        ].map(k=>(
+          <div key={k.label} style={S.card}>
+            <div style={{fontSize:9,color:"#64748b",textTransform:"uppercase",letterSpacing:.6,marginBottom:3}}>{k.label}</div>
+            <div style={{fontSize:20,fontWeight:800,color:k.color,fontFamily:"monospace"}}>{k.value}</div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-            <div>
-              <label style={S.label}>{lang==="es"?"Tardanzas":"Late arrivals"}</label>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <button onClick={()=>setTard(Math.max(0,tard-1))} style={{width:36,height:36,borderRadius:9,border:"none",background:"rgba(148,163,184,.1)",color:"#e2e8f0",fontSize:18,cursor:"pointer",fontWeight:700}}>−</button>
-                <span style={{fontSize:22,fontWeight:800,color:tard>0?"#f87171":"#4ade80",fontFamily:"monospace",flex:1,textAlign:"center"}}>{tard}</span>
-                <button onClick={()=>setTard(tard+1)} style={{width:36,height:36,borderRadius:9,border:"none",background:"rgba(148,163,184,.1)",color:"#e2e8f0",fontSize:18,cursor:"pointer",fontWeight:700}}>+</button>
-              </div>
-            </div>
-            <div>
-              <label style={S.label}>{lang==="es"?"Ausencias":"Absences"}</label>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <button onClick={()=>setAus(Math.max(0,aus-1))} style={{width:36,height:36,borderRadius:9,border:"none",background:"rgba(148,163,184,.1)",color:"#e2e8f0",fontSize:18,cursor:"pointer",fontWeight:700}}>−</button>
-                <span style={{fontSize:22,fontWeight:800,color:aus>0?"#f87171":"#4ade80",fontFamily:"monospace",flex:1,textAlign:"center"}}>{aus}</span>
-                <button onClick={()=>setAus(aus+1)} style={{width:36,height:36,borderRadius:9,border:"none",background:"rgba(148,163,184,.1)",color:"#e2e8f0",fontSize:18,cursor:"pointer",fontWeight:700}}>+</button>
-              </div>
-            </div>
-          </div>
-          <textarea value={nota} onChange={e=>setNota(e.target.value)} rows={2} style={{...S.input,resize:"none",marginBottom:10}} placeholder={lang==="es"?"Notas sobre incidencias...":"Notes on incidents..."}/>
-          <button onClick={()=>logIncidents(selected,tard,aus,nota)} style={{...S.btn(true),fontSize:13,padding:11}}>
-            {lang==="es"?"Guardar incidencias":"Save incidents"}
-          </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Past incidents */}
-        {incidents.length>0&&(
+      {/* ── TIMECARD ────────────────────────────────────────────────────────── */}
+      <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",
+        textTransform:"uppercase",letterSpacing:1}}>
+        ⏱ {lang==="es"?"Tarjeta de tiempo — hoy":"Timecard — today"}
+      </div>
+      <div style={{...S.card,marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
           <div>
-            <div style={{fontSize:11,color:"#64748b",fontWeight:700,margin:"12px 0 8px",textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Historial":"History"}</div>
-            {incidents.slice(0,4).map(i=>(
-              <div key={i.week} style={{...S.card,padding:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:11,color:"#64748b"}}>{i.week}</span>
-                  <span style={{fontSize:12,fontWeight:700,color:(i.tardanzas+i.ausencias)>0?"#f87171":"#4ade80"}}>
-                    {i.tardanzas>0?`⏰${i.tardanzas} `:""}{i.ausencias>0?`🚫${i.ausencias}`:""}{(i.tardanzas+i.ausencias)===0?"✓ OK":""}
-                  </span>
-                </div>
-                {i.notas&&<div style={{fontSize:10,color:"#475569",fontStyle:"italic"}}>"{i.notas}"</div>}
-              </div>
-            ))}
+            <label style={S.label}>{lang==="es"?"Entrada":"Check-in"}</label>
+            <input type="time" value={checkInVal}
+              onChange={e=>setCheckInVal(e.target.value)}
+              disabled={!canEdit}
+              style={{...S.input,colorScheme:"dark",fontSize:18,fontWeight:700,
+                color:"#4ade80",fontFamily:"monospace",textAlign:"center"}}/>
+          </div>
+          <div>
+            <label style={S.label}>{lang==="es"?"Salida":"Check-out"}</label>
+            <input type="time" value={checkOutVal}
+              onChange={e=>setCheckOutVal(e.target.value)}
+              disabled={!canEdit}
+              style={{...S.input,colorScheme:"dark",fontSize:18,fontWeight:700,
+                color:"#f87171",fontFamily:"monospace",textAlign:"center"}}/>
+          </div>
+        </div>
+        {horas && (
+          <div style={{display:"flex",justifyContent:"space-between",
+            padding:"8px 12px",borderRadius:9,
+            background:"rgba(255,255,255,.03)",marginBottom:10}}>
+            <span style={{fontSize:12,color:"#64748b"}}>
+              {lang==="es"?"Horas trabajadas hoy":"Hours worked today"}
+            </span>
+            <span style={{fontSize:15,fontWeight:800,color:"#e2e8f0",fontFamily:"monospace"}}>
+              {horas}h
+            </span>
           </div>
         )}
-
-        <h3 style={{color:"#94a3b8",fontSize:11,fontWeight:700,margin:"14px 0 10px",textTransform:"uppercase",letterSpacing:1}}>{lang==="es"?"Tareas esta semana":"Tasks this week"}</h3>
-        {tasks.map(t=><TaskLogCard key={t.id} task={t} systems={[]} lang={lang} canEdit={false}/>)}
+        {canEdit && (
+          <button onClick={saveTimecard}
+            style={{...S.btn(checkInVal||checkOutVal),fontSize:13,padding:10}}>
+            {tcSaved?"✓ Guardado":(lang==="es"?"Guardar tarjeta":"Save timecard")}
+          </button>
+        )}
+        {!canEdit && (
+          <p style={{fontSize:11,color:"#475569",margin:0,textAlign:"center"}}>
+            {lang==="es"?"Solo Eduardo puede editar tarjetas de tiempo":"Only Eduardo can edit timecards"}
+          </p>
+        )}
       </div>
-    );
+
+      {/* ── TODAY'S TASKS ────────────────────────────────────────────────────── */}
+      <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",
+        textTransform:"uppercase",letterSpacing:1}}>
+        {lang==="es"?"Tareas de hoy":"Today's tasks"} — {todayTasks.length}
+      </div>
+      {todayTasks.length===0 ? (
+        <div style={{...S.card,textAlign:"center",padding:20,marginBottom:14}}>
+          <p style={{color:"#475569",fontSize:12,margin:0}}>
+            {lang==="es"?"Sin tareas asignadas para hoy":"No tasks assigned for today"}
+          </p>
+        </div>
+      ) : (
+        <div style={{marginBottom:14}}>
+          {todayTasks.map(t=>(
+            <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
+              onComplete={()=>{}} canEdit={false}/>
+          ))}
+        </div>
+      )}
+
+      {/* ── ASSIGNED SYSTEMS ─────────────────────────────────────────────────── */}
+      {sysWithRate.length > 0 && (
+        <>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",
+            textTransform:"uppercase",letterSpacing:1}}>
+            {lang==="es"?"Sistemas a cargo":"Responsible systems"} — {sysWithRate.length}
+          </div>
+          {sysWithRate.map(s=>{
+            const rc = s.rate===null?"#475569":s.rate>=2.5?"#4ade80":s.rate>=1?"#fb923c":"#f87171";
+            return (
+              <div key={s.id} style={{...S.card,borderLeft:`3px solid ${rc}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</div>
+                    <div style={{fontSize:11,color:"#64748b"}}>{s.pueblo||s.region}</div>
+                    <div style={{display:"flex",gap:4,marginTop:3}}>
+                      {s.categoria&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:s.categoria==="comercial"?"rgba(13,148,136,.15)":"rgba(74,222,128,.15)",
+                        color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>
+                        {s.categoria}</span>}
+                      {s.capitan===initials&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:"rgba(251,146,60,.15)",color:"#fb923c",fontWeight:700}}>Cap</span>}
+                      {s.buceador===initials&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>Buc</span>}
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:16,fontWeight:800,color:rc,fontFamily:"monospace"}}>
+                      {s.rate!==null?`${s.rate>=0?"+":""}${s.rate}%`:"—"}
+                    </div>
+                    <div style={{fontSize:10,color:"#64748b"}}>/día</div>
+                    {s.latest&&<div style={{fontSize:10,color:"#475569",marginTop:2}}>
+                      {(s.latest.peso/1000).toFixed(2)}kg
+                    </div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* ── INCIDENTS THIS WEEK ───────────────────────────────────────────────── */}
+      {latestInc && (
+        <>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"14px 0 8px",
+            textTransform:"uppercase",letterSpacing:1}}>
+            {lang==="es"?"Incidencias esta semana":"This week's incidents"}
+          </div>
+          <div style={{...S.card,
+            borderColor:(latestInc.tardanzas+latestInc.ausencias)>0
+              ?"rgba(248,113,113,.2)":"rgba(74,222,128,.15)"}}>
+            <div style={{display:"flex",gap:10}}>
+              {[
+                [lang==="es"?"Tardanzas":"Late",latestInc.tardanzas],
+                [lang==="es"?"Ausencias":"Absent",latestInc.ausencias],
+              ].map(([l,v])=>(
+                <div key={l} style={{flex:1,textAlign:"center",padding:"10px 0",
+                  background:"rgba(255,255,255,.03)",borderRadius:10}}>
+                  <div style={{fontSize:26,fontWeight:900,
+                    color:v>0?"#f87171":"#4ade80",fontFamily:"monospace"}}>{v}</div>
+                  <div style={{fontSize:10,color:"#64748b"}}>{l}</div>
+                </div>
+              ))}
+            </div>
+            {latestInc.notas&&<p style={{fontSize:11,color:"#94a3b8",
+              margin:"8px 0 0",fontStyle:"italic"}}>"{latestInc.notas}"</p>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+const CAPITAN_REGIONS = {
+  JV:  { regions:["Bahía Azul"], color:"#0d9488", note:"Avispa · Ensenada · Igle. Apostólica · P26-x semilleros" },
+  RBC: { regions:["Playa Roja"], color:"#f87171", note:"Gallinazo · P36-x · P39-x" },
+  RBM: { regions:["Cayo de Agua"], color:"#4ade80", note:"Jobori · P5-x" },
+  RV:  { regions:["Cayo de Agua"], color:"#4ade80", note:"Cayo de Agua · Ensenada" },
+};
+
+function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, announcements }) {
+  const myInitials = user.initials;
+  const regionInfo = CAPITAN_REGIONS[myInitials] || { regions:[], color:"#64748b", note:"" };
+  const [activeTask, setActiveTask] = useState(null);
+
+  // Tasks assigned directly to this captain
+  const myTasks = assignedTasks.filter(t => t.assignedTo === myInitials);
+
+  // Systems this captain is responsible for
+  const mySystems = systems.filter(s => s.capitan === myInitials && s.estado === "Activo");
+
+  const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const todayName = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][new Date().getDay()];
+
+  const done    = myTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
+  const pending = myTasks.filter(t => t.actual === null && !(TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
+  const pct     = myTasks.length ? Math.round((done / myTasks.length) * 100) : 0;
+
+  const handleComplete = (updatedTask) => {
+    setAssignedTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    setActiveTask(null);
+  };
+
+  const byDay = {};
+  days.forEach(d => { byDay[d] = myTasks.filter(t => t.day === d); });
+
+  return (
+    <div style={{padding:"16px 16px 100px"}}>
+
+      {/* Header */}
+      <div style={{marginBottom:14}}>
+        <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>
+          {lang==="es"?"Mis Tareas":"My Tasks"}
+        </h2>
+        <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>
+          {user.name} · Capitán
+        </p>
+      </div>
+
+      {/* Announcements */}
+      <AnunciosPanel announcements={announcements} setAnnouncements={()=>{}} user={user} lang={lang}/>
+
+      {/* Region responsibility banner */}
+      {regionInfo.regions.length > 0 && (
+        <div style={{...S.card, borderLeft:`3px solid ${regionInfo.color}`,
+          background:`${regionInfo.color}08`, marginBottom:14}}>
+          <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",
+            letterSpacing:.6,marginBottom:4}}>
+            {lang==="es"?"Tu zona de responsabilidad":"Your region"}
+          </div>
+          <div style={{fontSize:15,fontWeight:800,color:regionInfo.color,marginBottom:2}}>
+            {regionInfo.regions.join(" · ")}
+          </div>
+          <div style={{fontSize:11,color:"#64748b"}}>{regionInfo.note}</div>
+          <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>
+            {mySystems.length} {lang==="es"?"sistemas activos bajo tu cargo":"active systems under your charge"}
+          </div>
+        </div>
+      )}
+
+      {/* Weekly progress */}
+      <div style={{...S.card,background:"rgba(13,148,136,.07)",border:"1px solid rgba(13,148,136,.15)",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:8}}>
+          <div>
+            <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>
+              {lang==="es"?"Mis tareas esta semana":"My tasks this week"}
+            </div>
+            <div style={{fontSize:32,fontWeight:900,color:"#0d9488",fontFamily:"monospace",lineHeight:1}}>
+              {pct}<span style={{fontSize:14,color:"#64748b"}}>%</span>
+            </div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{done}/{myTasks.length}</div>
+            <div style={{fontSize:11,color:pending>0?"#fb923c":"#4ade80"}}>
+              {pending>0?`${pending} ${lang==="es"?"pendientes":"pending"}`:"✓ Todo listo"}
+            </div>
+          </div>
+        </div>
+        <div style={{height:7,borderRadius:4,background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${pct}%`,
+            background:"linear-gradient(90deg,#0d9488,#2dd4bf)",
+            borderRadius:4,transition:"width .5s ease"}}/>
+        </div>
+      </div>
+
+      {/* Tasks by day */}
+      {myTasks.length === 0 ? (
+        <div style={{...S.card,textAlign:"center",padding:32}}>
+          <span style={{fontSize:32}}>📋</span>
+          <p style={{color:"#475569",fontSize:13,margin:"10px 0 0"}}>
+            {lang==="es"
+              ?"Eduardo no ha asignado tareas para esta semana todavía."
+              :"Eduardo has not assigned tasks for this week yet."}
+          </p>
+        </div>
+      ) : (
+        days.map(d => {
+          const dayTasks = byDay[d] || [];
+          if (dayTasks.length === 0) return null;
+          const dayDone = dayTasks.filter(t =>
+            t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)
+          ).length;
+          const isToday = d === todayName;
+          return (
+            <div key={d} style={{marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:13,fontWeight:800,color:isToday?"#0d9488":"#94a3b8"}}>{d}</span>
+                  {isToday && (
+                    <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,
+                      background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>HOY</span>
+                  )}
+                </div>
+                <span style={{fontSize:11,color:dayDone===dayTasks.length?"#4ade80":"#64748b",fontWeight:600}}>
+                  {dayDone}/{dayTasks.length} ✓
+                </span>
+              </div>
+              {dayTasks.map(t => (
+                <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
+                  onComplete={setActiveTask} canEdit={true}/>
+              ))}
+            </div>
+          );
+        })
+      )}
+
+      {/* My systems summary */}
+      {mySystems.length > 0 && (
+        <div style={{marginTop:8}}>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 10px",
+            textTransform:"uppercase",letterSpacing:1}}>
+            {lang==="es"?"Mis sistemas":"My systems"}
+          </div>
+          {mySystems.map(s => (
+            <div key={s.id} style={{...S.card,
+              borderLeft:`3px solid ${regionInfo.color}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{s.pueblo || s.region}</div>
+                  <div style={{display:"flex",gap:4,marginTop:3}}>
+                    {s.categoria && (
+                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:s.categoria==="comercial"?"rgba(13,148,136,.15)":"rgba(74,222,128,.15)",
+                        color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>
+                        {s.categoria}
+                      </span>
+                    )}
+                    {s.buceador && (
+                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>
+                        Buc: {s.buceador}
+                      </span>
+                    )}
+                    {s.fechaCosecha && (
+                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                        background:"rgba(74,222,128,.08)",color:"#4ade80"}}>
+                        🌿 {s.fechaCosecha}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!s.fechaCosecha && (
+                  <span style={{fontSize:9,padding:"2px 7px",borderRadius:6,
+                    background:"rgba(251,191,36,.1)",color:"#fbbf24",fontWeight:700}}>
+                    ⚠ fecha pendiente
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTask && (
+        <TaskCompleteModal task={activeTask} systems={systems} lang={lang}
+          onSave={handleComplete} onClose={()=>setActiveTask(null)}/>
+      )}
+    </div>
+  );
+}
+
+function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user }) {
+  const [selected, setSelected] = useState(null);
+
+  if (selected) {
+    return <PersonalDashboard
+      initials={selected}
+      onBack={()=>setSelected(null)}
+      assignedTasks={assignedTasks}
+      systems={systems}
+      readings={readings}
+      weeklyIncidents={weeklyIncidents}
+      timecards={timecards}
+      setTimecards={setTimecards}
+      lang={lang}
+      canEdit={["supervisor","ceo","consultant"].includes(user.role)}
+      user={user}
+    />;
   }
 
   return (
@@ -2987,8 +3373,8 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, lang })
         return (
           <div key={c.initials} style={{...S.card,cursor:"pointer"}} onClick={()=>setSelected(c.initials)}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:40,height:40,borderRadius:11,background:"rgba(14,165,233,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:11,fontWeight:800,color:"#0ea5e9"}}>{c.initials}</span>
+              <div style={{width:40,height:40,borderRadius:11,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:11,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
@@ -3034,7 +3420,7 @@ function AddableSelect({ value, onChange, options, onAddOption, lang, label, pla
         placeholder={placeholder||lang==="es"?"Nombre...":"Name..."}
         style={{...S.input,flex:1}}
       />
-      <button onClick={handleAdd} style={{padding:"0 12px",borderRadius:9,border:"none",background:"#0ea5e9",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>✓</button>
+      <button onClick={handleAdd} style={{padding:"0 12px",borderRadius:9,border:"none",background:"#0d9488",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>✓</button>
       <button onClick={()=>{setAdding(false);setNewVal("");}} style={{padding:"0 10px",borderRadius:9,border:"1px solid rgba(148,163,184,.15)",background:"transparent",color:"#64748b",fontSize:13,cursor:"pointer",flexShrink:0}}>✕</button>
     </div>
   );
@@ -3062,7 +3448,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [readingForm, setReadingForm] = useState({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
   const [editingReadingId, setEditingReadingId] = useState(null);
   const [editReadingForm, setEditReadingForm] = useState({ fecha:"", peso:"", notas:"" });
-  const regionColor = {"Bahía Azul":"#0ea5e9","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
+  const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
   // Only Eduardo, Jason, Cameron can edit existing readings
   const canEditReadings = ["ceo","consultant","supervisor"].includes(user.role);
@@ -3147,12 +3533,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   if(selected&&!showForm) {
     const s=systems.find(x=>x.id===selected)||{};
-    const rc=regionColor[s.region]||"#0ea5e9";
+    const rc=regionColor[s.region]||"#0d9488";
     const lastR=readings.filter(r=>r.sistema===s.id).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
     return (
       <div style={{padding:"16px 16px 100px"}}>
-        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>Sistemas
+        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
+          <Icon name="back" size={16} color="#0d9488"/>Sistemas
         </button>
         <div style={{background:`linear-gradient(135deg,${rc}15,rgba(2,8,24,.5))`,border:`1px solid ${rc}22`,borderRadius:16,padding:18,marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -3172,7 +3558,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         </div>
         <div style={S.card}>
           <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Equipo responsable":"Responsible crew"}</div>
-          {[{role:"Supervisor",name:"Eduardo Valdés",initials:"EV",color:"#f59e0b",note:lang==="es"?"Todas las regiones":"All regions"},{role:"Capitán",name:CREW.find(c=>c.initials===s.capitan)?.name||s.capitan,initials:s.capitan,color:"#0ea5e9",note:`Polígono ${s.poligono}`},{role:"Buceador",name:CREW.find(c=>c.initials===s.buceador)?.name||s.buceador,initials:s.buceador,color:"#4ade80",note:lang==="es"?"Este sistema":"This system"}].map(item=>(
+          {[{role:"Supervisor",name:"Eduardo Valdés",initials:"EV",color:"#f59e0b",note:lang==="es"?"Todas las regiones":"All regions"},{role:"Capitán",name:CREW.find(c=>c.initials===s.capitan)?.name||s.capitan,initials:s.capitan,color:"#0d9488",note:`Polígono ${s.poligono}`},{role:"Buceador",name:CREW.find(c=>c.initials===s.buceador)?.name||s.buceador,initials:s.buceador,color:"#4ade80",note:lang==="es"?"Este sistema":"This system"}].map(item=>(
             <div key={item.role} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 9px",background:"rgba(255,255,255,.03)",borderRadius:9,marginBottom:6}}>
               <div style={{width:30,height:30,borderRadius:8,background:`${item.color}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:9,fontWeight:800,color:item.color}}>{item.initials||"–"}</span></div>
               <div><div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{item.name||"–"}</div><div style={{fontSize:10,color:"#64748b"}}>{item.role} · {item.note}</div></div>
@@ -3188,7 +3574,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
             </div>
             {canEdit && (
               <button onClick={()=>setShowReadingForm(v=>!v)}
-                style={{padding:"4px 10px",borderRadius:8,border:"1px solid rgba(14,165,233,.3)",background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                style={{padding:"4px 10px",borderRadius:8,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:11,cursor:"pointer"}}>
                 {showReadingForm?"✕ Cancelar":"+ Nueva Lectura"}
               </button>
             )}
@@ -3196,7 +3582,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
           {/* New reading form */}
           {showReadingForm && canEdit && (
-            <div style={{background:"rgba(14,165,233,.06)",border:"1px solid rgba(14,165,233,.15)",borderRadius:10,padding:12,marginBottom:12}}>
+            <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.15)",borderRadius:10,padding:12,marginBottom:12}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                 <div>
                   <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
@@ -3215,7 +3601,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               {readingForm.peso && lastR && (() => {
                 const preview = calcTDC(lastR.peso, lastR.fecha, parseFloat(readingForm.peso), readingForm.fecha);
                 if (preview === null) return null;
-                const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0ea5e9" : "#f87171";
+                const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0d9488" : "#f87171";
                 return (
                   <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <span style={{fontSize:11,color:"#64748b"}}>TDC calculado vs lectura anterior</span>
@@ -3231,7 +3617,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               </div>
               <button onClick={()=>handleAddReading(s.id)}
                 disabled={!readingForm.peso}
-                style={{width:"100%",padding:10,borderRadius:9,border:"none",background:readingForm.peso?"linear-gradient(135deg,#0ea5e9,#0284c7)":"rgba(148,163,184,.1)",color:readingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:13,cursor:readingForm.peso?"pointer":"default"}}>
+                style={{width:"100%",padding:10,borderRadius:9,border:"none",background:readingForm.peso?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",color:readingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:13,cursor:readingForm.peso?"pointer":"default"}}>
                 {lang==="es"?"Guardar Lectura":"Save Reading"}
               </button>
             </div>
@@ -3241,7 +3627,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           {readings.filter(r=>r.sistema===s.id)
             .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))
             .map((r,i)=>{
-              const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0ea5e9":"#f87171";
+              const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0d9488":"#f87171";
               const isEditing = editingReadingId === r.id;
               const sysReadings = readings.filter(x=>x.sistema===s.id);
 
@@ -3327,7 +3713,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           )}
         </div>
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
-        {canEdit&&<button onClick={()=>{setForm({...s});setShowForm(true);}} style={{width:"100%",padding:13,borderRadius:11,border:"1px solid rgba(14,165,233,.3)",background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>}
+        {canEdit&&<button onClick={()=>{setForm({...s});setShowForm(true);}} style={{width:"100%",padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>}
       </div>
     );
   }
@@ -3336,8 +3722,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     const isNew=!systems.find(s=>s.id===form.id);
     return (
       <div style={{padding:"16px 16px 100px"}}>
-        <button onClick={()=>setShowForm(false)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>{lang==="es"?"Cancelar":"Cancel"}
+        <button onClick={()=>setShowForm(false)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
+          <Icon name="back" size={16} color="#0d9488"/>{lang==="es"?"Cancelar":"Cancel"}
         </button>
         <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:800,margin:"0 0 14px"}}>{isNew?(lang==="es"?"Nuevo Sistema":"New System"):(lang==="es"?"Editar":"Edit")} {form.id}</h2>
         {[
@@ -3419,7 +3805,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           <div><label style={S.label}>Estado</label><select value={form.estado} onChange={e=>F("estado",e.target.value)} style={{...S.input,appearance:"none"}}><option>Activo</option><option>Retirado</option></select></div>
         </div>,
         ]}
-        <button onClick={handleSave} disabled={!form.id} style={{...S.btn(!!form.id),boxShadow:form.id?"0 0 20px rgba(14,165,233,.25)":"none"}}>
+        <button onClick={handleSave} disabled={!form.id} style={{...S.btn(!!form.id),boxShadow:form.id?"0 0 20px rgba(13,148,136,.25)":"none"}}>
           {lang==="es"?"Guardar Sistema":"Save System"}
         </button>
       </div>
@@ -3433,7 +3819,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>Sistemas</h2>
           <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>{systems.filter(s=>s.estado==="Activo").length} {lang==="es"?"activos":"active"} · {systems.length} total</p>
         </div>
-        {canEdit&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0ea5e9,#0284c7)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
+        {canEdit&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:12}}>
         {["all",...regions].map(r=>{ const c=r==="all"?"#94a3b8":regionColor[r]||"#94a3b8"; return <button key={r} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?c:"rgba(148,163,184,.12)"}`,background:filterRegion===r?`${c}18`:"transparent",color:filterRegion===r?c:"#64748b",fontWeight:600,fontSize:11,cursor:"pointer"}}>{r==="all"?(lang==="es"?"Todas":"All"):r}</button>; })}
@@ -3456,7 +3842,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                         <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div>
                         <div style={{fontSize:11,color:"#64748b"}}>{s.tipo} · {s.modulos} {lang==="es"?"módulos":"modules"} · {s.buceador||"–"}</div>
                         <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
-                          {s.categoria && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(14,165,233,.15)":s.categoria==="semillero"?"rgba(74,222,128,.15)":"rgba(251,191,36,.15)",color:s.categoria==="comercial"?"#0ea5e9":s.categoria==="semillero"?"#4ade80":"#fbbf24",fontWeight:700}}>{s.categoria}</span>}
+                          {s.categoria && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(13,148,136,.15)":s.categoria==="semillero"?"rgba(74,222,128,.15)":"rgba(251,191,36,.15)",color:s.categoria==="comercial"?"#0d9488":s.categoria==="semillero"?"#4ade80":"#fbbf24",fontWeight:700}}>{s.categoria}</span>}
                           {s.tamano && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>{s.tamano}</span>}
                           {s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(74,222,128,.08)",color:"#4ade80"}}>🌿 {s.fechaCosecha}</span>}
                           {!s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(251,191,36,.08)",color:"#fbbf24"}}>⚠ fecha pendiente</span>}
@@ -3478,12 +3864,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
 function MapaTab({ systems, lang }) {
   const withCoords = systems.filter(s=>s.coordenadas&&s.estado==="Activo");
-  const regionColor = {"Bahía Azul":"#0ea5e9","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
+  const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
   return (
     <div style={{padding:"16px 16px 100px"}}>
       <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:"0 0 14px"}}>Mapa</h2>
-      <div style={{...S.card,textAlign:"center",padding:32,borderColor:"rgba(14,165,233,.15)"}}>
-        <Icon name="map" size={40} color="#0ea5e9"/>
+      <div style={{...S.card,textAlign:"center",padding:32,borderColor:"rgba(13,148,136,.15)"}}>
+        <Icon name="map" size={40} color="#0d9488"/>
         <h3 style={{color:"#e2e8f0",fontSize:16,fontWeight:700,margin:"12px 0 6px"}}>{lang==="es"?"Mapa interactivo próximamente":"Interactive map coming soon"}</h3>
         <p style={{color:"#64748b",fontSize:12,lineHeight:1.6,margin:0}}>{lang==="es"?"Se construirá una vez confirmadas todas las coordenadas GPS.":"Will be built once all GPS coordinates are confirmed."}</p>
       </div>
@@ -3509,13 +3895,13 @@ function MapaTab({ systems, lang }) {
 }
 
 function ProfileTab({ user, lang, setLang, onLogout }) {
-  const roleColors = { ceo:"#f59e0b", consultant:"#a78bfa", supervisor:"#0ea5e9", vaquero:"#4ade80", researcher:"#818cf8" };
+  const roleColors = { ceo:"#f59e0b", consultant:"#a78bfa", supervisor:"#0d9488", vaquero:"#4ade80", researcher:"#818cf8" };
   const roleLabels = { ceo:"CEO", consultant:"Consultor", supervisor:"Supervisor", vaquero:"Vaquero", researcher:"Investigador" };
   return (
     <div style={{padding:"16px 16px 100px"}}>
-      <div style={{...S.card,background:"linear-gradient(135deg,rgba(14,165,233,.08),rgba(2,8,24,.5))",border:"1px solid rgba(14,165,233,.12)",textAlign:"center",padding:24,marginBottom:14}}>
-        <div style={{width:64,height:64,borderRadius:18,background:"rgba(14,165,233,.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px"}}>
-          <Icon name="user" size={28} color="#0ea5e9"/>
+      <div style={{...S.card,background:"linear-gradient(135deg,rgba(13,148,136,.08),rgba(2,8,24,.5))",border:"1px solid rgba(13,148,136,.12)",textAlign:"center",padding:24,marginBottom:14}}>
+        <div style={{width:64,height:64,borderRadius:18,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px"}}>
+          <Icon name="user" size={28} color="#0d9488"/>
         </div>
         <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:800,margin:"0 0 4px"}}>{user.name}</h2>
         <span style={{fontSize:12,padding:"3px 12px",borderRadius:10,background:`${roleColors[user.role]||"#64748b"}18`,color:roleColors[user.role]||"#94a3b8",fontWeight:700}}>{roleLabels[user.role]||user.role}</span>
@@ -3523,7 +3909,7 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
       <div style={S.card}>
         <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>Idioma / Language</div>
         <div style={{display:"flex",gap:10}}>
-          {["es","en"].map(l=><button key={l} onClick={()=>setLang(l)} style={{flex:1,padding:11,borderRadius:10,border:`1px solid ${lang===l?"#0ea5e9":"rgba(148,163,184,.15)"}`,fontWeight:700,fontSize:13,cursor:"pointer",background:lang===l?"rgba(14,165,233,.15)":"transparent",color:lang===l?"#0ea5e9":"#64748b"}}>{l==="es"?"🇵🇦 Español":"🇺🇸 English"}</button>)}
+          {["es","en"].map(l=><button key={l} onClick={()=>setLang(l)} style={{flex:1,padding:11,borderRadius:10,border:`1px solid ${lang===l?"#0d9488":"rgba(148,163,184,.15)"}`,fontWeight:700,fontSize:13,cursor:"pointer",background:lang===l?"rgba(13,148,136,.15)":"transparent",color:lang===l?"#0d9488":"#64748b"}}>{l==="es"?"🇵🇦 Español":"🇺🇸 English"}</button>)}
         </div>
       </div>
       <div style={S.card}>
@@ -3652,7 +4038,7 @@ function TDCUploader({ tdcData, pruebas, biomasa, onUpload, lang }) {
   };
 
   return (
-    <div style={{...S.card, borderColor: status==="done" ? "rgba(74,222,128,.25)" : status==="error" ? "rgba(248,113,113,.25)" : "rgba(14,165,233,.15)", marginBottom:10}}>
+    <div style={{...S.card, borderColor: status==="done" ? "rgba(74,222,128,.25)" : status==="error" ? "rgba(248,113,113,.25)" : "rgba(13,148,136,.15)", marginBottom:10}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
         <div style={{flex:1}}>
           <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0",marginBottom:2}}>
@@ -3678,7 +4064,7 @@ function TDCUploader({ tdcData, pruebas, biomasa, onUpload, lang }) {
           <button onClick={()=>fileRef.current?.click()}
             disabled={status==="parsing"}
             style={{padding:"9px 14px",borderRadius:10,border:"none",
-              background: status==="done" ? "rgba(74,222,128,.15)" : "linear-gradient(135deg,#0ea5e9,#0284c7)",
+              background: status==="done" ? "rgba(74,222,128,.15)" : "linear-gradient(135deg,#0d9488,#0f766e)",
               color: status==="done" ? "#4ade80" : "#fff",
               fontWeight:700,fontSize:12,cursor:status==="parsing"?"wait":"pointer",
               whiteSpace:"nowrap",flexShrink:0}}>
@@ -3777,8 +4163,8 @@ function ExportButtons({ readings, systems, evaluations, weeklyIncidents, profSc
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
       <button onClick={()=>exportCSV(buildOpsExport(readings,systems), `AquaOps_Operaciones_${new Date().toISOString().slice(0,10)}.csv`)}
-        style={{padding:"10px 8px",borderRadius:10,border:"1px solid rgba(14,165,233,.3)",
-          background:"rgba(14,165,233,.06)",color:"#0ea5e9",fontWeight:700,fontSize:11,cursor:"pointer",
+        style={{padding:"10px 8px",borderRadius:10,border:"1px solid rgba(13,148,136,.3)",
+          background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:11,cursor:"pointer",
           display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
         <span style={{fontSize:18}}>📊</span>
         <span>{lang==="es"?"Exportar Operaciones":"Export Operations"}</span>
@@ -3850,8 +4236,8 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
 
     return (
       <div style={{padding:"16px 16px 100px"}}>
-        <button onClick={()=>{setView("overview");setSelectedPerson(null);setDraft(null);}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0ea5e9",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          <Icon name="back" size={16} color="#0ea5e9"/>RRHH
+        <button onClick={()=>{setView("overview");setSelectedPerson(null);setDraft(null);}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
+          <Icon name="back" size={16} color="#0d9488"/>RRHH
         </button>
         <div style={{...S.card,background:"linear-gradient(135deg,rgba(251,191,36,.08),rgba(2,8,24,.5))",border:"1px solid rgba(251,191,36,.15)",marginBottom:14}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -3861,7 +4247,7 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:14}}>
           {["resumen","resultados","comportamientos","gallup"].map(s=>(
-            <button key={s} onClick={()=>setSection(s)} style={{padding:"7px 0",borderRadius:9,border:`1px solid ${section===s?"#0ea5e9":"rgba(148,163,184,.1)"}`,background:section===s?"rgba(14,165,233,.12)":"transparent",color:section===s?"#0ea5e9":"#64748b",fontWeight:700,fontSize:10,cursor:"pointer",textTransform:"capitalize"}}>
+            <button key={s} onClick={()=>setSection(s)} style={{padding:"7px 0",borderRadius:9,border:`1px solid ${section===s?"#0d9488":"rgba(148,163,184,.1)"}`,background:section===s?"rgba(13,148,136,.12)":"transparent",color:section===s?"#0d9488":"#64748b",fontWeight:700,fontSize:10,cursor:"pointer",textTransform:"capitalize"}}>
               {s==="gallup"?"12Qs":s.slice(0,7)}
             </button>
           ))}
@@ -3900,7 +4286,7 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
               <div key={c.id} style={S.card}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontSize:12,color:"#e2e8f0",flex:1,paddingRight:8}}>{i+1}. {c.desc}</span><span style={{fontSize:15,fontWeight:800,color:col,fontFamily:"monospace"}}>{v.toFixed(2)}</span></div>
                 <div style={{display:"flex",gap:6}}>
-                  {[0,0.5,0.75,1.0].map(val=><button key={val} onClick={()=>updateC(c.id,val)} style={{flex:1,padding:"7px 0",borderRadius:8,border:`1px solid ${v===val?"#0ea5e9":"rgba(148,163,184,.1)"}`,background:v===val?"rgba(14,165,233,.15)":"transparent",color:v===val?"#0ea5e9":"#64748b",fontWeight:700,fontSize:10,cursor:"pointer"}}>{val===0?"Nunca":val===0.5?"A veces":val===0.75?"Frec.":"Siempre"}</button>)}
+                  {[0,0.5,0.75,1.0].map(val=><button key={val} onClick={()=>updateC(c.id,val)} style={{flex:1,padding:"7px 0",borderRadius:8,border:`1px solid ${v===val?"#0d9488":"rgba(148,163,184,.1)"}`,background:v===val?"rgba(13,148,136,.15)":"transparent",color:v===val?"#0d9488":"#64748b",fontWeight:700,fontSize:10,cursor:"pointer"}}>{val===0?"Nunca":val===0.5?"A veces":val===0.75?"Frec.":"Siempre"}</button>)}
                 </div>
               </div>
             );})}
@@ -3917,10 +4303,10 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
                 </div>
               </div>
             );})}
-            <div style={{...S.card,textAlign:"center"}}><div style={{fontSize:10,color:"#64748b"}}>Promedio</div><div style={{fontSize:24,fontWeight:800,color:"#0ea5e9",fontFamily:"monospace"}}>{draft.gallup?.length?(draft.gallup.reduce((a,b)=>a+b,0)/draft.gallup.length).toFixed(2):"–"}</div></div>
+            <div style={{...S.card,textAlign:"center"}}><div style={{fontSize:10,color:"#64748b"}}>Promedio</div><div style={{fontSize:24,fontWeight:800,color:"#0d9488",fontFamily:"monospace"}}>{draft.gallup?.length?(draft.gallup.reduce((a,b)=>a+b,0)/draft.gallup.length).toFixed(2):"–"}</div></div>
           </div>
         )}
-        <button onClick={saveDraft} style={{...S.btn(true),marginTop:8,boxShadow:"0 0 20px rgba(14,165,233,.2)"}}>{lang==="es"?"💾 Guardar Evaluación":"💾 Save Evaluation"}</button>
+        <button onClick={saveDraft} style={{...S.btn(true),marginTop:8,boxShadow:"0 0 20px rgba(13,148,136,.2)"}}>{lang==="es"?"💾 Guardar Evaluación":"💾 Save Evaluation"}</button>
       </div>
     );
   }
@@ -4011,8 +4397,8 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
         return (
           <div key={c.initials} style={{...S.card,cursor:"pointer"}} onClick={()=>{setSelectedPerson(c.initials);setDraft(null);setSection("resumen");setView("eval");}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-              <div style={{width:36,height:36,borderRadius:10,background:i===0?"rgba(251,191,36,.15)":i===1?"rgba(148,163,184,.1)":"rgba(14,165,233,.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:12,fontWeight:800,color:i===0?"#fbbf24":i===1?"#94a3b8":"#0ea5e9"}}>{i===0?"🥇":i===1?"🥈":c.initials}</span>
+              <div style={{width:36,height:36,borderRadius:10,background:i===0?"rgba(251,191,36,.15)":i===1?"rgba(148,163,184,.1)":"rgba(13,148,136,.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:12,fontWeight:800,color:i===0?"#fbbf24":i===1?"#94a3b8":"#0d9488"}}>{i===0?"🥇":i===1?"🥈":c.initials}</span>
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
@@ -4026,7 +4412,7 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
                 <div style={{fontSize:12,color:"#f59e0b",fontWeight:700}}>${c.bono}</div>
               </div>
             </div>
-            {S.scoreBar(r||0,"#0ea5e9")}
+            {S.scoreBar(r||0,"#0d9488")}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
               <div style={{fontSize:10,color:"#475569"}}>Pts: {c.pts} · Peso: {((c.weightedScore/totalWeighted)*100).toFixed(1)}%</div>
               <div style={{fontSize:10,color:"#475569"}}>✏️ {lang==="es"?"Evaluar":"Evaluate"}</div>
@@ -4084,6 +4470,7 @@ function BottomNav({ tab, setTab, role, lang }) {
     ],
     capitan: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
+      { id:"tareas",   icon:"task",     label: lang==="es"?"Mis Tareas":"My Tasks" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"mapa",     icon:"map",      label: "Mapa" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
@@ -4109,8 +4496,8 @@ function BottomNav({ tab, setTab, role, lang }) {
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(2,8,24,.96)",borderTop:"1px solid rgba(148,163,184,.07)",display:"flex",justifyContent:"space-around",padding:"8px 0 max(8px,env(safe-area-inset-bottom))",backdropFilter:"blur(20px)",zIndex:100}}>
       {tabs.map(item=>(
         <button key={item.id} onClick={()=>setTab(item.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
-          <Icon name={item.icon} size={20} color={tab===item.id?"#0ea5e9":"#475569"}/>
-          <span style={{fontSize:9,color:tab===item.id?"#0ea5e9":"#475569",fontWeight:tab===item.id?700:400}}>{item.label}</span>
+          <Icon name={item.icon} size={20} color={tab===item.id?"#0d9488":"#475569"}/>
+          <span style={{fontSize:9,color:tab===item.id?"#0d9488":"#475569",fontWeight:tab===item.id?700:400}}>{item.label}</span>
         </button>
       ))}
     </nav>
@@ -4127,6 +4514,7 @@ export default function App() {
   const [lang, setLang]               = useState(localStorage.getItem('vdm_lang') || "es");
   const [user, setUser]               = useState(savedUser);
   const [tab, setTab]                 = useState(savedUser?.role==="vaquero" ? "inicio" : "dashboard");
+  const [personalView, setPersonalView] = useState(null);
   const inactivityTimer = useRef(null);
 
   // Auto-logout timeouts by role (ms)
@@ -4167,6 +4555,7 @@ export default function App() {
   const [evaluations, setEvaluations]         = useState(SEED_EVALUATIONS);
   const [profScores, setProfScores]           = useState(SEED_PROF_SCORES);
   const [weeklyIncidents, setWeeklyIncidents] = useState(SEED_WEEKLY_INCIDENTS);
+  const [timecards, setTimecards]             = useState(SEED_TIMECARDS);
   const [announcements, setAnnouncements]     = useState(SEED_ANNOUNCEMENTS);
 
   // ── Editable catalog lists (Level 2+ can add new options) ───────────────────
@@ -4424,14 +4813,14 @@ export default function App() {
     localStorage.setItem('vdm_user', JSON.stringify(u));
     setUser(u);
     if(u.role==="vaquero") setTab("inicio");
-    else if(u.role==="capitan") setTab("dashboard");
+    else if(u.role==="capitan") setTab("tareas");
     else setTab("dashboard");
   };
 
   if(!user) return <LoginScreen onLogin={handleLogin} lang={lang} setLang={setLang}/>;
 
   return (
-    <div className="vdm-root" style={{minHeight:"100vh",background:"#020c1a",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
+    <div className="vdm-root" style={{minHeight:"100vh",background:"#021c1e",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @media(min-width:600px){
@@ -4447,10 +4836,10 @@ export default function App() {
       {/* Top bar */}
       <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(2,8,24,.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(148,163,184,.06)",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:30,height:30,borderRadius:8,background:"linear-gradient(135deg,#0ea5e9,#0369a1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <Icon name="wave" size={15} color="#fff"/>
+          <div style={{width:30,height:30,borderRadius:8,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <img src="data:image/jpeg;base64,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" alt="logo" style={{width:28,height:28,objectFit:"contain"}}/>
           </div>
-          <span style={{fontWeight:800,fontSize:14,color:"#e2e8f0"}}>AquaOps</span>
+          <span style={{fontWeight:800,fontSize:14,color:"#f0fdfa"}}>AquaOps</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:10,color:"#475569",background:"rgba(255,255,255,.04)",padding:"3px 8px",borderRadius:12}}>{user.name.split(" ")[0]}</span>
@@ -4468,6 +4857,22 @@ export default function App() {
       )}
 
       {/* Screen routing */}
+      {/* Personal dashboard overlay — reachable from any screen */}
+      {personalView && (
+        <PersonalDashboard
+          initials={personalView}
+          onBack={()=>setPersonalView(null)}
+          assignedTasks={assignedTasks}
+          systems={systems}
+          readings={readings}
+          weeklyIncidents={weeklyIncidents}
+          timecards={timecards}
+          setTimecards={setTimecards}
+          lang={lang}
+          canEdit={["supervisor","ceo","consultant"].includes(user.role)}
+          user={user}
+        />
+      )}
       <div>
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
@@ -4476,21 +4881,22 @@ export default function App() {
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
-        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
+        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
+        {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
-        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
+        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
-        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} lang={lang}/>}
+        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 3 — CEO + Consultant */}
-        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}}/>}
+        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
