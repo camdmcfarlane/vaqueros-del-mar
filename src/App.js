@@ -228,28 +228,28 @@ const CREW = [
 // ─── SEED TASK LOGS (week of Mar 9 2026) ────────────────────────────────────
 const SEED_TASK_LOGS = [
   // Lunes
-  { id:1,  date:"2026-03-09", day:"Lunes",    taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:2, actual:2,  confirmed:true,  notas:"" },
-  { id:2,  date:"2026-03-09", day:"Lunes",    taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"" },
-  { id:3,  date:"2026-03-09", day:"Lunes",    taskId:"construir",   initials:"LA",  initials2:"CE",  objetivo:5, actual:3,  confirmed:true,  notas:"Faltaron materiales" },
+  { id:1,  date:"2026-03-09", day:"Lunes",    taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:2, actual:2,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:2,  date:"2026-03-09", day:"Lunes",    taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:3,  date:"2026-03-09", day:"Lunes",    taskId:"construir",   initials:"LA",  initials2:"CE",  objetivo:5, actual:3,  confirmed:true,  notas:"Faltaron materiales", comentarioVaquero:null, comentarioFecha:null },
   // Martes
-  { id:4,  date:"2026-03-10", day:"Martes",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"" },
-  { id:5,  date:"2026-03-10", day:"Martes",   taskId:"limpieza",    initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"" },
-  { id:6,  date:"2026-03-10", day:"Martes",   taskId:"motor",       initials:"RBM", initials2:null,  objetivo:2, actual:2,  confirmed:true,  notas:"" },
+  { id:4,  date:"2026-03-10", day:"Martes",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:5,  date:"2026-03-10", day:"Martes",   taskId:"limpieza",    initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:6,  date:"2026-03-10", day:"Martes",   taskId:"motor",       initials:"RBM", initials2:null,  objetivo:2, actual:2,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
   // Miércoles
-  { id:7,  date:"2026-03-11", day:"Miércoles",taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:2,  confirmed:false, notas:"" },
-  { id:8,  date:"2026-03-11", day:"Miércoles",taskId:"limpieza",    initials:"CE",  initials2:"HM",  objetivo:3, actual:3,  confirmed:true,  notas:"" },
-  { id:9,  date:"2026-03-11", day:"Miércoles",taskId:"pesos",       initials:"LA",  initials2:null,  objetivo:5, actual:5,  confirmed:true,  notas:"" },
+  { id:7,  date:"2026-03-11", day:"Miércoles",taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:2,  confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:8,  date:"2026-03-11", day:"Miércoles",taskId:"limpieza",    initials:"CE",  initials2:"HM",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:9,  date:"2026-03-11", day:"Miércoles",taskId:"pesos",       initials:"LA",  initials2:null,  objetivo:5, actual:5,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
   // Jueves
-  { id:10, date:"2026-03-12", day:"Jueves",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"" },
-  { id:11, date:"2026-03-12", day:"Jueves",   taskId:"construir",   initials:"JV",  initials2:"RBM", objetivo:6, actual:6,  confirmed:true,  notas:"" },
-  { id:12, date:"2026-03-12", day:"Jueves",   taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:3,  confirmed:true,  notas:"" },
+  { id:10, date:"2026-03-12", day:"Jueves",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:11, date:"2026-03-12", day:"Jueves",   taskId:"construir",   initials:"JV",  initials2:"RBM", objetivo:6, actual:6,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:12, date:"2026-03-12", day:"Jueves",   taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
   // Viernes
-  { id:13, date:"2026-03-13", day:"Viernes",  taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"" },
-  { id:14, date:"2026-03-13", day:"Viernes",  taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"" },
-  { id:15, date:"2026-03-13", day:"Viernes",  taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:4,  confirmed:true,  notas:"" },
+  { id:13, date:"2026-03-13", day:"Viernes",  taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:14, date:"2026-03-13", day:"Viernes",  taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:15, date:"2026-03-13", day:"Viernes",  taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
   // Sábado
-  { id:16, date:"2026-03-14", day:"Sábado",   taskId:"sembrar",     initials:"RBM", initials2:"JV",  objetivo:20, actual:18, confirmed:true, notas:"Playa roja" },
-  { id:17, date:"2026-03-14", day:"Sábado",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"" },
+  { id:16, date:"2026-03-14", day:"Sábado",   taskId:"sembrar",     initials:"RBM", initials2:"JV",  objetivo:20, actual:18, confirmed:true, notas:"Playa roja", comentarioVaquero:null, comentarioFecha:null },
+  { id:17, date:"2026-03-14", day:"Sábado",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
 ];
 
 // ─── SEED PROFESSIONALISM SCORES (monthly, scored by Eduardo) ───────────────
@@ -730,27 +730,27 @@ const CONDICION_EMOJIS = [
 // Seed task assignments for this week (Eduardo creates these via Plan Semanal)
 const SEED_ASSIGNED_TASKS = [
   // HM
-  { id:101, assignedTo:"HM", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:102, assignedTo:"HM", day:"Miércoles",taskType:"limpieza",    sistema:"P12-1", objetivo:3, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:103, assignedTo:"HM", day:"Viernes",  taskType:"pesos",       sistema:"P12-2", objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:104, assignedTo:"JL", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:105, assignedTo:"JL", day:"Martes",   taskType:"limpieza",    sistema:"P13-1", objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:106, assignedTo:"JL", day:"Jueves",   taskType:"cosecha",     sistema:"P14",   objetivo:50, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:107, assignedTo:"CE", day:"Lunes",    taskType:"reubicar",    sistema:"P5-2",  objetivo:null, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Mover hacia Polígono 3 — coordinar con RBC antes de salir" },
-  { id:108, assignedTo:"CE", day:"Martes",   taskType:"limpieza",    sistema:"P5-3",  objetivo:3, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:109, assignedTo:"CE", day:"Miércoles",taskType:"construir",   sistema:null,    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Usar materiales del taller — confirmar con Eduardo" },
-  { id:110, assignedTo:"RV", day:"Martes",   taskType:"parametros",  sistema:"P1",    objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:111, assignedTo:"RV", day:"Jueves",   taskType:"construir",   sistema:null,    objetivo:6, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:112, assignedTo:"RV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:113, assignedTo:"RBM",day:"Lunes",    taskType:"motor",       sistema:null,    objetivo:20, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Revisar aceite — último cambio hace 3 semanas" },
-  { id:114, assignedTo:"RBM",day:"Miércoles",taskType:"sembrar",     sistema:"P5-4",  objetivo:10, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:115, assignedTo:"RBC",day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:116, assignedTo:"RBC",day:"Jueves",   taskType:"mantenimiento",sistema:"P13-2",objetivo:2, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:117, assignedTo:"JV", day:"Martes",   taskType:"seleccion",   sistema:null,    objetivo:5, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Priorizar semilla de Bahía Azul para los nuevos sistemas" },
-  { id:118, assignedTo:"JV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:119, assignedTo:"LA", day:"Martes",   taskType:"limpieza",    sistema:"P5-5",  objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:120, assignedTo:"LA", day:"Miércoles",taskType:"parametros",  sistema:"P1",    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"" },
-  { id:121, assignedTo:"LA", day:"Viernes",  taskType:"desplegar",   sistema:"P17",   objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Desplegar en coordenadas N 09°07'34 O 082°03'58" },
+  { id:101, assignedTo:"HM", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:102, assignedTo:"HM", day:"Miércoles",taskType:"limpieza",    sistema:"P12-1", objetivo:3, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:103, assignedTo:"HM", day:"Viernes",  taskType:"pesos",       sistema:"P12-2", objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:104, assignedTo:"JL", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:105, assignedTo:"JL", day:"Martes",   taskType:"limpieza",    sistema:"P13-1", objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:106, assignedTo:"JL", day:"Jueves",   taskType:"cosecha",     sistema:"P14",   objetivo:50, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:107, assignedTo:"CE", day:"Lunes",    taskType:"reubicar",    sistema:"P5-2",  objetivo:null, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Mover hacia Polígono 3 — coordinar con RBC antes de salir", comentarioVaquero:null, comentarioFecha:null },
+  { id:108, assignedTo:"CE", day:"Martes",   taskType:"limpieza",    sistema:"P5-3",  objetivo:3, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:109, assignedTo:"CE", day:"Miércoles",taskType:"construir",   sistema:null,    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Usar materiales del taller — confirmar con Eduardo", comentarioVaquero:null, comentarioFecha:null },
+  { id:110, assignedTo:"RV", day:"Martes",   taskType:"parametros",  sistema:"P1",    objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:111, assignedTo:"RV", day:"Jueves",   taskType:"construir",   sistema:null,    objetivo:6, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:112, assignedTo:"RV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:113, assignedTo:"RBM",day:"Lunes",    taskType:"motor",       sistema:null,    objetivo:20, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Revisar aceite — último cambio hace 3 semanas", comentarioVaquero:null, comentarioFecha:null },
+  { id:114, assignedTo:"RBM",day:"Miércoles",taskType:"sembrar",     sistema:"P5-4",  objetivo:10, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:115, assignedTo:"RBC",day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:116, assignedTo:"RBC",day:"Jueves",   taskType:"mantenimiento",sistema:"P13-2",objetivo:2, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:117, assignedTo:"JV", day:"Martes",   taskType:"seleccion",   sistema:null,    objetivo:5, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Priorizar semilla de Bahía Azul para los nuevos sistemas", comentarioVaquero:null, comentarioFecha:null },
+  { id:118, assignedTo:"JV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:119, assignedTo:"LA", day:"Martes",   taskType:"limpieza",    sistema:"P5-5",  objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:120, assignedTo:"LA", day:"Miércoles",taskType:"parametros",  sistema:"P1",    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
+  { id:121, assignedTo:"LA", day:"Viernes",  taskType:"desplegar",   sistema:"P17",   objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Desplegar en coordenadas N 09°07'34 O 082°03'58", comentarioVaquero:null, comentarioFecha:null },
 ];
 
 // ─── ICONS ───────────────────────────────────────────────────────────────────
@@ -1090,10 +1090,25 @@ function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
       )}
 
       {/* Logged evidence */}
-      {done && (task.foto || task.voiceNote) && (
-        <div style={{display:"flex",gap:6,marginTop:8}}>
-          {task.foto && <span style={{fontSize:10,color:"#0d9488",fontWeight:700,background:"rgba(13,148,136,.1)",padding:"2px 8px",borderRadius:6}}>📷 foto</span>}
-          {task.voiceNote && <span style={{fontSize:10,color:"#4ade80",fontWeight:700,background:"rgba(74,222,128,.1)",padding:"2px 8px",borderRadius:6}}>🎙 voz</span>}
+      {done && (task.foto || task.voiceNote || task.comentarioVaquero) && (
+        <div style={{marginTop:8}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:task.comentarioVaquero?6:0}}>
+            {task.foto && <span style={{fontSize:10,color:"#0d9488",fontWeight:700,background:"rgba(13,148,136,.1)",padding:"2px 8px",borderRadius:6}}>📷 foto</span>}
+            {task.voiceNote && <span style={{fontSize:10,color:"#4ade80",fontWeight:700,background:"rgba(74,222,128,.1)",padding:"2px 8px",borderRadius:6}}>🎙 voz</span>}
+          </div>
+          {task.comentarioVaquero && (
+            <div style={{
+              padding:"8px 10px",borderRadius:9,
+              background:"rgba(13,148,136,.06)",
+              border:"1px solid rgba(13,148,136,.15)",
+              display:"flex",alignItems:"flex-start",gap:7,
+            }}>
+              <span style={{fontSize:13,flexShrink:0}}>💬</span>
+              <span style={{fontSize:12,color:"#2dd4bf",lineHeight:1.4,fontStyle:"italic"}}>
+                "{task.comentarioVaquero}"
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1111,10 +1126,11 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
   const sys    = systems.find(s=>s.id===task.sistema);
   const done   = task.actual !== null || (schema.yesno && task.condicion !== null);
 
-  const [actual,    setActual]    = useState(task.actual ?? "");
-  const [condicion, setCondicion] = useState(task.condicion ?? "");
-  const [foto,      setFoto]      = useState(task.foto ?? null);
-  const [voiceNote, setVoiceNote] = useState(task.voiceNote ?? null);
+  const [actual,             setActual]            = useState(task.actual ?? "");
+  const [condicion,          setCondicion]          = useState(task.condicion ?? "");
+  const [foto,               setFoto]               = useState(task.foto ?? null);
+  const [voiceNote,          setVoiceNote]          = useState(task.voiceNote ?? null);
+  const [comentarioVaquero,  setComentarioVaquero]  = useState(task.comentarioVaquero ?? "");
 
   // For limpieza and vigilancia: completion = yes/no + optional photo
   const isConfirmType = ["limpieza","vigilancia","mantenimiento","seleccion"].includes(task.taskType);
@@ -1122,16 +1138,18 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
   const canSave = schema.yesno
     ? condicion !== ""
     : isConfirmType
-      ? condicion !== ""      // yes/no is the required input
+      ? condicion !== ""
       : String(actual).trim() !== "";
 
   const handleSave = () => {
     onSave({
       ...task,
-      actual:    schema.yesno || isConfirmType ? (actual||null) : parseFloat(actual)||0,
-      condicion: condicion || null,
+      actual:            schema.yesno || isConfirmType ? (actual||null) : parseFloat(actual)||0,
+      condicion:         condicion || null,
       voiceNote,
       foto: foto ? (typeof foto==="string"&&foto.startsWith("foto") ? foto : `foto_${Date.now()}.jpg`) : null,
+      comentarioVaquero: comentarioVaquero.trim() || null,
+      comentarioFecha:   comentarioVaquero.trim() ? new Date().toISOString() : null,
     });
   };
 
@@ -1246,6 +1264,50 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
               </div>
             </div>
           )}
+
+          {/* ── COMENTARIOS — optional field for all task types ── */}
+          <div style={{marginBottom:20}}>
+            <label style={{
+              fontSize:11,color:"#64748b",fontWeight:700,
+              textTransform:"uppercase",letterSpacing:.6,
+              display:"block",marginBottom:8,
+            }}>
+              💬 {lang==="es"?"Comentarios del campo (opcional)":"Field comments (optional)"}
+            </label>
+            <textarea
+              value={comentarioVaquero}
+              onChange={e=>setComentarioVaquero(e.target.value)}
+              rows={3}
+              placeholder={lang==="es"
+                ?"Ej: Encontré epifitas en el lado norte, agua turbia, canasta dañada..."
+                :"E.g. Found epiphytes on north side, turbid water, damaged basket..."}
+              aria-label={lang==="es"?"Comentarios del campo":"Field comments"}
+              style={{
+                width:"100%",padding:"11px 13px",borderRadius:12,
+                border:`1px solid ${comentarioVaquero.trim()
+                  ?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}`,
+                background:"rgba(15,23,42,.8)",
+                color:"#e2e8f0",fontSize:13,
+                outline:"none",resize:"none",
+                fontFamily:"inherit",lineHeight:1.5,
+                boxSizing:"border-box",
+                transition:"border-color .2s",
+              }}
+            />
+            {comentarioVaquero.trim() && (
+              <div style={{
+                display:"flex",alignItems:"center",gap:6,
+                marginTop:6,fontSize:11,color:"#0d9488",
+                fontWeight:600,
+              }}>
+                <span>📨</span>
+                <span>{lang==="es"
+                  ?"Eduardo verá este comentario en su dashboard al sincronizar"
+                  :"Eduardo will see this comment on his dashboard when synced"}
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Save button */}
           <button onClick={handleSave} disabled={!canSave}
@@ -2434,6 +2496,109 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             <BiomasaChart lang={lang}/>
           </div>
 
+          {/* ── COMENTARIOS DEL CAMPO ─────────────────────────────────────── */}
+          {(() => {
+            // Task comments
+            const taskComments = assignedTasks
+              .filter(t => t.comentarioVaquero && t.comentarioVaquero.trim())
+              .map(t => ({
+                key: `task-${t.id}`,
+                type: "task",
+                initials: t.assignedTo,
+                name: CREW.find(c=>c.initials===t.assignedTo)?.name||t.assignedTo,
+                icon: TASK_SCHEMA[t.taskType]?.icon||"📋",
+                label: TASK_SCHEMA[t.taskType]?.[lang==="es"?"label":"labelEn"]||t.taskType,
+                sistema: t.sistema,
+                comment: t.comentarioVaquero,
+                fecha: t.comentarioFecha||t.date,
+                day: t.day,
+              }));
+
+            // Reading comments (notas field)
+            const today = new Date().toISOString().slice(0,10);
+            const thisWeek = new Date();
+            thisWeek.setDate(thisWeek.getDate() - 7);
+            const readingComments = readings
+              .filter(r => r.notas && r.notas.trim() && r.fecha >= thisWeek.toISOString().slice(0,10))
+              .map(r => ({
+                key: `reading-${r.id}`,
+                type: "reading",
+                initials: "—",
+                name: lang==="es"?"Lectura de peso":"Weight reading",
+                icon: "⚖️",
+                label: lang==="es"?"Pesos":"Readings",
+                sistema: r.sistema,
+                comment: r.notas,
+                fecha: r.fecha,
+                day: "",
+              }));
+
+            const allComments = [...taskComments, ...readingComments]
+              .sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""))
+              .slice(0, 12);
+
+            if (allComments.length === 0) return null;
+
+            return (
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"4px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
+                  💬 {lang==="es"?"Comentarios del campo":"Field comments"}
+                  <span style={{marginLeft:6,fontSize:10,padding:"1px 6px",borderRadius:10,
+                    background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>
+                    {allComments.length}
+                  </span>
+                </div>
+                {allComments.map(item=>{
+                  const timeLabel = item.fecha
+                    ? (item.fecha.length > 10
+                        ? new Date(item.fecha).toLocaleTimeString(lang==="es"?"es-PA":"en-US",{hour:"2-digit",minute:"2-digit"})
+                        : item.fecha)
+                    : item.day||"";
+                  return (
+                    <div key={item.key} style={{
+                      ...S.card,
+                      borderLeft:"3px solid rgba(13,148,136,.5)",
+                      background:"rgba(13,148,136,.04)",
+                      padding:"10px 12px",
+                      marginBottom:8,
+                    }}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          {item.initials !== "—" ? (
+                            <div style={{width:28,height:28,borderRadius:8,
+                              background:"rgba(13,148,136,.12)",
+                              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{item.initials}</span>
+                            </div>
+                          ) : (
+                            <span style={{fontSize:18,flexShrink:0}}>{item.icon}</span>
+                          )}
+                          <div>
+                            <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{item.name}</div>
+                            <div style={{fontSize:10,color:"#64748b"}}>
+                              {item.icon} {item.label}
+                              {item.sistema&&` · ${item.sistema}`}
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{fontSize:10,color:"#475569",flexShrink:0}}>{timeLabel}</span>
+                      </div>
+                      <div style={{
+                        padding:"7px 10px",borderRadius:8,
+                        background:"rgba(255,255,255,.03)",
+                        border:"1px solid rgba(13,148,136,.12)",
+                      }}>
+                        <span style={{fontSize:12,color:"#2dd4bf",lineHeight:1.5,fontStyle:"italic"}}>
+                          "{item.comment}"
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Team task status */}
           <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"4px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
             {lang==="es"?"Estado del equipo":"Team status"}
@@ -3610,10 +3775,24 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                 );
               })()}
               <div style={{marginBottom:8}}>
-                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Notas (opcional)</div>
-                <input placeholder={lang==="es"?"Observaciones...":"Observations..."} value={readingForm.notas}
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
+                  💬 {lang==="es"?"Comentarios del campo (opcional)":"Field comments (optional)"}
+                </div>
+                <input
+                  placeholder={lang==="es"
+                    ?"Ej: Epifitas visibles, agua turbia, canasta dañada..."
+                    :"E.g. Epiphytes visible, turbid water, damaged basket..."}
+                  value={readingForm.notas}
                   onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
-                  style={{...S.input,fontSize:12}}/>
+                  aria-label={lang==="es"?"Comentarios del campo":"Field comments"}
+                  style={{...S.input,fontSize:12,
+                    borderColor:readingForm.notas.trim()?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}}/>
+                {readingForm.notas.trim() && (
+                  <div style={{fontSize:10,color:"#0d9488",fontWeight:600,marginTop:4,display:"flex",alignItems:"center",gap:4}}>
+                    <span>📨</span>
+                    <span>{lang==="es"?"Eduardo verá este comentario al sincronizar":"Eduardo sees this on sync"}</span>
+                  </div>
+                )}
               </div>
               <button onClick={()=>handleAddReading(s.id)}
                 disabled={!readingForm.peso}
@@ -4495,7 +4674,13 @@ function BottomNav({ tab, setTab, role, lang }) {
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(2,8,24,.96)",borderTop:"1px solid rgba(148,163,184,.07)",display:"flex",justifyContent:"space-around",padding:"8px 0 max(8px,env(safe-area-inset-bottom))",backdropFilter:"blur(20px)",zIndex:100}}>
       {tabs.map(item=>(
-        <button key={item.id} onClick={()=>setTab(item.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+        <button
+          key={item.id}
+          onClick={()=>setTab(item.id)}
+          role="tab"
+          aria-selected={tab===item.id}
+          aria-label={item.label}
+          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
           <Icon name={item.icon} size={20} color={tab===item.id?"#0d9488":"#475569"}/>
           <span style={{fontSize:9,color:tab===item.id?"#0d9488":"#475569",fontWeight:tab===item.id?700:400}}>{item.label}</span>
         </button>
@@ -4598,9 +4783,15 @@ export default function App() {
     return () => clearInterval(id);
   }, [online, user]);
 
-  // ── Initial load after login ─────────────────────────────────────────────────
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Mark initial load complete after first pull
   useEffect(() => {
-    if (user && online) pullRemoteData();
+    if (user && online) {
+      pullRemoteData().finally(() => setInitialLoading(false));
+    } else {
+      setInitialLoading(false);
+    }
   }, [user]);
 
   // ── PULL: fetch latest data from Supabase ────────────────────────────────────
@@ -4823,6 +5014,12 @@ export default function App() {
     <div className="vdm-root" style={{minHeight:"100vh",background:"#021c1e",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        :focus-visible{outline:2px solid #0d9488!important;outline-offset:2px!important;}
+        :focus:not(:focus-visible){outline:none;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
         @media(min-width:600px){
           .vdm-root{max-width:600px!important;margin:0 auto!important;}
           .vdm-root nav{max-width:600px!important;left:50%!important;transform:translateX(-50%)!important;right:auto!important;}
@@ -4849,16 +5046,66 @@ export default function App() {
 
       {/* Offline banner */}
       {!online && (
-        <div style={{background:"rgba(71,85,105,.9)",padding:"6px 16px",display:"flex",alignItems:"center",gap:8,fontSize:11,color:"#cbd5e1"}}>
-          <span>📵</span>
+        <div
+          role="alert"
+          aria-live="assertive"
+          style={{background:"rgba(71,85,105,.9)",padding:"6px 16px",display:"flex",alignItems:"center",gap:8,fontSize:11,color:"#cbd5e1"}}>
+          <span aria-hidden="true">📵</span>
           <span>{lang==="es"?"Sin conexión — los cambios se guardarán al reconectar":"Offline — changes will sync when reconnected"}</span>
           {pendingCount>0&&<span style={{marginLeft:"auto",color:"#fb923c",fontWeight:700}}>{pendingCount} pendiente{pendingCount>1?"s":""}</span>}
         </div>
       )}
 
+      {/* Sync announcements — screen reader only */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{position:"absolute",width:1,height:1,padding:0,margin:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0}}
+      >
+        {lastSync ? `Sincronizado a las ${lastSync.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}` : ""}
+      </div>
+
+      {/* Toast notification region */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
+          zIndex:9999,display:"flex",flexDirection:"column",gap:8,
+          pointerEvents:"none",width:"calc(100% - 32px)",maxWidth:400}}
+        id="toast-region"
+      />
+
+      {/* Skeleton loading screen */}
+      {initialLoading && (
+        <div style={{padding:"16px 16px 100px"}} aria-busy="true" aria-label="Cargando...">
+          {[1,2,3].map(i=>(
+            <div key={i} style={{background:"rgba(15,23,42,.8)",border:"1px solid rgba(148,163,184,.08)",borderRadius:14,padding:14,marginBottom:10}}>
+              <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
+                <div style={{width:40,height:40,borderRadius:11,backgroundSize:"200% 100%",
+                  background:"linear-gradient(90deg,#032d30 25%,#054040 50%,#032d30 75%)",
+                  animation:"shimmer 1.5s infinite"}}/>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{height:14,width:"60%",borderRadius:6,backgroundSize:"200% 100%",
+                    background:"linear-gradient(90deg,#032d30 25%,#054040 50%,#032d30 75%)",
+                    animation:"shimmer 1.5s infinite"}}/>
+                  <div style={{height:11,width:"40%",borderRadius:6,backgroundSize:"200% 100%",
+                    background:"linear-gradient(90deg,#032d30 25%,#054040 50%,#032d30 75%)",
+                    animation:"shimmer 1.5s infinite"}}/>
+                </div>
+              </div>
+              <div style={{height:5,borderRadius:3,backgroundSize:"200% 100%",
+                background:"linear-gradient(90deg,#032d30 25%,#054040 50%,#032d30 75%)",
+                animation:"shimmer 1.5s infinite"}}/>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Screen routing */}
       {/* Personal dashboard overlay — reachable from any screen */}
-      {personalView && (
+      {!initialLoading && personalView && (
         <PersonalDashboard
           initials={personalView}
           onBack={()=>setPersonalView(null)}
@@ -4873,7 +5120,7 @@ export default function App() {
           user={user}
         />
       )}
-      <div>
+      <div role="main" aria-label="Contenido principal" style={{display: initialLoading ? "none" : "block"}}>
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
