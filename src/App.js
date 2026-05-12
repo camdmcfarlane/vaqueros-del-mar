@@ -81,6 +81,11 @@ const SYSTEMS_DATA = [
   { id:"P28",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
   { id:"P29",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
   { id:"P30",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
+  // ─── NEW SYSTEMS — added from beta test ──────────────────────────────────────
+  { id:"P13-4", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
+  { id:"P13-5", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
+  { id:"P13-6", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
+  { id:"P13-7", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
 ];
 
 const INITIAL_READINGS = [
@@ -3609,8 +3614,19 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editSys, setEditSys] = useState(null);
-  const [showReadingForm, setShowReadingForm] = useState(false);
-  const [readingForm, setReadingForm] = useState({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
+  const [showReadingForm, setShowReadingForm]   = useState(false);
+  const [readingForm, setReadingForm]           = useState({
+    fecha:     new Date().toISOString().slice(0,10),
+    tipo:      "peso",   // "peso" | "parametros"
+    peso:      "",
+    sueltos:   "",       // free seaweed (suelto/sueldo)
+    salt:      "",
+    ph:        "",
+    temp:      "",
+    salinidad: "",
+    notas:     "",
+    foto:      false,
+  });
   const [editingReadingId, setEditingReadingId] = useState(null);
   const [editReadingForm, setEditReadingForm] = useState({ fecha:"", peso:"", notas:"" });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
@@ -3643,26 +3659,43 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   };
 
   const handleAddReading = (sistemaId) => {
-    const peso = parseFloat(readingForm.peso);
-    if (!peso || peso <= 0) return;
-    const prevReadings = readings.filter(r => r.sistema === sistemaId)
+    const isPeso = readingForm.tipo === "peso";
+    const peso   = isPeso ? parseFloat(readingForm.peso) : null;
+    if (isPeso && (!peso || peso <= 0)) return;
+    if (!isPeso && !readingForm.salt && !readingForm.ph && !readingForm.temp) return;
+
+    const prevReadings = readings
+      .filter(r => r.sistema === sistemaId)
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     const prev = prevReadings[0] || null;
-    const tdc = prev ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha) : null;
+    const tdc  = (isPeso && prev?.peso)
+      ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha)
+      : null;
+
     const newReading = {
-      id: Date.now(),
-      sistema: sistemaId,
-      fecha: readingForm.fecha,
-      peso: peso,
+      id:         Date.now(),
+      sistema:    sistemaId,
+      fecha:      readingForm.fecha,
+      tipo:       readingForm.tipo,
+      peso:       peso,
+      sueltos:    readingForm.sueltos ? parseFloat(readingForm.sueltos) : null,
       tdc,
-      notas: readingForm.notas || "",
-      sueltos: null, cosechada: null, sembrado: null,
-      aguas: "", condiciones: "", salt: null, ph: null, salinidad: null, temp: null, foto: null,
+      salt:       readingForm.salt      ? parseFloat(readingForm.salt)      : null,
+      ph:         readingForm.ph        ? parseFloat(readingForm.ph)        : null,
+      temp:       readingForm.temp      ? parseFloat(readingForm.temp)      : null,
+      salinidad:  readingForm.salinidad ? parseFloat(readingForm.salinidad) : null,
+      notas:      readingForm.notas || "",
+      foto:       readingForm.foto ? `foto_${Date.now()}.jpg` : null,
+      cosechada:  null, sembrado: null, aguas: "", condiciones: "",
     };
     const withNew = [...readings, newReading];
-    setReadings(recalcAllTDC(withNew, sistemaId));
+    syncReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
     setShowReadingForm(false);
-    setReadingForm({ fecha: new Date().toISOString().slice(0,10), peso:"", notas:"" });
+    setReadingForm({
+      fecha: new Date().toISOString().slice(0,10),
+      tipo:"peso", peso:"", sueltos:"",
+      salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:false,
+    });
   };
 
   const handleSaveEditReading = (readingId, sistemaId) => {
@@ -3673,7 +3706,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         ? { ...r, peso, fecha: editReadingForm.fecha, notas: editReadingForm.notas }
         : r
     );
-    setReadings(recalcAllTDC(updated, sistemaId));
+    syncReadings(recalcAllTDC(updated, sistemaId));
     setEditingReadingId(null);
   };
 
@@ -3748,59 +3781,113 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           {/* New reading form */}
           {showReadingForm && canEdit && (
             <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.15)",borderRadius:10,padding:12,marginBottom:12}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                <div>
-                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
-                  <input type="date" value={readingForm.fecha}
-                    onChange={e=>setReadingForm(p=>({...p,fecha:e.target.value}))}
-                    style={{...S.input,colorScheme:"dark",fontSize:12}}/>
-                </div>
-                <div>
-                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
-                  <input type="number" placeholder="ej. 8500" value={readingForm.peso}
-                    onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
-                    style={{...S.input,fontSize:12}}/>
-                </div>
+
+              {/* Reading type toggle */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
+                  <button key={t} onClick={()=>setReadingForm(p=>({...p,tipo:t}))}
+                    style={{padding:"8px 0",borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
+                      background:readingForm.tipo===t?"rgba(13,148,136,.25)":"rgba(255,255,255,.03)",
+                      color:readingForm.tipo===t?"#2dd4bf":"#64748b"}}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              {/* TDC preview */}
-              {readingForm.peso && lastR && (() => {
-                const preview = calcTDC(lastR.peso, lastR.fecha, parseFloat(readingForm.peso), readingForm.fecha);
-                if (preview === null) return null;
-                const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0d9488" : "#f87171";
-                return (
-                  <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:11,color:"#64748b"}}>TDC calculado vs lectura anterior</span>
-                    <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview >= 0 ? "+" : ""}{preview}%/día</span>
-                  </div>
-                );
-              })()}
+
+              {/* Date */}
               <div style={{marginBottom:8}}>
-                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
-                  💬 {lang==="es"?"Comentarios del campo (opcional)":"Field comments (optional)"}
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
+                <input type="date" value={readingForm.fecha}
+                  onChange={e=>setReadingForm(p=>({...p,fecha:e.target.value}))}
+                  style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+              </div>
+
+              {/* PESO mode */}
+              {readingForm.tipo==="peso" && (
+                <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                      <input type="number" placeholder="ej. 8500" value={readingForm.peso}
+                        onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
+                        style={{...S.input,fontSize:12}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
+                        {lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}
+                        <span style={{fontSize:9,color:"#334155",marginLeft:3}}>(sueltos)</span>
+                      </div>
+                      <input type="number" placeholder="0" value={readingForm.sueltos}
+                        onChange={e=>setReadingForm(p=>({...p,sueltos:e.target.value}))}
+                        style={{...S.input,fontSize:12}}/>
+                    </div>
+                  </div>
+                  {readingForm.peso && lastR?.peso && (() => {
+                    const preview = calcTDC(lastR.peso, lastR.fecha, parseFloat(readingForm.peso), readingForm.fecha);
+                    if (preview === null) return null;
+                    const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0d9488" : "#f87171";
+                    return (
+                      <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:11,color:"#64748b"}}>TDC vs lectura anterior</span>
+                        <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview >= 0 ? "+" : ""}{preview}%/día</span>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+
+              {/* PARAMETROS mode */}
+              {readingForm.tipo==="parametros" && (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                  {[
+                    ["salt",    lang==="es"?"Sal %":"Salt %",       "2.5"],
+                    ["ph",      "pH",                               "9.2"],
+                    ["temp",    lang==="es"?"Temp °C":"Temp °C",    "27" ],
+                    ["salinidad",lang==="es"?"Salinidad":"Salinity","19" ],
+                  ].map(([key,label,ph])=>(
+                    <div key={key}>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
+                      <input type="number" step="0.1" placeholder={ph}
+                        value={readingForm[key]}
+                        onChange={e=>setReadingForm(p=>({...p,[key]:e.target.value}))}
+                        style={{...S.input,fontSize:12}}/>
+                    </div>
+                  ))}
                 </div>
-                <input
-                  placeholder={lang==="es"
-                    ?"Ej: Epifitas visibles, agua turbia, canasta dañada..."
-                    :"E.g. Epiphytes visible, turbid water, damaged basket..."}
+              )}
+
+              {/* Photo */}
+              <div style={{marginBottom:8}}>
+                <button onClick={()=>setReadingForm(p=>({...p,foto:!p.foto}))}
+                  style={{width:"100%",padding:"9px 12px",borderRadius:9,cursor:"pointer",
+                    border:`1.5px dashed ${readingForm.foto?"rgba(13,148,136,.5)":"rgba(148,163,184,.2)"}`,
+                    background:readingForm.foto?"rgba(13,148,136,.06)":"transparent",
+                    color:readingForm.foto?"#2dd4bf":"#64748b",
+                    fontWeight:600,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                  <span>📷</span>
+                  {readingForm.foto?(lang==="es"?"✓ Foto incluida":"✓ Photo included"):(lang==="es"?"Adjuntar foto (opcional)":"Attach photo (optional)")}
+                </button>
+              </div>
+
+              {/* Comments */}
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios (opcional)":"Comments (optional)"}</div>
+                <input placeholder={lang==="es"?"Ej: Epifitas, agua turbia...":"E.g. Epiphytes, turbid water..."}
                   value={readingForm.notas}
                   onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
-                  aria-label={lang==="es"?"Comentarios del campo":"Field comments"}
-                  style={{...S.input,fontSize:12,
-                    borderColor:readingForm.notas.trim()?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}}/>
-                {readingForm.notas.trim() && (
-                  <div style={{fontSize:10,color:"#0d9488",fontWeight:600,marginTop:4,display:"flex",alignItems:"center",gap:4}}>
-                    <span>📨</span>
-                    <span>{lang==="es"?"Eduardo verá este comentario al sincronizar":"Eduardo sees this on sync"}</span>
-                  </div>
-                )}
+                  style={{...S.input,fontSize:12,borderColor:readingForm.notas.trim()?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}}/>
               </div>
+
               <button onClick={()=>handleAddReading(s.id)}
-                disabled={!readingForm.peso}
-                style={{width:"100%",padding:10,borderRadius:9,border:"none",background:readingForm.peso?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",color:readingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:13,cursor:readingForm.peso?"pointer":"default"}}>
+                disabled={readingForm.tipo==="peso"?!readingForm.peso:(!readingForm.salt&&!readingForm.ph&&!readingForm.temp)}
+                style={{width:"100%",padding:10,borderRadius:9,border:"none",
+                  background:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.salt||readingForm.ph||readingForm.temp))?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",
+                  color:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.salt||readingForm.ph||readingForm.temp))?"#fff":"#475569",
+                  fontWeight:700,fontSize:13,cursor:"pointer"}}>
                 {lang==="es"?"Guardar Lectura":"Save Reading"}
               </button>
             </div>
-          )}
+          )}          )}
 
           {/* Reading history list */}
           {readings.filter(r=>r.sistema===s.id)
@@ -3861,19 +3948,31 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                 <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                   padding:"8px 0",borderBottom:i<sysReadings.length-1?"1px solid rgba(148,163,184,.06)":"none"}}>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>{r.fecha}</div>
-                    {r.notas?<div style={{fontSize:10,color:"#64748b",marginTop:1}}>{r.notas}</div>:null}
+                    <div style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>
+                      {r.fecha}
+                      {r.tipo==="parametros"&&<span style={{marginLeft:6,fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(45,212,191,.15)",color:"#2dd4bf",fontWeight:700}}>🌊 params</span>}
+                    </div>
+                    {(r.salt||r.ph||r.temp||r.salinidad)&&(
+                      <div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap"}}>
+                        {r.salt&&<span style={{fontSize:9,color:"#64748b"}}>Sal: {r.salt}%</span>}
+                        {r.ph&&<span style={{fontSize:9,color:"#64748b"}}>pH: {r.ph}</span>}
+                        {r.temp&&<span style={{fontSize:9,color:"#64748b"}}>T: {r.temp}°C</span>}
+                        {r.salinidad&&<span style={{fontSize:9,color:"#64748b"}}>Salinidad: {r.salinidad}</span>}
+                      </div>
+                    )}
+                    {r.notas?<div style={{fontSize:10,color:"#64748b",marginTop:1,fontStyle:"italic"}}>"{r.notas}"</div>:null}
                   </div>
                   <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:10}}>
                     <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>
+                      {r.peso&&<div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>}
+                      {r.sueltos&&<div style={{fontSize:10,color:"#64748b"}}>+{(r.sueltos/1000).toFixed(2)}kg sueltos</div>}
                       {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
                       {i===0&&<div style={{fontSize:9,color:"#334155"}}>← actual</div>}
                     </div>
                     {canEditReadings && (
                       <button onClick={()=>{
                         setEditingReadingId(r.id);
-                        setEditReadingForm({ fecha:r.fecha, peso:String(r.peso), notas:r.notas||"" });
+                        setEditReadingForm({ fecha:r.fecha, peso:String(r.peso||""), notas:r.notas||"" });
                         setShowReadingForm(false);
                       }} style={{padding:"3px 8px",borderRadius:6,border:"none",
                         background:"rgba(245,158,11,.1)",color:"#f59e0b",
@@ -4734,8 +4833,18 @@ export default function App() {
   // Persist lang preference
   useEffect(() => { localStorage.setItem('vdm_lang', lang); }, [lang]);
 
-  const [systems, setSystems]         = useState(SYSTEMS_DATA);
-  const [readings, setReadings]       = useState(INITIAL_READINGS);
+  const [systems,  setSystems]  = useState(() => {
+    try {
+      const cached = localStorage.getItem('aq_systems_cache');
+      return cached ? JSON.parse(cached) : SYSTEMS_DATA;
+    } catch { return SYSTEMS_DATA; }
+  });
+  const [readings, setReadings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('aq_readings_cache');
+      return cached ? JSON.parse(cached) : INITIAL_READINGS;
+    } catch { return INITIAL_READINGS; }
+  });
   const [assignedTasks, setAssignedTasks]     = useState(SEED_ASSIGNED_TASKS);
   const [evaluations, setEvaluations]         = useState(SEED_EVALUATIONS);
   const [profScores, setProfScores]           = useState(SEED_PROF_SCORES);
@@ -4973,6 +5082,55 @@ export default function App() {
     });
   };
 
+  // ── syncReadings — push every new/edited reading to Supabase + localStorage ──
+  // This is the critical fix: readings previously used raw setReadings
+  // which meant new field readings were lost on logout/refresh
+  const syncReadings = (updater) => {
+    setReadings(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // Push new or changed readings to Supabase
+      next.forEach(r => {
+        const old = prev.find(x => x.id === r.id);
+        if (!old || JSON.stringify(old) !== JSON.stringify(r)) {
+          pushItem('readings', 'upsert', {
+            id:          r.id,
+            sistema:     r.sistema,
+            fecha:       r.fecha,
+            peso:        r.peso,
+            salt:        r.salt        ?? null,
+            ph:          r.ph          ?? null,
+            salinidad:   r.salinidad   ?? null,
+            temp:        r.temp        ?? null,
+            condiciones: r.condiciones ?? null,
+            aguas:       r.aguas       ?? null,
+            notas:       r.notas       ?? "",
+            tdc:         r.tdc         ?? null,
+            sueltos:     r.sueltos     ?? null,
+            cosechada:   r.cosechada   ?? null,
+            sembrado:    r.sembrado    ?? null,
+            updated_at:  new Date().toISOString(),
+          });
+        }
+      });
+      // Persist to localStorage so data survives inactivity logout
+      try {
+        localStorage.setItem('aq_readings_cache', JSON.stringify(next));
+      } catch(e) { console.warn('readings cache write failed:', e); }
+      return next;
+    });
+  };
+
+  // ── syncSystems — persist new systems to localStorage immediately ─────────────
+  const syncSystems = (updater) => {
+    setSystems(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        localStorage.setItem('aq_systems_cache', JSON.stringify(next));
+      } catch(e) { console.warn('systems cache write failed:', e); }
+      return next;
+    });
+  };
+
   // ── SYNC INDICATOR COMPONENT ─────────────────────────────────────────────────
   const SyncDot = () => {
     if (syncing) return (
@@ -5124,20 +5282,20 @@ export default function App() {
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
-        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
         {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
-        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
@@ -5145,7 +5303,7 @@ export default function App() {
         {/* Level 3 — CEO + Consultant */}
         {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={setSystems} readings={readings} setReadings={setReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
