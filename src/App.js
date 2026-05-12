@@ -3615,11 +3615,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [showForm, setShowForm] = useState(false);
   const [editSys, setEditSys] = useState(null);
   const [showReadingForm, setShowReadingForm]   = useState(false);
-  const [readingForm, setReadingForm]           = useState({
+  const [readingForm, setReadingForm] = useState({
     fecha:     new Date().toISOString().slice(0,10),
-    tipo:      "peso",   // "peso" | "parametros"
+    tipo:      "peso",
     peso:      "",
-    sueltos:   "",       // free seaweed (suelto/sueldo)
+    sueltos:   "",
+    buoys:     Array(10).fill(""),
     salt:      "",
     ph:        "",
     temp:      "",
@@ -3628,7 +3629,10 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     foto:      false,
   });
   const [editingReadingId, setEditingReadingId] = useState(null);
-  const [editReadingForm, setEditReadingForm] = useState({ fecha:"", peso:"", notas:"" });
+  const [editReadingForm, setEditReadingForm] = useState({
+    fecha:"", tipo:"peso", peso:"", sueltos:"",
+    salt:"", ph:"", temp:"", salinidad:"", notas:"",
+  });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
   // Only Eduardo, Jason, Cameron can edit existing readings
@@ -3679,6 +3683,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       tipo:       readingForm.tipo,
       peso:       peso,
       sueltos:    readingForm.sueltos ? parseFloat(readingForm.sueltos) : null,
+      buoys:      readingForm.buoys?.some(b=>b) ? readingForm.buoys.map(b=>parseFloat(b)||0) : null,
       tdc,
       salt:       readingForm.salt      ? parseFloat(readingForm.salt)      : null,
       ph:         readingForm.ph        ? parseFloat(readingForm.ph)        : null,
@@ -3693,20 +3698,30 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     setShowReadingForm(false);
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
-      tipo:"peso", peso:"", sueltos:"",
+      tipo:"peso", peso:"", sueltos:"", buoys:Array(10).fill(""),
       salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:false,
     });
   };
 
   const handleSaveEditReading = (readingId, sistemaId) => {
-    const peso = parseFloat(editReadingForm.peso);
-    if (!peso || peso <= 0) return;
+    const isPeso = editReadingForm.tipo === "peso";
+    const peso = isPeso ? parseFloat(editReadingForm.peso) : null;
+    if (isPeso && (!peso || peso <= 0)) return;
     const updated = readings.map(r =>
-      r.id === readingId
-        ? { ...r, peso, fecha: editReadingForm.fecha, notas: editReadingForm.notas }
-        : r
+      r.id === readingId ? {
+        ...r,
+        fecha:     editReadingForm.fecha,
+        tipo:      editReadingForm.tipo,
+        peso:      peso,
+        sueltos:   editReadingForm.sueltos   ? parseFloat(editReadingForm.sueltos)   : null,
+        salt:      editReadingForm.salt      ? parseFloat(editReadingForm.salt)      : null,
+        ph:        editReadingForm.ph        ? parseFloat(editReadingForm.ph)        : null,
+        temp:      editReadingForm.temp      ? parseFloat(editReadingForm.temp)      : null,
+        salinidad: editReadingForm.salinidad ? parseFloat(editReadingForm.salinidad) : null,
+        notas:     editReadingForm.notas     || "",
+      } : r
     );
-    setReadings(recalcAllTDC(updated, sistemaId));
+    setReadings(isPeso ? recalcAllTDC(updated, sistemaId) : updated);
     setEditingReadingId(null);
   };
 
@@ -3767,7 +3782,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         <div style={S.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>
-              {lang==="es"?"Lecturas de Peso":"Weight Readings"}
+              {lang==="es"?"Lecturas":"Readings"}
               <span style={{marginLeft:6,color:"#334155"}}>({readings.filter(r=>r.sistema===s.id).length})</span>
             </div>
             {canEdit && (
@@ -3781,19 +3796,15 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           {/* New reading form */}
           {showReadingForm && canEdit && (
             <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.15)",borderRadius:10,padding:12,marginBottom:12}}>
-
-              {/* Reading type toggle */}
+              {/* Type toggle */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                 {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
                   <button key={t} onClick={()=>setReadingForm(p=>({...p,tipo:t}))}
                     style={{padding:"8px 0",borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
                       background:readingForm.tipo===t?"rgba(13,148,136,.25)":"rgba(255,255,255,.03)",
-                      color:readingForm.tipo===t?"#2dd4bf":"#64748b"}}>
-                    {label}
-                  </button>
+                      color:readingForm.tipo===t?"#2dd4bf":"#64748b"}}>{label}</button>
                 ))}
               </div>
-
               {/* Date */}
               <div style={{marginBottom:8}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
@@ -3801,61 +3812,86 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                   onChange={e=>setReadingForm(p=>({...p,fecha:e.target.value}))}
                   style={{...S.input,colorScheme:"dark",fontSize:12}}/>
               </div>
-
               {/* PESO mode */}
               {readingForm.tipo==="peso" && (
                 <>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                    <div>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
-                      <input type="number" placeholder="ej. 8500" value={readingForm.peso}
-                        onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
-                        style={{...S.input,fontSize:12}}/>
-                    </div>
-                    <div>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
-                        {lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}
-                        <span style={{fontSize:9,color:"#334155",marginLeft:3}}>(sueltos)</span>
+                  {s.tipo==="Long Line" ? (
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
+                        {s.id} — Buoys 1–10 (g each)
+                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Total = sum of all buoys</span>
                       </div>
-                      <input type="number" placeholder="0" value={readingForm.sueltos}
-                        onChange={e=>setReadingForm(p=>({...p,sueltos:e.target.value}))}
-                        style={{...S.input,fontSize:12}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                        {Array.from({length:10},(_,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:10,color:"#64748b",width:48,flexShrink:0,fontFamily:"monospace"}}>Buoy {i+1}</span>
+                            <input type="number" placeholder="0"
+                              value={readingForm.buoys?.[i]||""}
+                              onChange={e=>{
+                                const buoys=[...(readingForm.buoys||Array(10).fill(""))];
+                                buoys[i]=e.target.value;
+                                const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);
+                                setReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));
+                              }}
+                              style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                          </div>
+                        ))}
+                      </div>
+                      {readingForm.peso&&(
+                        <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",
+                          borderRadius:8,background:"rgba(13,148,136,.08)",marginBottom:8}}>
+                          <span style={{fontSize:11,color:"#64748b"}}>Total (all buoys)</span>
+                          <span style={{fontSize:14,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>
+                            {(parseFloat(readingForm.peso)/1000).toFixed(3)} kg
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  {readingForm.peso && lastR?.peso && (() => {
-                    const preview = calcTDC(lastR.peso, lastR.fecha, parseFloat(readingForm.peso), readingForm.fecha);
-                    if (preview === null) return null;
-                    const col = preview >= 2.5 ? "#4ade80" : preview >= 0 ? "#0d9488" : "#f87171";
-                    return (
+                  ) : (
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                      <div>
+                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                        <input type="number" placeholder="ej. 8500" value={readingForm.peso}
+                          onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
+                          style={{...S.input,fontSize:12}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
+                          {lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}
+                          <span style={{fontSize:9,color:"#334155",marginLeft:3}}>(sueltos)</span>
+                        </div>
+                        <input type="number" placeholder="0" value={readingForm.sueltos}
+                          onChange={e=>setReadingForm(p=>({...p,sueltos:e.target.value}))}
+                          style={{...S.input,fontSize:12}}/>
+                      </div>
+                    </div>
+                  )}
+                  {readingForm.peso&&lastR?.peso&&(()=>{
+                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha);
+                    if(preview===null)return null;
+                    const col=preview>=2.5?"#4ade80":preview>=0?"#0d9488":"#f87171";
+                    return(
                       <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{fontSize:11,color:"#64748b"}}>TDC vs lectura anterior</span>
-                        <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview >= 0 ? "+" : ""}{preview}%/día</span>
+                        <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview>=0?"+":""}{preview}%/día</span>
                       </div>
                     );
                   })()}
                 </>
               )}
-
-              {/* PARAMETROS mode */}
-              {readingForm.tipo==="parametros" && (
+              {/* PARAMETROS mode — sal% last */}
+              {readingForm.tipo==="parametros"&&(
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  {[
-                    ["salt",    lang==="es"?"Sal %":"Salt %",       "2.5"],
-                    ["ph",      "pH",                               "9.2"],
-                    ["temp",    lang==="es"?"Temp °C":"Temp °C",    "27" ],
-                    ["salinidad",lang==="es"?"Salinidad":"Salinity","19" ],
-                  ].map(([key,label,ph])=>(
+                  {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
                     <div key={key}>
                       <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
-                      <input type="number" step="0.1" placeholder={ph}
-                        value={readingForm[key]}
+                      <input type="number" step="0.1" placeholder={ph} value={readingForm[key]}
                         onChange={e=>setReadingForm(p=>({...p,[key]:e.target.value}))}
                         style={{...S.input,fontSize:12}}/>
                     </div>
                   ))}
                 </div>
               )}
-
               {/* Photo */}
               <div style={{marginBottom:8}}>
                 <button onClick={()=>setReadingForm(p=>({...p,foto:!p.foto}))}
@@ -3868,123 +3904,178 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                   {readingForm.foto?(lang==="es"?"✓ Foto incluida":"✓ Photo included"):(lang==="es"?"Adjuntar foto (opcional)":"Attach photo (optional)")}
                 </button>
               </div>
-
               {/* Comments */}
               <div style={{marginBottom:8}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios (opcional)":"Comments (optional)"}</div>
                 <input placeholder={lang==="es"?"Ej: Epifitas, agua turbia...":"E.g. Epiphytes, turbid water..."}
-                  value={readingForm.notas}
-                  onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
+                  value={readingForm.notas} onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
                   style={{...S.input,fontSize:12,borderColor:readingForm.notas.trim()?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}}/>
               </div>
-
               <button onClick={()=>handleAddReading(s.id)}
-                disabled={readingForm.tipo==="peso"?!readingForm.peso:(!readingForm.salt&&!readingForm.ph&&!readingForm.temp)}
+                disabled={readingForm.tipo==="peso"?!readingForm.peso:(!readingForm.ph&&!readingForm.temp&&!readingForm.salinidad&&!readingForm.salt)}
                 style={{width:"100%",padding:10,borderRadius:9,border:"none",
-                  background:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.salt||readingForm.ph||readingForm.temp))?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",
-                  color:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.salt||readingForm.ph||readingForm.temp))?"#fff":"#475569",
+                  background:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.ph||readingForm.temp||readingForm.salinidad||readingForm.salt))?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",
+                  color:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.ph||readingForm.temp||readingForm.salinidad||readingForm.salt))?"#fff":"#475569",
                   fontWeight:700,fontSize:13,cursor:"pointer"}}>
                 {lang==="es"?"Guardar Lectura":"Save Reading"}
               </button>
             </div>
-          )}          )}
+          )}
 
-          {/* Reading history list */}
-          {readings.filter(r=>r.sistema===s.id)
-            .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))
-            .map((r,i)=>{
-              const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0d9488":"#f87171";
-              const isEditing = editingReadingId === r.id;
-              const sysReadings = readings.filter(x=>x.sistema===s.id);
+          {/* Reading history — header renamed to Lecturas, grouped by date */}
+          {(()=>{
+            const isLongLine = s.tipo==="Long Line";
+            const allSysReadings = readings.filter(r=>r.sistema===s.id)
+              .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
 
-              // ── Inline edit form ──────────────────────────────────────────
-              if (isEditing && canEditReadings) {
+            // Group by date — concatenate peso+parametros on same date
+            const dateGroups = {};
+            allSysReadings.forEach(r=>{
+              if(!dateGroups[r.fecha]) dateGroups[r.fecha]={};
+              const tipo = r.tipo||"peso";
+              if(!dateGroups[r.fecha][tipo]) dateGroups[r.fecha][tipo]=[];
+              dateGroups[r.fecha][tipo].push(r);
+            });
+
+            return Object.entries(dateGroups)
+              .sort(([a],[b])=>b.localeCompare(a))
+              .map(([fecha,tipoMap],groupIdx)=>{
+                const pesoReadings   = tipoMap["peso"]       ||[];
+                const paramReadings  = tipoMap["parametros"] ||[];
+                const allInGroup     = [...pesoReadings,...paramReadings];
+
                 return (
-                  <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.2)",borderRadius:10,padding:12,marginBottom:6}}>
-                    <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>
-                      ✏️ {lang==="es"?"Editar lectura":"Edit reading"}
+                  <div key={fecha} style={{borderBottom:"1px solid rgba(148,163,184,.06)",paddingBottom:6,marginBottom:4}}>
+                    {/* Date header */}
+                    <div style={{fontSize:10,color:"#64748b",fontWeight:700,padding:"4px 0 2px",textTransform:"uppercase",letterSpacing:.5}}>
+                      {fecha}
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                      <div>
-                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
-                        <input type="date" value={editReadingForm.fecha}
-                          onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
-                          style={{...S.input,colorScheme:"dark",fontSize:12}}/>
-                      </div>
-                      <div>
-                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso (g)":"Weight (g)"}</div>
-                        <input type="number" value={editReadingForm.peso}
-                          onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))}
-                          style={{...S.input,fontSize:12}}/>
-                      </div>
-                    </div>
-                    <div style={{marginBottom:8}}>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Notas</div>
-                      <input value={editReadingForm.notas}
-                        onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
-                        placeholder={lang==="es"?"Observaciones...":"Observations..."}
-                        style={{...S.input,fontSize:12}}/>
-                    </div>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>handleSaveEditReading(r.id, s.id)}
-                        disabled={!editReadingForm.peso}
-                        style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",
-                          background:editReadingForm.peso?"linear-gradient(135deg,#f59e0b,#d97706)":"rgba(148,163,184,.1)",
-                          color:editReadingForm.peso?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:editReadingForm.peso?"pointer":"default"}}>
-                        {lang==="es"?"Guardar":"Save"}
-                      </button>
-                      <button onClick={()=>setEditingReadingId(null)}
-                        style={{padding:"8px 14px",borderRadius:8,border:"1px solid rgba(148,163,184,.15)",
-                          background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>
-                        {lang==="es"?"Cancelar":"Cancel"}
-                      </button>
-                    </div>
+
+                    {/* Peso reading(s) for this date */}
+                    {pesoReadings.map((r,pi)=>{
+                      const col = r.tdc===null?"#475569":r.tdc>=2.5?"#4ade80":r.tdc>=0?"#0d9488":"#f87171";
+                      const isEditing = editingReadingId===r.id;
+                      const dupLabel = pesoReadings.length>1?` (${pi+1})`:"";
+                      const sysReadings = allSysReadings;
+                      if(isEditing && canEditReadings) {
+                        const editCanSave = editReadingForm.tipo==="peso"
+                          ? !!editReadingForm.peso
+                          : !!(editReadingForm.ph||editReadingForm.temp||editReadingForm.salinidad||editReadingForm.salt);
+                        return (
+                          <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.25)",borderRadius:10,padding:12,marginBottom:6}}>
+                            <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
+                              ✏️ {lang==="es"?"Editar lectura":"Edit reading"} — {fecha}{dupLabel}
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                              {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
+                                <button key={t} onClick={()=>setEditReadingForm(p=>({...p,tipo:t}))}
+                                  style={{padding:"7px 0",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
+                                    background:editReadingForm.tipo===t?"rgba(245,158,11,.25)":"rgba(255,255,255,.03)",
+                                    color:editReadingForm.tipo===t?"#f59e0b":"#64748b"}}>{label}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{marginBottom:8}}>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
+                              <input type="date" value={editReadingForm.fecha}
+                                onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
+                                style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+                            </div>
+                            {editReadingForm.tipo==="peso"?(
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                <div>
+                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                </div>
+                                <div>
+                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}</div>
+                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                </div>
+                              </div>
+                            ):(
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
+                                  <div key={key}>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
+                                    <input type="number" step="0.1" placeholder={ph} value={editReadingForm[key]} onChange={e=>setEditReadingForm(p=>({...p,[key]:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{marginBottom:10}}>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios":"Comments"}</div>
+                              <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
+                                placeholder={lang==="es"?"Observaciones...":"Observations..."} style={{...S.input,fontSize:12}}/>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                              <button onClick={()=>handleSaveEditReading(r.id,s.id)} disabled={!editCanSave}
+                                style={{padding:10,borderRadius:9,border:"none",background:editCanSave?"rgba(13,148,136,.8)":"rgba(148,163,184,.1)",color:editCanSave?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+                                {lang==="es"?"Guardar":"Save"}
+                              </button>
+                              <button onClick={()=>setEditingReadingId(null)}
+                                style={{padding:10,borderRadius:9,border:"1px solid rgba(148,163,184,.12)",background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>
+                                {lang==="es"?"Cancelar":"Cancel"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      // Normal peso row
+                      return (
+                        <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}>
+                          <div style={{flex:1}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>⚖️</span>
+                              {dupLabel&&<span style={{fontSize:9,color:"#64748b"}}>{dupLabel}</span>}
+                            </div>
+                            {r.notas&&<div style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>"{r.notas}"</div>}
+                          </div>
+                          <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:8}}>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{r.peso?(r.peso/1000).toFixed(2)+" kg":"—"}</div>
+                              {r.sueltos&&<div style={{fontSize:10,color:"#64748b"}}>+{(r.sueltos/1000).toFixed(2)}kg sueltos</div>}
+                              {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
+                            </div>
+                            {canEditReadings&&(
+                              <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
+                                style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Parametros reading(s) for this date — shown below peso, concatenated */}
+                    {paramReadings.map((r,pi)=>{
+                      const isEditing = editingReadingId===r.id;
+                      const dupLabel  = paramReadings.length>1?` (${pi+1})`:"";
+                      if(isEditing && canEditReadings) return null; // handled above
+                      return (
+                        <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 0 3px 10px",borderLeft:"2px solid rgba(45,212,191,.2)"}}>
+                          <div style={{flex:1}}>
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                              {r.ph&&<span style={{fontSize:10,color:"#94a3b8"}}>pH {r.ph}</span>}
+                              {r.temp&&<span style={{fontSize:10,color:"#94a3b8"}}>T {r.temp}°C</span>}
+                              {r.salinidad&&<span style={{fontSize:10,color:"#94a3b8"}}>Sal {r.salinidad}</span>}
+                              {r.salt&&<span style={{fontSize:10,color:"#94a3b8"}}>Sal% {r.salt}</span>}
+                            </div>
+                            {r.notas&&<div style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>"{r.notas}"</div>}
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:9,color:"#2dd4bf"}}>🌊{dupLabel}</span>
+                            {canEditReadings&&(
+                              <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:"parametros",peso:"",sueltos:"",salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
+                                style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              }
+              });
+          })()}
 
-              // ── Normal reading row ────────────────────────────────────────
-              return (
-                <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                  padding:"8px 0",borderBottom:i<sysReadings.length-1?"1px solid rgba(148,163,184,.06)":"none"}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>
-                      {r.fecha}
-                      {r.tipo==="parametros"&&<span style={{marginLeft:6,fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(45,212,191,.15)",color:"#2dd4bf",fontWeight:700}}>🌊 params</span>}
-                    </div>
-                    {(r.salt||r.ph||r.temp||r.salinidad)&&(
-                      <div style={{display:"flex",gap:8,marginTop:3,flexWrap:"wrap"}}>
-                        {r.salt&&<span style={{fontSize:9,color:"#64748b"}}>Sal: {r.salt}%</span>}
-                        {r.ph&&<span style={{fontSize:9,color:"#64748b"}}>pH: {r.ph}</span>}
-                        {r.temp&&<span style={{fontSize:9,color:"#64748b"}}>T: {r.temp}°C</span>}
-                        {r.salinidad&&<span style={{fontSize:9,color:"#64748b"}}>Salinidad: {r.salinidad}</span>}
-                      </div>
-                    )}
-                    {r.notas?<div style={{fontSize:10,color:"#64748b",marginTop:1,fontStyle:"italic"}}>"{r.notas}"</div>:null}
-                  </div>
-                  <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:10}}>
-                    <div>
-                      {r.peso&&<div style={{fontSize:13,fontWeight:700,color:"#e2e8f0",fontFamily:"monospace"}}>{(r.peso/1000).toFixed(2)} kg</div>}
-                      {r.sueltos&&<div style={{fontSize:10,color:"#64748b"}}>+{(r.sueltos/1000).toFixed(2)}kg sueltos</div>}
-                      {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
-                      {i===0&&<div style={{fontSize:9,color:"#334155"}}>← actual</div>}
-                    </div>
-                    {canEditReadings && (
-                      <button onClick={()=>{
-                        setEditingReadingId(r.id);
-                        setEditReadingForm({ fecha:r.fecha, peso:String(r.peso||""), notas:r.notas||"" });
-                        setShowReadingForm(false);
-                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",
-                        background:"rgba(245,158,11,.1)",color:"#f59e0b",
-                        fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>
-                        ✏️
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-          })}
-          {readings.filter(r=>r.sistema===s.id).length===0&&(
             <div style={{fontSize:12,color:"#475569",textAlign:"center",padding:"12px 0"}}>
               {lang==="es"?"Sin lecturas registradas":"No readings recorded"}
             </div>
@@ -4866,11 +4957,17 @@ export default function App() {
   const offlineQueue = useRef([]);  // { table, op, payload }
   const syncTimer    = useRef(null);
 
-  // ── Supabase import (lazy — only when online) ────────────────────────────────
-  // We import dynamically so the app still loads fully if Supabase is unreachable
+  // ── Supabase import — wait for client before any operations ────────────────
   const sb = useRef(null);
+  const [sbReady, setSbReady] = useState(false);
+
   useEffect(() => {
-    import('./supabase.js').then(m => { sb.current = m.supabase; }).catch(() => {});
+    import('./supabase.js')
+      .then(m => {
+        sb.current = m.supabase;
+        setSbReady(true);
+      })
+      .catch(e => console.warn('Supabase load failed:', e));
   }, []);
 
   // ── Online/offline detection ─────────────────────────────────────────────────
@@ -4885,23 +4982,24 @@ export default function App() {
     };
   }, []);
 
-  // ── Poll for remote updates every 60s when online ───────────────────────────
+  // ── Poll for remote updates every 30s when online and sb ready ──────────────
   useEffect(() => {
-    if (!online) return;
-    const id = setInterval(() => pullRemoteData(), 60000);
+    if (!online || !sbReady) return;
+    const id = setInterval(() => pullRemoteData(), 30000);
     return () => clearInterval(id);
-  }, [online, user]);
+  }, [online, user, sbReady]);
 
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Mark initial load complete after first pull
+  // Pull once Supabase client is ready AND user is logged in
   useEffect(() => {
+    if (!sbReady) return;
     if (user && online) {
       pullRemoteData().finally(() => setInitialLoading(false));
     } else {
       setInitialLoading(false);
     }
-  }, [user]);
+  }, [user, sbReady]);
 
   // ── PULL: fetch latest data from Supabase ────────────────────────────────────
   const pullRemoteData = async () => {
@@ -4923,6 +5021,8 @@ export default function App() {
           condicion: r.condicion, voiceNote: null,
           foto: r.foto_url, confirmed: r.confirmed,
           notas: r.notas || "",
+          comentarioVaquero: r.comentario_vaquero || null,
+          comentarioFecha:   r.comentario_fecha   || null,
         })));
       }
 
@@ -4941,15 +5041,37 @@ export default function App() {
         })));
       }
 
+      // Merge remote readings with local — remote wins on conflict by id
+      // This prevents wiping locally-entered readings not yet pushed
       if (readRes.data?.length) {
-        setReadings(readRes.data.map(r => ({
-          id: r.id, sistema: r.sistema, fecha: r.fecha,
-          peso: r.peso, salt: r.salt, ph: r.ph,
-          salinidad: r.salinidad, temp: r.temp,
-          condiciones: r.condiciones, aguas: r.aguas,
-          notas: r.notas || "", foto: null, tdc: null,
-          sueltos: null, cosechada: null, sembrado: null,
-        })));
+        const pulled = readRes.data.map(r => ({
+          id:          r.id,
+          sistema:     r.sistema,
+          fecha:       r.fecha,
+          tipo:        r.tipo || 'peso',
+          peso:        r.peso,
+          sueltos:     r.sueltos     ?? null,
+          tdc:         r.tdc         ?? null,
+          salt:        r.salt        ?? null,
+          ph:          r.ph          ?? null,
+          salinidad:   r.salinidad   ?? null,
+          temp:        r.temp        ?? null,
+          condiciones: r.condiciones ?? null,
+          aguas:       r.aguas       ?? null,
+          notas:       r.notas       || "",
+          foto:        null,
+          cosechada:   r.cosechada   ?? null,
+          sembrado:    r.sembrado    ?? null,
+          buoys:       r.buoys       ?? null,
+        }));
+        // Merge: keep local-only readings (id not in remote), override with remote for shared ids
+        setReadings(prev => {
+          const remoteIds = new Set(pulled.map(r => r.id));
+          const localOnly = prev.filter(r => !remoteIds.has(r.id));
+          const merged = [...pulled, ...localOnly];
+          try { localStorage.setItem('aq_readings_cache', JSON.stringify(merged)); } catch {}
+          return merged;
+        });
       }
 
       setLastSync(new Date());
@@ -4960,25 +5082,29 @@ export default function App() {
     }
   };
 
-  // ── PUSH: write one item to Supabase ─────────────────────────────────────────
+  // ── PUSH: write one item to Supabase, then refresh dashboard ────────────────
   const pushItem = async (table, op, payload) => {
     if (!sb.current || !online) {
-      // Queue for later
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
       return false;
     }
     try {
+      let error;
       if (op === 'upsert') {
-        await sb.current.from(table).upsert(payload, { onConflict: 'id' });
+        // weekly_incidents uses composite PK (week, initials) not id
+        const conflictCol = table === 'weekly_incidents' ? 'week,initials' : 'id';
+        ({ error } = await sb.current.from(table).upsert(payload, { onConflict: conflictCol }));
       } else if (op === 'insert') {
-        await sb.current.from(table).insert(payload);
+        ({ error } = await sb.current.from(table).insert(payload));
       } else if (op === 'delete') {
-        await sb.current.from(table).delete().eq('id', payload.id);
+        ({ error } = await sb.current.from(table).delete().eq('id', payload.id));
       }
+      if (error) throw error;
+      setLastSync(new Date());
       return true;
     } catch (e) {
-      console.warn(`Push to ${table} failed:`, e.message);
+      console.error(`[AquaOps] Push to ${table} failed:`, e.message, payload);
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
       return false;
@@ -5088,34 +5214,41 @@ export default function App() {
   const syncReadings = (updater) => {
     setReadings(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Push new or changed readings to Supabase
-      next.forEach(r => {
+      // Find only new or changed readings — avoid pushing all 16 seed entries on every save
+      const changed = next.filter(r => {
         const old = prev.find(x => x.id === r.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(r)) {
-          pushItem('readings', 'upsert', {
-            id:          r.id,
-            sistema:     r.sistema,
-            fecha:       r.fecha,
-            peso:        r.peso,
-            salt:        r.salt        ?? null,
-            ph:          r.ph          ?? null,
-            salinidad:   r.salinidad   ?? null,
-            temp:        r.temp        ?? null,
-            condiciones: r.condiciones ?? null,
-            aguas:       r.aguas       ?? null,
-            notas:       r.notas       ?? "",
-            tdc:         r.tdc         ?? null,
-            sueltos:     r.sueltos     ?? null,
-            cosechada:   r.cosechada   ?? null,
-            sembrado:    r.sembrado    ?? null,
-            updated_at:  new Date().toISOString(),
-          });
-        }
+        return !old || JSON.stringify(old) !== JSON.stringify(r);
       });
-      // Persist to localStorage so data survives inactivity logout
-      try {
-        localStorage.setItem('aq_readings_cache', JSON.stringify(next));
-      } catch(e) { console.warn('readings cache write failed:', e); }
+      // Push outside the setState callback so it doesn't block render
+      if (changed.length > 0) {
+        setTimeout(() => {
+          changed.forEach(r => {
+            pushItem('readings', 'upsert', {
+              id:          r.id,
+              sistema:     r.sistema,
+              fecha:       r.fecha,
+              tipo:        r.tipo        ?? "peso",
+              peso:        r.peso        ?? null,
+              sueltos:     r.sueltos     ?? null,
+              tdc:         r.tdc         ?? null,
+              salt:        r.salt        ?? null,
+              ph:          r.ph          ?? null,
+              temp:        r.temp        ?? null,
+              salinidad:   r.salinidad   ?? null,
+              condiciones: r.condiciones ?? null,
+              aguas:       r.aguas       ?? null,
+              notas:       r.notas       ?? "",
+              foto:        r.foto        ?? null,
+              cosechada:   r.cosechada   ?? null,
+              sembrado:    r.sembrado    ?? null,
+              updated_at:  new Date().toISOString(),
+            });
+          });
+        }, 0);
+      }
+      // Persist to localStorage — survives inactivity logout
+      try { localStorage.setItem('aq_readings_cache', JSON.stringify(next)); }
+      catch(e) { console.warn('readings cache write failed:', e); }
       return next;
     });
   };
