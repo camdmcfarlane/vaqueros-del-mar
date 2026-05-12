@@ -3689,7 +3689,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       cosechada:  null, sembrado: null, aguas: "", condiciones: "",
     };
     const withNew = [...readings, newReading];
-    syncReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
+    setReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
     setShowReadingForm(false);
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
@@ -3706,7 +3706,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         ? { ...r, peso, fecha: editReadingForm.fecha, notas: editReadingForm.notas }
         : r
     );
-    syncReadings(recalcAllTDC(updated, sistemaId));
+    setReadings(recalcAllTDC(updated, sistemaId));
     setEditingReadingId(null);
   };
 
