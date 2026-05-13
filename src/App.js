@@ -18,7 +18,7 @@ import {
 } from "./data/seed";
 import { USERS } from "./data/users";
 import { T } from "./data/translations";
-import { getAlert, getLatestReading, calcGrowth, calcTaskScore, calcProfScore, calcTotalScore, calcBonusShare } from "./data/helpers";
+import { getAlert, getLatestReading, calcGrowth, calcTaskScore, calcProfScore, calcTotalScore, calcBonusShare, calcHoras } from "./data/helpers";
 import { S, AUTH_ISTYLE, AUTH_LSTYLE } from "./styles";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────────
