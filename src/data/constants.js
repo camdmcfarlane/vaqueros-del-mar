@@ -2,10 +2,29 @@
 // Extracted from App.js for maintainability
 
 // ─── REGIONS & POLYGONS ──────────────────────────────────────────────────────
-const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Isla de Tigre"];
+const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Tobobe","Playa Verde"];
 const DEFAULT_TIPOS     = ["Canasta","Long Line","Sistema 75m","Linea","Comercial"];
 const DEFAULT_MATERIALES= ["Tie-tie","Redes tubular","PVC","HDPE","Cuerda"];
 const DEFAULT_SEMILLAS  = ["Brazil","Mixed","Bahía Azul","Yellow","Brown","Spinosum"];
+
+// ─── REGION → SUPERVISOR MAPPING ────────────────────────────────────────────
+// One supervisor per region. null = unassigned (new region)
+const REGION_SUPERVISORS = {
+  "Tobobe":       { initials: "AD", name: "Adomis" },
+  "Playa Verde":  { initials: "VA", name: "Valerio" },
+  "Bahía Azul":   { initials: "BA", name: "Barnal" },
+  "Playa Roja":   { initials: "CE", name: "Charlie" },
+  "Cayo de Agua": { initials: "RV", name: "Viquez" },
+};
+
+// ─── TASK CADENCES (days) ───────────────────────────────────────────────────
+// Vigilancia includes: readings, weights, parameters, algae condition check
+const TASK_CADENCES = {
+  vigilancia: 1,    // Every day — readings, weights, parameters, condition
+  limpieza:   3,    // Every 3 days
+  siembra:    30,   // Every 30 days
+  cosecha:    45,   // Every 45 days (may be sooner for disease protocol)
+};
 
 const THRESHOLDS = {
   salt:  { min:1.5, max:3.5 },
@@ -156,6 +175,7 @@ const CONDICION_EMOJIS = [
 
 export {
   DEFAULT_REGIONS, DEFAULT_TIPOS, DEFAULT_MATERIALES, DEFAULT_SEMILLAS,
+  REGION_SUPERVISORS, TASK_CADENCES,
   THRESHOLDS, TASK_TYPES, PROF_CATEGORIES, SCORE_WEIGHTS,
   CREW, EVAL_SPLIT, CURRENT_QUARTER, ROLE_KPIS,
   COMPORTAMIENTOS_LIST, GALLUP_12, TOTAL_PTS,
