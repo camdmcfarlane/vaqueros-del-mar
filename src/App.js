@@ -1,762 +1,25 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
-// ─── REGIONS & POLYGONS ──────────────────────────────────────────────────────
-const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Isla de Tigre"];
-const DEFAULT_TIPOS     = ["Canasta","Long Line","Sistema 75m","Linea","Comercial"];
-const DEFAULT_MATERIALES= ["Tie-tie","Redes tubular","PVC","HDPE","Cuerda"];
-const DEFAULT_SEMILLAS  = ["Brazil","Mixed","Bahía Azul","Yellow","Brown","Spinosum"];
-
-// ─── SYSTEMS DATA (enriched with region, polygon, crew) ──────────────────────
-const SYSTEMS_DATA = [
-  // ─── EXISTING SYSTEMS — updated with calendario dates ────────────────────────
-  // Fields added: tamano ("2x2m"|"2x3m"), categoria ("semillero"|"comercial"|"prueba"),
-  //               fechaCosecha, fechaLimpieza
-  { id:"P1",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P2",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"HM", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P3",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P4",    region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P5-2",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P5-3",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P5-4",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P5-5",  region:"Cayo de Agua", poligono:1, pueblo:"Jobori",           tipo:"Long Line",  familia:"Eliazar",      profundidad:"50cm", materiales:"PVC",          semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°08'12\" O 082°04'10\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P11",   region:"Bahía Azul",   poligono:1, pueblo:"Avispa",           tipo:"Long Line",  familia:"Nortizo",      profundidad:"40cm", materiales:"HDPE",         semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°06'55\" O 082°02'44\"", fechaInstalacion:"2025-12-03", capitan:"JV", buceador:"JL", modulos:6,  tamano:"2x3m", categoria:"comercial", fechaCosecha:null,         fechaLimpieza:"diaria", notas:"⚠ Sin fecha en calendario" },
-  { id:"P12-1", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P12-2", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"Empresa*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'50\" O 082°03'20\"", fechaInstalacion:"2025-12-29", capitan:"RBC", buceador:"HM", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P13-1", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
-  { id:"P13-2", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"Empresa*",     profundidad:"35cm", materiales:"Tie-tie",      semillas:"Mixed",  estado:"Activo",   coordenadas:"N 09°05'30\" O 082°01'15\"", fechaInstalacion:"2025-12-29", capitan:"RBM", buceador:"CE", modulos:10, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-21", fechaLimpieza:"diaria", notas:"" },
-  { id:"P14",   region:"Playa Roja",   poligono:1, pueblo:"Gallinazo",        tipo:"Canasta",    familia:"P Celestino*", profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°04'22\" O 082°00'38\"", fechaInstalacion:"2025-12-12", capitan:"RBC", buceador:"JL", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-06", fechaLimpieza:"diaria", notas:"" },
-  { id:"P15-1", region:"Bahía Azul",   poligono:3, pueblo:"Ensenada",         tipo:"Canasta",    familia:"Eurelia*",     profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°09'10\" O 082°05'02\"", fechaInstalacion:"2025-12-29", capitan:"JV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-28", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-1", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"P Demetrio",   profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°10'05\" O 082°05'55\"", fechaInstalacion:"2025-12-29", capitan:"JV",  buceador:"HM", modulos:8,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P17",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"Empresa",      profundidad:"30cm", materiales:"Tie-tie",      semillas:"Brazil", estado:"Activo",   coordenadas:"N 09°07'34\" O 082°03'58\"", fechaInstalacion:"2025-12-29", capitan:"RV",  buceador:"JL", modulos:12, tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-
-  // ─── NEW COMMERCIAL SYSTEMS — from Calendario ────────────────────────────────
-  { id:"P18",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P19",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P20",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P21",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P22",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P23",   region:"Cayo de Agua", poligono:2, pueblo:"Cayo de Agua",     tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-03-31", fechaLimpieza:"diaria", notas:"" },
-  { id:"P12-3", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P12-4", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P12-5", region:"Bahía Azul",   poligono:2, pueblo:"Playa Verde",      tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-17", fechaLimpieza:"diaria", notas:"" },
-  { id:"P13-3", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-15", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-2", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P16-3", region:"Bahía Azul",   poligono:3, pueblo:"Igle. Apostólica", tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-02", fechaLimpieza:"diaria", notas:"" },
-  { id:"P72",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P73",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P74",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-  { id:"P75",   region:"Bahía Azul",   poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:0,  tamano:"2x3m", categoria:"comercial", fechaCosecha:"2026-05-14", fechaLimpieza:"diaria", notas:"" },
-
-  // ─── PRUEBA / SEMILLERO MODULES — 2x2m, 45-day cycle ────────────────────────
-  { id:"P26-1",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-2",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-3",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-4",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-5",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-03-16", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-6",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Retirado", coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"Retirado por alta infección de Epifitas" },
-  { id:"P26-7",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-11", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-8",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"Redes tubular",semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-9",  region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-10", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-23", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-11", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-12", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-27", fechaLimpieza:"diaria", notas:"" },
-  { id:"P26-13", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P26-14", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P26-15", region:"Bahía Azul",  poligono:1, pueblo:"Avispa",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"Bahía Azul", estado:"Activo", coordenadas:"", fechaInstalacion:"", capitan:"JV",   buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-08", fechaLimpieza:"diaria", notas:"Origen Bahía Azul — inicia etapa 45 días" },
-  { id:"P36-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P36-2",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P39-1",  region:"Playa Roja",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"RBC",    buceador:"CE",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-25", fechaLimpieza:"diaria", notas:"" },
-  { id:"P47-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-04-26", fechaLimpieza:"diaria", notas:"" },
-  { id:"P63-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
-  { id:"P64-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-03", fechaLimpieza:"diaria", notas:"" },
-  { id:"P65-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
-  { id:"P70-1",  region:"Bahía Azul",  poligono:1, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"JV",    buceador:"",   modulos:1,  tamano:"2x2m", categoria:"semillero", fechaCosecha:"2026-05-10", fechaLimpieza:"diaria", notas:"" },
-
-  // ─── SYSTEMS FLAGGED — no dates, needs Eduardo update ────────────────────────
-  { id:"P7",    region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P9-1",  region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P24",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P25",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P27",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P28",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P29",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  { id:"P30",   region:"",             poligono:0, pueblo:"",                 tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"", capitan:"",    buceador:"",   modulos:0,  tamano:"", categoria:"", fechaCosecha:null, fechaLimpieza:null, notas:"⚠ Sin datos — Eduardo debe actualizar" },
-  // ─── NEW SYSTEMS — added from beta test ──────────────────────────────────────
-  { id:"P13-4", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
-  { id:"P13-5", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
-  { id:"P13-6", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
-  { id:"P13-7", region:"Playa Roja",   poligono:1, pueblo:"Tobobe",           tipo:"Canasta",    familia:"",             profundidad:"",     materiales:"",             semillas:"",       estado:"Activo",   coordenadas:"", fechaInstalacion:"2026-04-01", capitan:"RBM", buceador:"CE", modulos:0, tamano:"2x3m", categoria:"comercial", fechaCosecha:null, fechaLimpieza:"diaria", notas:"⚠ Nuevo sistema — actualizar datos con Eduardo" },
-];
-
-const INITIAL_READINGS = [
-  { id:1, sistema:"P5-2", fecha:"2025-12-03", peso:3700, sueltos:null, cosechada:null, sembrado:800, aguas:"Turbia",       condiciones:"Saludables", salt:2.7,  ph:9.3,  salinidad:19.2, temp:26, tdc:null, notas:"", foto:null },
-  { id:2, sistema:"P5-3", fecha:"2025-12-03", peso:3200, sueltos:null, cosechada:null, sembrado:750, aguas:"Claras",       condiciones:"Saludables", salt:2.6,  ph:9.2,  salinidad:19.1, temp:26, tdc:null, notas:"", foto:null },
-  { id:3, sistema:"P5-4", fecha:"2025-12-06", peso:6160, sueltos:null, cosechada:null, sembrado:800, aguas:"Transparente", condiciones:"Saludables", salt:2.21, ph:9.37, salinidad:18.5, temp:26, tdc:null, notas:"", foto:null },
-  { id:4, sistema:"P5-5", fecha:"2025-12-06", peso:5480, sueltos:null, cosechada:null, sembrado:750, aguas:"Transparente", condiciones:"Saludable",  salt:2.2,  ph:9.3,  salinidad:19.1, temp:26, tdc:null, notas:"", foto:null },
-  { id:5, sistema:"P11",  fecha:"2025-12-03", peso:4500, sueltos:null, cosechada:null, sembrado:900, aguas:"Claras",       condiciones:"Saludables", salt:2.6,  ph:9.2,  salinidad:19.2, temp:26, tdc:null, notas:"", foto:null },
-  { id:6, sistema:"P12-1",fecha:"2025-12-09", peso:3440, sueltos:null, cosechada:null, sembrado:700, aguas:"Transparente", condiciones:"Saludables", salt:2.3,  ph:9.4,  salinidad:9.1,  temp:26, tdc:null, notas:"", foto:null },
-  { id:7, sistema:"P13-1",fecha:"2025-12-06", peso:3100, sueltos:null, cosechada:null, sembrado:650, aguas:"Transparente", condiciones:"Saludale",   salt:1.54, ph:9.6,  salinidad:13.3, temp:26, tdc:null, notas:"", foto:null },
-  { id:8, sistema:"P1",   fecha:"2025-12-10", peso:4200, sueltos:null, cosechada:null, sembrado:800, aguas:"Claras",       condiciones:"Saludables", salt:2.5,  ph:9.1,  salinidad:18.8, temp:27, tdc:null, notas:"", foto:null },
-  { id:9, sistema:"P2",   fecha:"2025-12-10", peso:3900, sueltos:null, cosechada:null, sembrado:780, aguas:"Claras",       condiciones:"Saludables", salt:2.4,  ph:9.2,  salinidad:18.9, temp:27, tdc:null, notas:"", foto:null },
-  { id:10,sistema:"P14",  fecha:"2025-12-12", peso:5200, sueltos:null, cosechada:null, sembrado:900, aguas:"Transparente", condiciones:"Saludables", salt:2.8,  ph:9.0,  salinidad:20.1, temp:25, tdc:null, notas:"", foto:null },
-  // Week 2
-  { id:11,sistema:"P5-2", fecha:"2025-12-10", peso:4900, sueltos:null, cosechada:null, sembrado:800, aguas:"Claras",       condiciones:"Saludables", salt:2.6,  ph:9.2,  salinidad:19.5, temp:26, tdc:null, notas:"", foto:null },
-  { id:12,sistema:"P5-3", fecha:"2025-12-10", peso:4400, sueltos:null, cosechada:null, sembrado:750, aguas:"Claras",       condiciones:"Saludables", salt:2.5,  ph:9.1,  salinidad:19.3, temp:26, tdc:null, notas:"", foto:null },
-  { id:13,sistema:"P11",  fecha:"2025-12-10", peso:6100, sueltos:null, cosechada:null, sembrado:900, aguas:"Transparente", condiciones:"Excelente",  salt:2.7,  ph:9.3,  salinidad:19.8, temp:26, tdc:null, notas:"", foto:null },
-  // Week 3
-  { id:14,sistema:"P5-2", fecha:"2025-12-17", peso:6800, sueltos:null, cosechada:null, sembrado:800, aguas:"Claras",       condiciones:"Saludables", salt:2.6,  ph:9.2,  salinidad:19.6, temp:27, tdc:null, notas:"", foto:null },
-  { id:15,sistema:"P11",  fecha:"2025-12-17", peso:8200, sueltos:null, cosechada:null, sembrado:900, aguas:"Claras",       condiciones:"Excelente",  salt:2.8,  ph:9.1,  salinidad:20.0, temp:27, tdc:null, notas:"", foto:null },
-  { id:16,sistema:"P14",  fecha:"2025-12-17", peso:7100, sueltos:null, cosechada:null, sembrado:900, aguas:"Transparente", condiciones:"Saludables", salt:2.7,  ph:9.2,  salinidad:19.8, temp:26, tdc:null, notas:"", foto:null },
-];
-
-// ─── TDC HISTORICAL DATA ─────────────────────────────────────────────────────
-const TDC_DATA = [
-  { fecha:"29/12/2025", tdc:0.00,  label:"29 Dic" },
-  { fecha:"05/01/2026", tdc:-0.18, label:"5 Ene" },
-  { fecha:"12/01/2026", tdc:-0.58, label:"12 Ene" },
-  { fecha:"19/01/2026", tdc:0.07,  label:"19 Ene" },
-  { fecha:"26/01/2026", tdc:2.08,  label:"26 Ene" },
-  { fecha:"02/02/2026", tdc:1.99,  label:"2 Feb" },
-  { fecha:"09/02/2026", tdc:1.12,  label:"9 Feb" },
-  { fecha:"16/02/2026", tdc:2.55,  label:"16 Feb" },
-  { fecha:"23/02/2026", tdc:2.26,  label:"23 Feb" },
-  { fecha:"02/03/2026", tdc:0.67,  label:"2 Mar" },
-  { fecha:"09/03/2026", tdc:1.58,  label:"9 Mar" },
-  { fecha:"16/03/2026", tdc:0.00,  label:"16 Mar", harvest:true },
-];
-
-// % Pruebas en Categorías
-// R = Rojo (red), A = Amarillo (yellow/amber), V = Verde (green), B = Azul/Blue (blue)
-// Stack order bottom→top: R, A, V, B — matching Eduardo's Excel chart
-// Source: R%/A%/V%/B% columns (N/O/P/Q) from Resumen sheet
-const PRUEBAS_DATA = [
-  { label:"12 Ene", r:55, a:32, v:9,  b:5  },
-  { label:"19 Ene", r:8,  a:19, v:49, b:24 },
-  { label:"26 Ene", r:11, a:54, v:11, b:25 },
-  { label:"2 Feb",  r:38, a:34, v:17, b:10 },
-  { label:"9 Feb",  r:15, a:31, v:42, b:12 },
-  { label:"16 Feb", r:0,  a:23, v:50, b:27 },
-  { label:"23 Feb", r:16, a:72, v:12, b:0  },
-  { label:"2 Mar",  r:26, a:52, v:19, b:3  },
-  { label:"9 Mar",  r:10, a:63, v:17, b:10 },
-  { label:"16 Mar", r:4,  a:44, v:20, b:32 },
-];
-
-// Biomasa total (kg) — actuals + targets
-const BIOMASA_DATA = [
-  { mes:"Dic",   actual:730,  target:null },
-  { mes:"Ene",   actual:803,  target:700  },
-  { mes:"Feb",   actual:1326, target:null },
-  { mes:"Mar",   actual:1390, target:1400 },
-  { mes:"Abr",   actual:null, target:null },
-  { mes:"May",   actual:null, target:null },
-  { mes:"Jun",   actual:null, target:2800 },
-  { mes:"Sep",   actual:null, target:5600 },
-  { mes:"Dic26", actual:null, target:11200 },
-];
-
-// ─── BOARD-LEVEL SALES DATA ───────────────────────────────────────────────────
-// Assumptions: wet-to-dry ratio 8:1 · price $400/dry ton (blended carrageenan market)
-// Actuals: placeholder $0 until first commercial sale confirmed
-// Projections derived from Business_Model_2026.xlsx biomass targets
-// Price per kg wet: $0.05 (=$400/dry ton ÷ 8 wet:dry ratio)
-const PRICE_PER_KG_WET = 0.05; // USD
-
-const SALES_DATA = [
-  // { mes, biomasaActual(kg), biomasaTarget(kg), revenueActual(USD), revenueTarget(USD) }
-  { mes:"Dic",   bioActual:730,   bioProy:730,   revActual:null, revProy:36.5,   label:"Dic 25" },
-  { mes:"Ene",   bioActual:803,   bioProy:700,   revActual:null, revProy:35.0,   label:"Ene 26" },
-  { mes:"Feb",   bioActual:1326,  bioProy:1050,  revActual:null, revProy:52.5,   label:"Feb 26" },
-  { mes:"Mar",   bioActual:1390,  bioProy:1400,  revActual:null, revProy:70.0,   label:"Mar 26" },
-  { mes:"Abr",   bioActual:null,  bioProy:1900,  revActual:null, revProy:95.0,   label:"Abr 26" },
-  { mes:"May",   bioActual:null,  bioProy:2400,  revActual:null, revProy:120.0,  label:"May 26" },
-  { mes:"Jun",   bioActual:null,  bioProy:2800,  revActual:null, revProy:140.0,  label:"Jun 26" },
-  { mes:"Sep",   bioActual:null,  bioProy:5600,  revActual:null, revProy:280.0,  label:"Sep 26" },
-  { mes:"Dic",   bioActual:null,  bioProy:11200, revActual:null, revProy:560.0,  label:"Dic 26" },
-];
-
-// Cumulative revenue: actual vs projected (for the S-curve chart)
-const REVENUE_CUMULATIVE = [
-  { label:"Dic 25", actual:0,    proy:36.5  },
-  { label:"Ene 26", actual:0,    proy:71.5  },
-  { label:"Feb 26", actual:0,    proy:124.0 },
-  { label:"Mar 26", actual:0,    proy:194.0 },
-  { label:"Abr 26", actual:null, proy:289.0 },
-  { label:"May 26", actual:null, proy:409.0 },
-  { label:"Jun 26", actual:null, proy:549.0 },
-  { label:"Sep 26", actual:null, proy:829.0 },
-  { label:"Dic 26", actual:null, proy:1389.0 },
-];
-
-const THRESHOLDS = {
-  salt:  { min:1.5, max:3.5 },
-  ph:    { min:8.5, max:9.8 },
-  temp:  { min:22,  max:30  },
-  salinidad: { min:15, max:25 },
-};
-
-// ─── TASK TYPES — weighted by frequency (higher freq = lower individual weight) ─
-// Total task weight sums to 1.0; professionalism is applied separately
-const TASK_TYPES = [
-  { id:"vigilancia",  label:"Vigilancia",        labelEn:"Monitoring",        unit:"sitios",   unitEn:"sites",    freq:5, weight:0.28 }, // daily
-  { id:"pesos",       label:"Pesos/Parámetros",  labelEn:"Readings",          unit:"lecturas", unitEn:"readings", freq:5, weight:0.22 }, // daily
-  { id:"limpieza",    label:"Limpieza",           labelEn:"Cleaning",          unit:"sistemas", unitEn:"systems",  freq:2, weight:0.18 }, // 2-3x/week
-  { id:"construir",   label:"Construir/Desplegar",labelEn:"Build/Deploy",      unit:"canastas", unitEn:"baskets",  freq:1, weight:0.14 }, // weekly
-  { id:"motor",       label:"Mant. Motor/Bote",   labelEn:"Boat Maintenance",  unit:"horas",    unitEn:"hours",    freq:1, weight:0.10 }, // weekly
-  { id:"sembrar",     label:"Sembrar/Cosechar",   labelEn:"Plant/Harvest",     unit:"kg",       unitEn:"kg",       freq:1, weight:0.08 }, // event-based
-];
-
-// ─── PROFESSIONALISM CATEGORIES ─────────────────────────────────────────────
-const PROF_CATEGORIES = [
-  { id:"puntualidad",  label:"Puntualidad/Asistencia", labelEn:"Punctuality",      weight:0.25 },
-  { id:"seguridad",    label:"Seguridad",               labelEn:"Safety compliance",weight:0.25 },
-  { id:"actitud",      label:"Actitud/Cooperación",     labelEn:"Attitude",         weight:0.25 },
-  { id:"equipo",       label:"Cuidado del Equipo",      labelEn:"Equipment care",   weight:0.25 },
-];
-
-// Score split
-const SCORE_WEIGHTS = { tasks: 0.40, prof: 0.60 };
-
-// ─── CREW — from Trabajo Semanal ─────────────────────────────────────────────
-const CREW = [
-  { initials:"HM", name:"Hilario Migar",   role:"Buceador", username:"hilario_migar" },
-  { initials:"JL", name:"Jairo Lorenzo",   role:"Buceador", username:"jairo_lorenzo" },
-  { initials:"CE", name:"Charles Ebersole",role:"Buceador", username:"charles_ebersole" },
-  { initials:"RV", name:"Rodolfo Viquez",  role:"Capitán",  username:"rodolfo_viquez" },
-  { initials:"RBM",name:"Rodolfo Banard",  role:"Capitán",  username:"rodolfo_banard" },
-  { initials:"RBC",name:"Romelio Bekar",   role:"Capitán",  username:"romelio_bekar" },
-  { initials:"JV", name:"Joel Valdés",     role:"Capitán",   username:"joel_valdes" },
-  { initials:"LA", name:"Luis A.",         role:"Colaborador",username:"luis_a" },
-  { initials:"EV", name:"Eduardo Valdés",  role:"Supervisor",username:"supervisor" },
-];
-
-// ─── SEED TASK LOGS (week of Mar 9 2026) ────────────────────────────────────
-const SEED_TASK_LOGS = [
-  // Lunes
-  { id:1,  date:"2026-03-09", day:"Lunes",    taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:2, actual:2,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:2,  date:"2026-03-09", day:"Lunes",    taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:3,  date:"2026-03-09", day:"Lunes",    taskId:"construir",   initials:"LA",  initials2:"CE",  objetivo:5, actual:3,  confirmed:true,  notas:"Faltaron materiales", comentarioVaquero:null, comentarioFecha:null },
-  // Martes
-  { id:4,  date:"2026-03-10", day:"Martes",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:5,  date:"2026-03-10", day:"Martes",   taskId:"limpieza",    initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:6,  date:"2026-03-10", day:"Martes",   taskId:"motor",       initials:"RBM", initials2:null,  objetivo:2, actual:2,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  // Miércoles
-  { id:7,  date:"2026-03-11", day:"Miércoles",taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:2,  confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:8,  date:"2026-03-11", day:"Miércoles",taskId:"limpieza",    initials:"CE",  initials2:"HM",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:9,  date:"2026-03-11", day:"Miércoles",taskId:"pesos",       initials:"LA",  initials2:null,  objetivo:5, actual:5,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  // Jueves
-  { id:10, date:"2026-03-12", day:"Jueves",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:11, date:"2026-03-12", day:"Jueves",   taskId:"construir",   initials:"JV",  initials2:"RBM", objetivo:6, actual:6,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:12, date:"2026-03-12", day:"Jueves",   taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  // Viernes
-  { id:13, date:"2026-03-13", day:"Viernes",  taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:14, date:"2026-03-13", day:"Viernes",  taskId:"pesos",       initials:"RBC", initials2:"JL",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:15, date:"2026-03-13", day:"Viernes",  taskId:"limpieza",    initials:"LA",  initials2:"CE",  objetivo:4, actual:4,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-  // Sábado
-  { id:16, date:"2026-03-14", day:"Sábado",   taskId:"sembrar",     initials:"RBM", initials2:"JV",  objetivo:20, actual:18, confirmed:true, notas:"Playa roja", comentarioVaquero:null, comentarioFecha:null },
-  { id:17, date:"2026-03-14", day:"Sábado",   taskId:"vigilancia",  initials:"RBC", initials2:"JL",  objetivo:3, actual:3,  confirmed:true,  notas:"", comentarioVaquero:null, comentarioFecha:null },
-];
-
-// ─── SEED PROFESSIONALISM SCORES (monthly, scored by Eduardo) ───────────────
-const SEED_PROF_SCORES = [
-  { month:"2026-03", initials:"HM",  puntualidad:4, seguridad:5, actitud:4, equipo:4 },
-  { month:"2026-03", initials:"JL",  puntualidad:5, seguridad:5, actitud:5, equipo:5 },
-  { month:"2026-03", initials:"CE",  puntualidad:4, seguridad:4, actitud:5, equipo:4 },
-  { month:"2026-03", initials:"RV",  puntualidad:3, seguridad:5, actitud:3, equipo:4 },
-  { month:"2026-03", initials:"RBM", puntualidad:5, seguridad:5, actitud:4, equipo:5 },
-  { month:"2026-03", initials:"RBC", puntualidad:4, seguridad:5, actitud:5, equipo:4 },
-  { month:"2026-03", initials:"JV",  puntualidad:4, seguridad:4, actitud:4, equipo:3 },
-  { month:"2026-03", initials:"LA",  puntualidad:3, seguridad:4, actitud:4, equipo:4 },
-];
-
-// ─── EVALUATION SYSTEM ───────────────────────────────────────────────────────
-const EVAL_SPLIT = { resultados: 0.70, comportamientos: 0.30 };
-const CURRENT_QUARTER = "Q3 2026";
-
-const ROLE_KPIS = {
-  "Buceador": [
-    { id:"cosecha",    titulo:"Siembra y cosecha",        metrico:"kg cosechados vs. objetivo",     importancia:0.40 },
-    { id:"limpieza",   titulo:"Limpieza y mantenimiento", metrico:"% ciclos completados a tiempo",  importancia:0.25 },
-    { id:"vigilancia", titulo:"Vigilancia y salinidad",   metrico:"# sitios registrados / objetivo",importancia:0.20 },
-    { id:"etica",      titulo:"Ética y asistencia",       metrico:"# incidencias (meta: 0)",        importancia:0.15 },
-  ],
-  "Capitán": [
-    { id:"cosecha",    titulo:"Siembra y cosecha",        metrico:"kg cosechados vs. objetivo",     importancia:0.35 },
-    { id:"bitacora",   titulo:"Operación de embarcación", metrico:"% viajes con bitácora completa", importancia:0.25 },
-    { id:"vigilancia", titulo:"Vigilancia y salinidad",   metrico:"# sitios registrados / objetivo",importancia:0.25 },
-    { id:"etica",      titulo:"Ética y asistencia",       metrico:"# incidencias (meta: 0)",        importancia:0.15 },
-  ],
-  "Asistente supervisor": [
-    { id:"cosecha",    titulo:"Siembra y cosecha",        metrico:"kg cosechados vs. objetivo",     importancia:0.40 },
-    { id:"construir",  titulo:"Construcción de sistemas", metrico:"# canastas construidas",         importancia:0.25 },
-    { id:"mant",       titulo:"Mantenimiento",            metrico:"% tareas completadas a tiempo",  importancia:0.20 },
-    { id:"etica",      titulo:"Ética y asistencia",       metrico:"# incidencias (meta: 0)",        importancia:0.15 },
-  ],
-  "Supervisor proceso": [
-    { id:"cosecha",    titulo:"Siembra y cosecha",        metrico:"kg cosechados vs. objetivo",     importancia:0.40 },
-    { id:"metricas",   titulo:"Métricas diarias",         metrico:"% datos TDC registrados vs. plan",importancia:0.25 },
-    { id:"planb",      titulo:"Planes de respaldo",       metrico:"# semanas con plan B documentado",importancia:0.20 },
-    { id:"etica",      titulo:"Ética y asistencia",       metrico:"# incidencias (meta: 0)",        importancia:0.15 },
-  ],
-  "Director operaciones": [
-    { id:"supervision",titulo:"Supervisión general",      metrico:"% visitas completadas",          importancia:0.35 },
-    { id:"plan",       titulo:"Plan de labor semanal",    metrico:"# semanas entregadas a tiempo",  importancia:0.30 },
-    { id:"reportes",   titulo:"Métricas y reportes",      metrico:"% reportes en tiempo",           importancia:0.20 },
-    { id:"liderazgo",  titulo:"Ética y liderazgo",        metrico:"Evaluación 360",                 importancia:0.15 },
-  ],
-  "Colaborador": [
-    { id:"tareas",     titulo:"Tareas asignadas",         metrico:"% tareas completadas vs. plan",  importancia:0.40 },
-    { id:"reporte",    titulo:"Reporte en tiempo",        metrico:"# reportes en tiempo / semana",  importancia:0.25 },
-    { id:"mant",       titulo:"Mantenimiento",            metrico:"% tareas completadas a tiempo",  importancia:0.20 },
-    { id:"etica",      titulo:"Ética y asistencia",       metrico:"# incidencias (meta: 0)",        importancia:0.15 },
-  ],
-};
-
-const COMPORTAMIENTOS_LIST = [
-  { id:"mision",     desc:"Sirve a una misión más grande que tú" },
-  { id:"resultados", desc:"Produce resultados sólidos (tiempo, calidad)" },
-  { id:"mejora",     desc:"Mejora continuamente — eficiencia" },
-  { id:"planes",     desc:"Hace planes de respaldo para el éxito" },
-  { id:"equipo",     desc:"Es un compañero de equipo con integridad" },
-];
-
-const GALLUP_12 = [
-  "¿Sé lo que se espera de mí en el trabajo?",
-  "¿Tengo los materiales y el equipo que necesito para hacer bien mi trabajo?",
-  "En el trabajo, ¿tengo la oportunidad de hacer lo que mejor hago todos los días?",
-  "En los últimos 7 días, ¿he recibido reconocimiento o elogio por hacer un buen trabajo?",
-  "¿Mi supervisor o alguien en el trabajo parece preocuparse por mí como persona?",
-  "¿Hay alguien en el trabajo que aliente mi desarrollo?",
-  "En el trabajo, ¿mis opiniones parecen contar?",
-  "¿La misión de mi empresa me hace sentir que mi trabajo es importante?",
-  "¿Mis compañeros de trabajo están comprometidos con hacer un trabajo de calidad?",
-  "¿Tengo un mejor amigo en el trabajo?",
-  "En los últimos 6 meses, ¿alguien me ha hablado de mi progreso?",
-  "Este último año, ¿he tenido oportunidades para aprender y crecer?",
-];
-
-// ─── WEEKLY INCIDENTS (attendance/tardiness — logged by Eduardo each week) ───
-// Each entry: { week, initials, tardanzas, ausencias, notas }
-// ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
-const SEED_ANNOUNCEMENTS = [
-  { id:1, author:"Eduardo Valdés", initials:"EV", role:"supervisor",
-    message:"No dejes para mañana lo que puedas hacer hoy.",
-    date:"2026-03-20", pinned:true },
-];
-
-// ─── TIMECARD DATA — daily check-in/check-out per employee ───────────────────
-// Each entry: { date, initials, checkIn, checkOut, horasTrabajadas }
-const SEED_TIMECARDS = [
-  { date:"2026-03-09", initials:"HM",  checkIn:"06:15", checkOut:"16:30" },
-  { date:"2026-03-09", initials:"JL",  checkIn:"06:55", checkOut:"16:30" },
-  { date:"2026-03-09", initials:"CE",  checkIn:"06:10", checkOut:"16:30" },
-  { date:"2026-03-09", initials:"RV",  checkIn:"06:00", checkOut:"17:00" },
-  { date:"2026-03-09", initials:"RBM", checkIn:"06:05", checkOut:"17:00" },
-  { date:"2026-03-09", initials:"RBC", checkIn:"06:00", checkOut:"17:00" },
-  { date:"2026-03-09", initials:"JV",  checkIn:"06:00", checkOut:"17:00" },
-  { date:"2026-03-09", initials:"LA",  checkIn:"07:10", checkOut:"16:30" },
-];
-
-function calcHoras(checkIn, checkOut) {
-  if (!checkIn || !checkOut) return null;
-  const [h1,m1] = checkIn.split(":").map(Number);
-  const [h2,m2] = checkOut.split(":").map(Number);
-  const mins = (h2*60+m2) - (h1*60+m1);
-  if (mins <= 0) return null;
-  return (mins/60).toFixed(1);
-}
-
-const SEED_WEEKLY_INCIDENTS = [
-  { week:"2026-W09", initials:"HM",  tardanzas:0, ausencias:0, notas:"" },
-  { week:"2026-W09", initials:"JL",  tardanzas:1, ausencias:0, notas:"Llegó 40 min tarde el lunes" },
-  { week:"2026-W09", initials:"CE",  tardanzas:0, ausencias:0, notas:"" },
-  { week:"2026-W09", initials:"RV",  tardanzas:0, ausencias:0, notas:"" },
-  { week:"2026-W09", initials:"RBM", tardanzas:0, ausencias:0, notas:"" },
-  { week:"2026-W09", initials:"RBC", tardanzas:2, ausencias:0, notas:"Tardanzas lunes y miércoles" },
-  { week:"2026-W09", initials:"JV",  tardanzas:0, ausencias:0, notas:"" },
-  { week:"2026-W09", initials:"LA",  tardanzas:1, ausencias:1, notas:"Ausencia jueves sin aviso" },
-];
-
-const TOTAL_PTS = { HM:10, JL:10, CE:13, RV:11, RBM:11, RBC:11, JV:14, EV:18, LA:13 };
-
-// Seeded from Excel Q1 actuals — Hilario is the only one with real Resultados data
-const SEED_EVALUATIONS = {
-  "HM":  { name:"Hilario Migar",   rol:"Buceador",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:100,resultado:60},limpieza:{gol:1,resultado:0},vigilancia:{gol:10,resultado:10},etica:{gol:90,resultado:90}}, comportamientos:{mision:1.0,resultados:0.6,mejora:0.75,planes:0.5,equipo:1.0}, gallup:[5,4,4,4,4,1,2,5,4,3,2,5], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "JL":  { name:"Jairo Lorenzo",   rol:"Buceador",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},limpieza:{gol:0,resultado:0},vigilancia:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "CE":  { name:"Charles Ebersole",rol:"Buceador",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},limpieza:{gol:0,resultado:0},vigilancia:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "RV":  { name:"Rodolfo Viquez",  rol:"Asistente supervisor",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},construir:{gol:0,resultado:0},mant:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "RBM": { name:"Rodolfo Banard",  rol:"Capitán",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},bitacora:{gol:0,resultado:0},vigilancia:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "RBC": { name:"Romelio Bekar",   rol:"Capitán",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},bitacora:{gol:0,resultado:0},vigilancia:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "JV":  { name:"Joel Valdés",     rol:"Supervisor proceso",
-    quarters:{ "Q1 2026":{ resultados:{cosecha:{gol:0,resultado:0},metricas:{gol:0,resultado:0},planb:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "EV":  { name:"Eduardo Valdés",  rol:"Director operaciones",
-    quarters:{ "Q1 2026":{ resultados:{supervision:{gol:0,resultado:0},plan:{gol:0,resultado:0},reportes:{gol:0,resultado:0},liderazgo:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-  "LA":  { name:"Luis Alvarado",   rol:"Colaborador",
-    quarters:{ "Q1 2026":{ resultados:{tareas:{gol:0,resultado:0},reporte:{gol:0,resultado:0},mant:{gol:0,resultado:0},etica:{gol:0,resultado:0}}, comportamientos:{mision:0.75,resultados:0.75,mejora:0.75,planes:0.75,equipo:0.75}, gallup:[4,4,4,4,4,4,4,4,4,4,4,4], fortalezas:["","",""], mejoras:["","",""], notas:"" },
-    "Q3 2026":{ resultados:{}, comportamientos:{}, gallup:[], fortalezas:["","",""], mejoras:["","",""], notas:"" } } },
-};
-
-const T = {
-  en: {
-    appName:"AquaOps",
-    tagline:"Seaweed Harvest Tracker",
-    today:"Today's Dashboard",
-    systems:"Systems",
-    newEntry:"New Entry",
-    login:"Sign In",
-    logout:"Sign Out",
-    role:"Role",
-    totalWeight:"Total Weight",
-    activeSystems:"Active Systems",
-    alerts:"Alerts",
-    avgGrowth:"Avg Growth",
-    system:"System",
-    village:"Village",
-    type:"Type",
-    family:"Family",
-    status:"Status",
-    active:"Active",
-    retired:"Retired",
-    weight:"Weight (g)",
-    salt:"Salt %",
-    ph:"pH",
-    temp:"Temp °C",
-    salinidad:"Salinity",
-    water:"Water",
-    conditions:"Conditions",
-    date:"Date",
-    notes:"Notes",
-    photo:"Photo",
-    save:"Save Entry",
-    cancel:"Cancel",
-    growth:"Growth",
-    sembrado:"Planted (g)",
-    detail:"View Detail",
-    lastReading:"Last Reading",
-    noData:"No data yet",
-    syncPending:"Pending sync",
-    synced:"Synced",
-    alertHigh:"HIGH",
-    alertLow:"LOW",
-    ok:"OK",
-    search:"Search systems...",
-    filterAll:"All",
-    filterCanasta:"Basket",
-    filterLongLine:"Long Line",
-    selectSystem:"Select System",
-    enterWeight:"Enter weight in grams",
-    enterSalt:"Salt percentage (e.g. 2.5)",
-    enterPh:"pH value (e.g. 9.2)",
-    enterTemp:"Temperature in °C",
-    takePhoto:"Take Photo",
-    weeklyGrowth:"Weekly Growth",
-    totalHarvested:"Total Harvested",
-    supervisor:"Supervisor",
-    vaquero:"Vaquero",
-    ceo:"CEO",
-    consultant:"Consultant",
-    bonos:"Bonuses",
-    eval:"Eval",
-    password:"Password",
-    username:"Username",
-    welcome:"Welcome back",
-    depth:"Depth",
-    materials:"Materials",
-    seeds:"Seeds",
-    coords:"Coordinates",
-    purpose:"Purpose",
-    history:"History",
-    back:"Back",
-    addSystem:"Add System",
-    editSystem:"Edit System",
-    deleteReading:"Delete Reading",
-    confirmDelete:"Confirm delete?",
-    yes:"Yes",
-    no:"No",
-    allSystems:"All Systems",
-    quickLog:"Quick Log",
-    quickLogSub:"Weight + photo only",
-    fullEntry:"Full Entry",
-    fullEntrySub:"All measurements",
-    incomplete:"Incomplete",
-    needsReview:"Needs supervisor review",
-    todayChecklist:"Today's Checklist",
-    logged:"Logged ✓",
-    notLogged:"Not logged",
-    completeEntry:"Complete Entry",
-    incompleteEntries:"Incomplete Entries",
-    mySystemsToday:"My Systems Today",
-    tapToLog:"Tap to log",
-    loggedToday:"Logged today",
-    pendingReview:"Pending review",
-    completeNow:"Complete Now",
-    healthy:"Healthy",
-    excellent:"Excellent",
-    sick:"Sick",
-  },
-  es: {
-    appName:"AquaOps",
-    tagline:"Rastreador de Cosecha de Algas",
-    today:"Panel de Hoy",
-    systems:"Sistemas",
-    newEntry:"Nueva Entrada",
-    login:"Iniciar Sesión",
-    logout:"Cerrar Sesión",
-    role:"Rol",
-    totalWeight:"Peso Total",
-    activeSystems:"Sistemas Activos",
-    alerts:"Alertas",
-    avgGrowth:"Crecimiento Promedio",
-    system:"Sistema",
-    village:"Pueblo",
-    type:"Tipo",
-    family:"Familia",
-    status:"Estado",
-    active:"Activo",
-    retired:"Retirado",
-    weight:"Peso (g)",
-    salt:"Sal %",
-    ph:"pH",
-    temp:"Temp °C",
-    salinidad:"Salinidad",
-    water:"Aguas",
-    conditions:"Condiciones",
-    date:"Fecha",
-    notes:"Notas",
-    photo:"Foto",
-    save:"Guardar",
-    cancel:"Cancelar",
-    growth:"Crecimiento",
-    sembrado:"Sembrado (g)",
-    detail:"Ver Detalle",
-    lastReading:"Última Lectura",
-    noData:"Sin datos",
-    syncPending:"Pendiente",
-    synced:"Sincronizado",
-    alertHigh:"ALTO",
-    alertLow:"BAJO",
-    ok:"OK",
-    search:"Buscar sistemas...",
-    filterAll:"Todos",
-    filterCanasta:"Canasta",
-    filterLongLine:"Long Line",
-    selectSystem:"Seleccionar Sistema",
-    enterWeight:"Peso en gramos",
-    enterSalt:"Porcentaje de sal (ej. 2.5)",
-    enterPh:"Valor de pH (ej. 9.2)",
-    enterTemp:"Temperatura en °C",
-    takePhoto:"Tomar Foto",
-    weeklyGrowth:"Crecimiento Semanal",
-    totalHarvested:"Total Cosechado",
-    supervisor:"Supervisor",
-    vaquero:"Vaquero",
-    ceo:"CEO",
-    consultant:"Consultor",
-    bonos:"Bonos",
-    eval:"Eval",
-    password:"Contraseña",
-    username:"Usuario",
-    welcome:"Bienvenido",
-    depth:"Profundidad",
-    materials:"Materiales",
-    seeds:"Semillas",
-    coords:"Coordenadas",
-    purpose:"Propósito",
-    history:"Historial",
-    back:"Atrás",
-    addSystem:"Agregar Sistema",
-    editSystem:"Editar Sistema",
-    deleteReading:"Eliminar Lectura",
-    confirmDelete:"¿Confirmar eliminación?",
-    yes:"Sí",
-    no:"No",
-    allSystems:"Todos los Sistemas",
-    clearWater:"Claras",
-    cloudyWater:"Turbia",
-    transparentWater:"Transparente",
-    healthy:"Saludables",
-    excellent:"Excelente",
-    sick:"Enfermo",
-    quickLog:"Registro Rápido",
-    quickLogSub:"Solo peso + foto",
-    fullEntry:"Entrada Completa",
-    fullEntrySub:"Todas las medidas",
-    incomplete:"Incompleto",
-    needsReview:"Requiere revisión del supervisor",
-    todayChecklist:"Lista de Hoy",
-    logged:"Registrado ✓",
-    notLogged:"Sin registrar",
-    completeEntry:"Completar Entrada",
-    incompleteEntries:"Entradas Incompletas",
-    mySystemsToday:"Mis Sistemas Hoy",
-    tapToLog:"Toca para registrar",
-    loggedToday:"Registrado hoy",
-    pendingReview:"Pendiente de revisión",
-    completeNow:"Completar Ahora",
-  }
-};
-
-const USERS = [
-  // ── Level 3 — CEO / Consultant ──────────────────────────────────────────────
-  { username:"jason_heckathorn", password:"AGPanama1", role:"ceo",        name:"Jason Heckathorn", initials:"JH",  assignedSystems: null },
-  { username:"cameron_mcfarlane",password:"AGPanama1", role:"consultant",  name:"Cameron McFarlane",initials:"CM",  assignedSystems: null },
-
-  // ── Level 2 — Supervisor ─────────────────────────────────────────────────────
-  { username:"eduardo_valdes",   password:"AGPanama1", role:"supervisor",  name:"Eduardo Valdés",   initials:"EV",  assignedSystems: null },
-  { username:"supervisor",       password:"AGPanama1", role:"supervisor",  name:"Supervisor (test)",initials:"EV",  assignedSystems: null }, // audit account
-
-  // ── Level 1 — Vaqueros (real crew) ───────────────────────────────────────────
-  { username:"hilario_migar",    password:"1234", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
-  { username:"jairo_lorenzo",    password:"1234", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
-  { username:"charles_ebersole", password:"1234", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
-  { username:"rodolfo_viquez",   password:"1234", role:"capitan",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
-  { username:"rodolfo_banard",   password:"1234", role:"vaquero",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
-  { username:"romelio_bekar",    password:"1234", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
-  { username:"joel_valdes",      password:"1234", role:"capitan",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
-  { username:"luis_alvarado",    password:"1234", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
-
-  // ── Audit / test accounts ─────────────────────────────────────────────────────
-  { username:"test_vaquero",     password:"1234", role:"vaquero",     name:"Test Vaquero",     initials:"HM",  assignedSystems: null }, // sees HM's tasks
-  { username:"test_supervisor",  password:"AGPanama1", role:"supervisor",  name:"Test Supervisor",  initials:"EV",  assignedSystems: null }, // sees supervisor view
-  { username:"test_ceo",         password:"AGPanama1", role:"ceo",         name:"Test CEO",         initials:"JH",  assignedSystems: null }, // sees full L3 view
-];
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getAlert(val, key) {
-  if (val == null) return null;
-  if (val < THRESHOLDS[key].min) return "low";
-  if (val > THRESHOLDS[key].max) return "high";
-  return "ok";
-}
-
-function getLatestReading(readings, systemId) {
-  return readings.filter(r => r.sistema === systemId).sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0] || null;
-}
-
-function calcGrowth(readings, systemId) {
-  const sys = readings.filter(r => r.sistema === systemId && r.peso).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-  if (sys.length < 2) return null;
-  const first = sys[0].sembrado || sys[0].peso;
-  const last = sys[sys.length-1].peso;
-  return Math.round(((last - first) / first) * 100);
-}
-
-// ─── BONUS SCORING HELPERS ───────────────────────────────────────────────────
-function calcTaskScore(taskLogs, initials) {
-  // For each task type, sum objetivo and actual across all logs where this person participated
-  let weightedSum = 0;
-  let totalWeight = 0;
-  TASK_TYPES.forEach(tt => {
-    const relevant = taskLogs.filter(l =>
-      l.taskId === tt.id &&
-      (l.initials === initials || l.initials2 === initials) &&
-      l.confirmed
-    );
-    if (relevant.length === 0) return;
-    const obj = relevant.reduce((s,l) => s + (l.objetivo||0), 0);
-    const act = relevant.reduce((s,l) => s + (l.actual||0), 0);
-    if (obj === 0) return;
-    const rate = Math.min(act / obj, 1.0);
-    weightedSum += rate * tt.weight;
-    totalWeight += tt.weight;
-  });
-  return totalWeight > 0 ? weightedSum / totalWeight : null;
-}
-
-function calcProfScore(profScores, initials, month) {
-  const record = profScores.find(p => p.initials === initials && p.month === month);
-  if (!record) return null;
-  let total = 0;
-  PROF_CATEGORIES.forEach(cat => {
-    const raw = record[cat.id] || 0; // 1–5 scale
-    total += (raw / 5) * cat.weight;
-  });
-  return total; // 0–1
-}
-
-function calcTotalScore(taskScore, profScore) {
-  if (taskScore === null && profScore === null) return null;
-  const t = taskScore ?? 0;
-  const p = profScore ?? 0;
-  return t * SCORE_WEIGHTS.tasks + p * SCORE_WEIGHTS.prof;
-}
-
-function calcBonusShare(crewScores, poolAmount) {
-  // Formula: Employee Total × Score ÷ SUMPRODUCT(all Score) × Pool
-  const validScores = crewScores.filter(c => c.totalScore !== null);
-  const sumScores = validScores.reduce((s,c) => s + (c.totalScore||0), 0);
-  if (sumScores === 0) return crewScores.map(c => ({ ...c, bonusShare: 0 }));
-  return crewScores.map(c => ({
-    ...c,
-    bonusShare: c.totalScore !== null ? (c.totalScore / sumScores) * poolAmount : 0,
-  }));
-}
-
-// ─── TASK SCHEMA — per-task input definition ─────────────────────────────────
-const TASK_SCHEMA = {
-  pesos:       { icon:"⚖️",  label:"Pesos",           labelEn:"Weigh",          unit:"g",        unitEn:"g",       inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  cosecha:     { icon:"🌿",  label:"Cosechar",         labelEn:"Harvest",        unit:"kg",       unitEn:"kg",      inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  sembrar:     { icon:"🌱",  label:"Sembrar",          labelEn:"Seed",           unit:"canastas", unitEn:"baskets", inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  vigilancia:  { icon:"👁️",  label:"Vigilancia",       labelEn:"Monitor",        unit:"sitios",   unitEn:"sites",   inputType:"number",  needsCondition:true,  needsPhoto:false, needsVoice:true,  yesno:false },
-  limpieza:    { icon:"🧹",  label:"Limpieza",         labelEn:"Clean",          unit:"sistemas", unitEn:"systems", inputType:"number",  needsCondition:true,  needsPhoto:true,  needsVoice:false, yesno:false },
-  construir:   { icon:"🔨",  label:"Construir canastas",labelEn:"Build baskets", unit:"canastas", unitEn:"baskets", inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  motor:       { icon:"⚙️",  label:"Mant. Motor",      labelEn:"Motor maint.",   unit:"horas",    unitEn:"hours",   inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  reubicar:    { icon:"📍",  label:"Reubicar",         labelEn:"Relocate",       unit:"",         unitEn:"",        inputType:"yesno",   needsCondition:false, needsPhoto:false, needsVoice:false, yesno:true  },
-  desplegar:   { icon:"🚀",  label:"Desplegar",        labelEn:"Deploy",         unit:"",         unitEn:"",        inputType:"yesno",   needsCondition:false, needsPhoto:false, needsVoice:false, yesno:true  },
-  parametros:  { icon:"📊",  label:"Parámetros",       labelEn:"Parameters",     unit:"lecturas", unitEn:"readings",inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  planificacion:{ icon:"📋", label:"Planificación",    labelEn:"Planning",       unit:"horas",    unitEn:"hours",   inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
-  seleccion:   { icon:"🔍",  label:"Selec. Semilla",   labelEn:"Seed select.",   unit:"canastas", unitEn:"baskets", inputType:"number",  needsCondition:true,  needsPhoto:false, needsVoice:true,  yesno:false },
-  mantenimiento:{ icon:"🛠️", label:"Mantenimiento",   labelEn:"Maintenance",    unit:"sistemas", unitEn:"systems", inputType:"number",  needsCondition:true,  needsPhoto:false, needsVoice:false, yesno:false },
-};
-
-const CONDICION_EMOJIS = [
-  { emoji:"✅", label:"Bien",       labelEn:"Good",    value:"bien"        },
-  { emoji:"⚠️", label:"Regular",    labelEn:"Fair",    value:"regular"     },
-  { emoji:"❌", label:"Problema",   labelEn:"Problem", value:"problema"    },
-  { emoji:"🌊", label:"Agua turbia",labelEn:"Turbid",  value:"turbid"      },
-  { emoji:"🌿", label:"Alga sana",  labelEn:"Healthy", value:"healthy"     },
-  { emoji:"🦠", label:"Contam.",    labelEn:"Contam.", value:"contaminado" },
-];
-
-// Seed task assignments for this week (Eduardo creates these via Plan Semanal)
-const SEED_ASSIGNED_TASKS = [
-  // HM
-  { id:101, assignedTo:"HM", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:102, assignedTo:"HM", day:"Miércoles",taskType:"limpieza",    sistema:"P12-1", objetivo:3, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:103, assignedTo:"HM", day:"Viernes",  taskType:"pesos",       sistema:"P12-2", objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:104, assignedTo:"JL", day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:105, assignedTo:"JL", day:"Martes",   taskType:"limpieza",    sistema:"P13-1", objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:106, assignedTo:"JL", day:"Jueves",   taskType:"cosecha",     sistema:"P14",   objetivo:50, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:107, assignedTo:"CE", day:"Lunes",    taskType:"reubicar",    sistema:"P5-2",  objetivo:null, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Mover hacia Polígono 3 — coordinar con RBC antes de salir", comentarioVaquero:null, comentarioFecha:null },
-  { id:108, assignedTo:"CE", day:"Martes",   taskType:"limpieza",    sistema:"P5-3",  objetivo:3, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:109, assignedTo:"CE", day:"Miércoles",taskType:"construir",   sistema:null,    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Usar materiales del taller — confirmar con Eduardo", comentarioVaquero:null, comentarioFecha:null },
-  { id:110, assignedTo:"RV", day:"Martes",   taskType:"parametros",  sistema:"P1",    objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:111, assignedTo:"RV", day:"Jueves",   taskType:"construir",   sistema:null,    objetivo:6, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:112, assignedTo:"RV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:113, assignedTo:"RBM",day:"Lunes",    taskType:"motor",       sistema:null,    objetivo:20, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Revisar aceite — último cambio hace 3 semanas", comentarioVaquero:null, comentarioFecha:null },
-  { id:114, assignedTo:"RBM",day:"Miércoles",taskType:"sembrar",     sistema:"P5-4",  objetivo:10, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:115, assignedTo:"RBC",day:"Lunes",    taskType:"vigilancia",  sistema:"P11",   objetivo:3, date:"2026-03-09", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:116, assignedTo:"RBC",day:"Jueves",   taskType:"mantenimiento",sistema:"P13-2",objetivo:2, date:"2026-03-12", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:117, assignedTo:"JV", day:"Martes",   taskType:"seleccion",   sistema:null,    objetivo:5, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Priorizar semilla de Bahía Azul para los nuevos sistemas", comentarioVaquero:null, comentarioFecha:null },
-  { id:118, assignedTo:"JV", day:"Sábado",   taskType:"planificacion",sistema:null,   objetivo:2, date:"2026-03-14", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:119, assignedTo:"LA", day:"Martes",   taskType:"limpieza",    sistema:"P5-5",  objetivo:4, date:"2026-03-10", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:120, assignedTo:"LA", day:"Miércoles",taskType:"parametros",  sistema:"P1",    objetivo:5, date:"2026-03-11", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"", comentarioVaquero:null, comentarioFecha:null },
-  { id:121, assignedTo:"LA", day:"Viernes",  taskType:"desplegar",   sistema:"P17",   objetivo:null, date:"2026-03-13", actual:null, condicion:null, voiceNote:null, foto:null, confirmed:false, notas:"Desplegar en coordenadas N 09°07'34 O 082°03'58", comentarioVaquero:null, comentarioFecha:null },
-];
+// ─── DATA LAYER ──────────────────────────────────────────────────────────────
+import { SYSTEMS_DATA } from "./data/systems";
+import {
+  DEFAULT_REGIONS, DEFAULT_TIPOS, DEFAULT_MATERIALES, DEFAULT_SEMILLAS,
+  THRESHOLDS, TASK_TYPES, PROF_CATEGORIES, SCORE_WEIGHTS,
+  CREW, EVAL_SPLIT, CURRENT_QUARTER, ROLE_KPIS,
+  COMPORTAMIENTOS_LIST, GALLUP_12, TOTAL_PTS,
+  PRICE_PER_KG_WET, TASK_SCHEMA, CONDICION_EMOJIS,
+} from "./data/constants";
+import {
+  INITIAL_READINGS, TDC_DATA, PRUEBAS_DATA, BIOMASA_DATA,
+  SALES_DATA, REVENUE_CUMULATIVE,
+  SEED_TASK_LOGS, SEED_PROF_SCORES,
+  SEED_ANNOUNCEMENTS, SEED_TIMECARDS, SEED_WEEKLY_INCIDENTS,
+  SEED_EVALUATIONS, SEED_ASSIGNED_TASKS,
+} from "./data/seed";
+import { USERS } from "./data/users";
+import { T } from "./data/translations";
+import { getAlert, getLatestReading, calcGrowth, calcTaskScore, calcProfScore, calcTotalScore, calcBonusShare } from "./data/helpers";
+import { S, AUTH_ISTYLE, AUTH_LSTYLE } from "./styles";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────────
 const Icon = ({ name, size=20, color="currentColor" }) => {
@@ -786,18 +49,6 @@ const Icon = ({ name, size=20, color="currentColor" }) => {
   return icons[name] || null;
 };
 
-// ─── SHARED STYLE HELPERS ────────────────────────────────────────────────────
-const S = {
-  card:    { background:"rgba(15,23,42,.8)", border:"1px solid rgba(148,163,184,.08)", borderRadius:14, padding:14, marginBottom:10 },
-  input:   { width:"100%", padding:"11px 13px", borderRadius:10, border:"1px solid rgba(148,163,184,.12)", background:"rgba(15,23,42,.8)", color:"#e2e8f0", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" },
-  label:   { fontSize:10, color:"#64748b", fontWeight:700, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.6 },
-  btn:     (active) => ({ width:"100%", padding:15, borderRadius:12, border:"none", background:active?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(13,148,136,.12)", color:active?"#fff":"#334155", fontWeight:800, fontSize:15, cursor:active?"pointer":"not-allowed", transition:"all .2s" }),
-  scoreBar:(v,color="#0d9488")=>(
-    <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden",marginTop:4}}>
-      <div style={{height:"100%",width:`${Math.min((v||0)*100,100)}%`,background:color,borderRadius:3,transition:"width .4s"}}/>
-    </div>
-  ),
-};
 
 // ─── SPARKLINE ───────────────────────────────────────────────────────────────
 function Sparkline({ data, color="#4ade80", height=40, width=100 }) {
@@ -880,8 +131,6 @@ function CondicionPicker({ value, onChange, lang }) {
 }
 
 // ─── AUTH SHELL ───────────────────────────────────────────────────────────────
-const AUTH_ISTYLE = { width:"100%", padding:"13px 14px", borderRadius:12, border:"1px solid rgba(148,163,184,.15)", background:"rgba(30,41,59,.7)", color:"#e2e8f0", fontSize:15, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
-const AUTH_LSTYLE = { fontSize:11, color:"#64748b", fontWeight:700, display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:.6 };
 
 function AuthShell({ lang, setLang, children }) {
   return (
@@ -4404,7 +3653,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                       const isEditing = editingReadingId===r.id;
                       const dupLabel  = paramReadings.length>1?` (${pi+1})`:"";
 
-                      // Parametros edit — reuse same unified form as peso
+                      // Parametros edit — same unified form as peso (buoys, harvest, photo)
                       if(isEditing && canEditReadings) {
                         const editCanSave = editReadingForm.tipo==="peso"
                           ? !!editReadingForm.peso
@@ -4429,12 +3678,39 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                               <input type="date" value={editReadingForm.fecha} onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))} style={{...S.input,colorScheme:"dark",fontSize:12}}/>
                             </div>
                             {editReadingForm.tipo==="peso"?(
-                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                                <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Peso total (g)</div>
-                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
-                                <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Alga suelta (g)</div>
-                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
-                              </div>
+                              <>
+                                {isLongLine ? (
+                                  <div style={{marginBottom:8}}>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>{s.id} — B1–B{buoyCount} (g)</div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                                      {Array.from({length:buoyCount},(_,i)=>(
+                                        <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                                          <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>B{i+1}</span>
+                                          <input type="number" placeholder="0" value={editReadingForm.buoys?.[i]||""}
+                                            onChange={e=>{const buoys=[...(editReadingForm.buoys||Array(buoyCount).fill(""))];buoys[i]=e.target.value;const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);setEditReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));}}
+                                            style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {editReadingForm.peso&&<div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"rgba(245,158,11,.08)",marginBottom:8}}><span style={{fontSize:11,color:"#64748b"}}>Total</span><span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"monospace"}}>{(parseFloat(editReadingForm.peso)/1000).toFixed(3)} kg</span></div>}
+                                  </div>
+                                ) : (
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                    <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Peso total (g)</div>
+                                      <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
+                                    <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Alga suelta (g)</div>
+                                      <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
+                                  </div>
+                                )}
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                  <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Cosechada (g)</div>
+                                    <input type="number" placeholder="0" value={editReadingForm.cosechada} onChange={e=>setEditReadingForm(p=>({...p,cosechada:e.target.value}))} style={{...S.input,fontSize:12,borderColor:editReadingForm.cosechada?"rgba(74,222,128,.4)":"rgba(148,163,184,.12)"}}/></div>
+                                  <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Condiciones</div>
+                                    <select value={editReadingForm.condiciones} onChange={e=>setEditReadingForm(p=>({...p,condiciones:e.target.value}))} style={{...S.input,fontSize:12,appearance:"none"}}><option value="">–</option><option value="Saludables">Saludables</option><option value="Epifitas">Epifitas</option><option value="Ice-ice">Ice-ice</option><option value="Decoloración">Decoloración</option><option value="Excelente">Excelente</option></select></div>
+                                </div>
+                                <div style={{marginBottom:8}}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Aguas</div>
+                                  <select value={editReadingForm.aguas} onChange={e=>setEditReadingForm(p=>({...p,aguas:e.target.value}))} style={{...S.input,fontSize:12,appearance:"none"}}><option value="">–</option><option value="Claras">Claras</option><option value="Transparente">Transparente</option><option value="Turbia">Turbia</option></select></div>
+                              </>
                             ):(
                               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                                 {[["ph","pH","9.2"],["temp","°C","27"],["salinidad","Salinidad","19"],["salt","Sal %","2.5"]].map(([key,label,ph])=>(
@@ -4443,6 +3719,14 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                                 ))}
                               </div>
                             )}
+                            <div style={{marginBottom:8}}>
+                              <input type="file" accept="image/*" capture="environment" id={`edit-param-foto-${r.id}`} style={{display:"none"}}
+                                onChange={e=>{const file=e.target.files?.[0];if(file){const reader=new FileReader();reader.onload=ev=>setEditReadingForm(p=>({...p,foto:ev.target.result}));reader.readAsDataURL(file);}}}/>
+                              <button onClick={()=>document.getElementById(`edit-param-foto-${r.id}`)?.click()}
+                                style={{width:"100%",padding:"8px 12px",borderRadius:9,cursor:"pointer",border:`1.5px dashed ${editReadingForm.foto?"rgba(74,222,128,.5)":"rgba(148,163,184,.2)"}`,background:editReadingForm.foto?"rgba(74,222,128,.06)":"transparent",color:editReadingForm.foto?"#4ade80":"#64748b",fontWeight:600,fontSize:11}}>
+                                📷 {editReadingForm.foto?"✓ Foto capturada":"Tomar foto"}
+                              </button>
+                            </div>
                             <div style={{marginBottom:10}}>
                               <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 Notas</div>
                               <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))} placeholder="Observaciones..." style={{...S.input,fontSize:12}}/>
@@ -5297,7 +4581,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"plan",     icon:"calendar", label: lang==="es"?"Plan":"Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"mapa",     icon:"map",      label: "Mapa" },
-      { id:"equipo",   icon:"users",    label: "Equipo" },
+      { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     default: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
@@ -5897,7 +5181,7 @@ export default function App() {
 
       {/* Top bar */}
       <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(2,8,24,.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(148,163,184,.06)",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div onClick={()=>setTab(user.role==="vaquero"?"inicio":"dashboard")} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
           <div style={{width:30,height:30,borderRadius:8,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <img src="data:image/jpeg;base64,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" alt="logo" style={{width:28,height:28,objectFit:"contain"}}/>
           </div>
