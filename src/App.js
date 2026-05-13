@@ -2891,7 +2891,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
-  onChartUpload=null }) {
+  onChartUpload=null, addToast=()=>{} }) {
   const canEdit = ["ceo","consultant","supervisor","capitan"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -3125,6 +3125,19 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     if (isPeso && (!peso || peso <= 0)) return;
     if (!isPeso && !readingForm.salt && !readingForm.ph && !readingForm.temp) return;
 
+    // ── Duplicate detection: same sistema + fecha + tipo ──
+    const dup = readings.find(r =>
+      r.sistema === sistemaId &&
+      r.fecha === readingForm.fecha &&
+      (r.tipo || "peso") === readingForm.tipo
+    );
+    if (dup) {
+      addToast(
+        `⚠ ${sistemaId} ya tiene una lectura ${readingForm.tipo} para ${readingForm.fecha}${dup.updated_by ? ` (por ${dup.updated_by})` : ""}. Se guardó como nueva entrada.`,
+        "warning"
+      );
+    }
+
     const prevReadings = readings
       .filter(r => r.sistema === sistemaId)
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
@@ -3206,7 +3219,14 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   const handleSave = ()=>{
     if(!form.id) return;
+    const existing = systems.find(s=>s.id===form.id);
+    const isNew = !existing;
+    if (isNew && systems.some(s => s.id === form.id)) {
+      // Shouldn't reach here since isNew checks find() — but safety check
+      addToast(`⚠ Sistema ${form.id} ya existe — se actualizó.`, "warning");
+    }
     setSystems(prev=>{ const e=prev.find(s=>s.id===form.id); return e?prev.map(s=>s.id===form.id?form:s):[...prev,form]; });
+    if (isNew) addToast(`✓ Sistema ${form.id} creado`, "success");
     setShowForm(false);
   };
 
@@ -4721,6 +4741,14 @@ export default function App() {
   const offlineQueue = useRef([]);  // { table, op, payload }
   const syncTimer    = useRef(null);
 
+  // ── Toast notifications (sync awareness) ──────────────────────────────────
+  const [toasts, setToasts] = useState([]);
+  const addToast = useCallback((msg, type="info") => {
+    const id = Date.now();
+    setToasts(prev => [...prev.slice(-4), { id, msg, type }]); // keep max 5
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+  }, []);
+
   // ── Supabase import — wait for client before any operations ────────────────
   const sb = useRef(null);
   const [sbReady, setSbReady] = useState(false);
@@ -4839,11 +4867,27 @@ export default function App() {
           cosechada:   r.cosechada   ?? null,
           sembrado:    r.sembrado    ?? null,
           buoys:       r.buoys       ?? null,
+          updated_by:  r.updated_by  ?? null,
+          updated_at:  r.updated_at  ?? null,
         }));
         // Merge: keep local-only readings (id not in remote), override with remote for shared ids
         setReadings(prev => {
           const remoteIds = new Set(pulled.map(r => r.id));
           const localOnly = prev.filter(r => !remoteIds.has(r.id));
+          // Detect new or changed readings from other users
+          const otherUserChanges = pulled.filter(r => {
+            if (r.updated_by && r.updated_by !== user?.initials) {
+              const local = prev.find(x => x.id === r.id);
+              if (!local) return true; // new reading from another user
+              if (JSON.stringify(local) !== JSON.stringify(r)) return true; // changed
+            }
+            return false;
+          });
+          if (otherUserChanges.length > 0) {
+            const who = [...new Set(otherUserChanges.map(r => r.updated_by))].join(", ");
+            const systems = [...new Set(otherUserChanges.map(r => r.sistema))].slice(0, 3).join(", ");
+            addToast(`⚠ ${otherUserChanges.length} lectura(s) actualizada(s) por ${who} — ${systems}`, "sync");
+          }
           const merged = [...pulled, ...localOnly];
           try { localStorage.setItem('aq_readings_cache', JSON.stringify(merged)); } catch {}
           return merged;
@@ -4873,10 +4917,25 @@ export default function App() {
           fechaCosecha:      r.fecha_cosecha     || null,
           fechaLimpieza:     r.fecha_limpieza    || "",
           notas:             r.notas             || "",
+          updated_by:        r.updated_by        ?? null,
         }));
         setSystems(prev => {
           const remoteIds = new Set(pulledSys.map(s => s.id));
           const localOnly = prev.filter(s => !remoteIds.has(s.id));
+          // Detect new or changed systems from other users
+          const otherSysChanges = pulledSys.filter(s => {
+            if (s.updated_by && s.updated_by !== user?.initials) {
+              const local = prev.find(x => x.id === s.id);
+              if (!local) return true;
+              if (JSON.stringify(local) !== JSON.stringify(s)) return true;
+            }
+            return false;
+          });
+          if (otherSysChanges.length > 0) {
+            const who = [...new Set(otherSysChanges.map(s => s.updated_by))].join(", ");
+            const ids = otherSysChanges.map(s => s.id).slice(0, 3).join(", ");
+            addToast(`⚠ Sistema(s) actualizado(s) por ${who} — ${ids}`, "sync");
+          }
           const merged2 = [...pulledSys, ...localOnly];
           try { localStorage.setItem('aq_systems_cache', JSON.stringify(merged2)); } catch {}
           return merged2;
@@ -5055,6 +5114,7 @@ export default function App() {
               cosechada:   r.cosechada   ?? null,
               sembrado:    r.sembrado    ?? null,
               buoys:       r.buoys       ?? null,
+              updated_by:  user?.initials || null,
               updated_at:  new Date().toISOString(),
             });
           });
@@ -5108,6 +5168,7 @@ export default function App() {
               fecha_cosecha:     s.fechaCosecha       || null,
               fecha_limpieza:    s.fechaLimpieza      || null,
               notas:             s.notas              || "",
+              updated_by:        user?.initials       || null,
               updated_at:        new Date().toISOString(),
             });
           });
@@ -5253,6 +5314,27 @@ export default function App() {
       )}
 
       {/* Screen routing */}
+
+      {/* ── Toast notifications ──────────────────────────────────────── */}
+      {toasts.length > 0 && (
+        <div style={{position:"fixed",top:56,left:16,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none"}}>
+          {toasts.map(t => (
+            <div key={t.id} style={{
+              padding:"10px 14px",borderRadius:10,
+              background: t.type==="warning" ? "rgba(251,146,60,.15)" : t.type==="success" ? "rgba(74,222,128,.12)" : "rgba(13,148,136,.12)",
+              border: `1px solid ${t.type==="warning" ? "rgba(251,146,60,.3)" : t.type==="success" ? "rgba(74,222,128,.25)" : "rgba(13,148,136,.2)"}`,
+              backdropFilter:"blur(12px)",
+              color: t.type==="warning" ? "#fb923c" : t.type==="success" ? "#4ade80" : "#2dd4bf",
+              fontSize:12,fontWeight:600,lineHeight:1.5,
+              animation:"fadeIn .3s ease-out",pointerEvents:"auto",
+            }}>
+              {t.msg}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Screen routing */}
       {/* Personal dashboard overlay — reachable from any screen */}
       {!initialLoading && personalView && (
         <PersonalDashboard
@@ -5273,20 +5355,20 @@ export default function App() {
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
-        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast}/>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
         {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
-        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast}/>}
         {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} onChartUpload={handleChartDataUpload}/>}
+        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} onChartUpload={handleChartDataUpload}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
@@ -5294,7 +5376,7 @@ export default function App() {
         {/* Level 3 — CEO + Consultant */}
         {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} onChartUpload={handleChartDataUpload}/>}
+        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
