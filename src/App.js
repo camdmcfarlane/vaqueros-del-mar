@@ -4241,8 +4241,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                               {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
                             </div>
                             {canEditReadings&&(
-                              <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
-                                style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                              <div style={{display:"flex",gap:4}}>
+                                <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
+                                  style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                                <button onClick={()=>{if(window.confirm(lang==="es"?"¿Eliminar esta lectura?":"Delete this reading?")){setReadings(prev=>prev.filter(x=>x.id!==r.id));}}}
+                                  style={{padding:"3px 6px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -4350,7 +4354,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           )}
         </div>
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
-        {canEdit&&<button onClick={()=>{setForm({...s});setShowForm(true);}} style={{width:"100%",padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:4}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>}
+        {canEdit&&(
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={()=>{setForm({...s});setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
+            {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Eliminar ${s.id}? Esto no se puede deshacer.`:`Delete ${s.id}? This cannot be undone.`)){setSystems(prev=>prev.filter(x=>x.id!==s.id));setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
+          </div>
+        )}
       </div>
     );
   }
@@ -5267,10 +5276,23 @@ export default function App() {
   };
 
   // ── Editable catalog lists (Level 2+ can add new options) ───────────────────
-  const [regions,    setRegions]    = useState(DEFAULT_REGIONS);
-  const [tipos,      setTipos]      = useState(DEFAULT_TIPOS);
-  const [materiales, setMateriales] = useState(DEFAULT_MATERIALES);
-  const [semillas,   setSemillas]   = useState(DEFAULT_SEMILLAS);
+  const [regions,    setRegions]    = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_regions');    return c ? JSON.parse(c) : DEFAULT_REGIONS; }    catch { return DEFAULT_REGIONS; }
+  });
+  const [tipos,      setTipos]      = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_tipos');      return c ? JSON.parse(c) : DEFAULT_TIPOS; }      catch { return DEFAULT_TIPOS; }
+  });
+  const [materiales, setMateriales] = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_materiales'); return c ? JSON.parse(c) : DEFAULT_MATERIALES; } catch { return DEFAULT_MATERIALES; }
+  });
+  const [semillas,   setSemillas]   = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_semillas');   return c ? JSON.parse(c) : DEFAULT_SEMILLAS; }   catch { return DEFAULT_SEMILLAS; }
+  });
+  // Persist catalogs whenever they change
+  useEffect(() => { try { localStorage.setItem('aq_cat_regions',    JSON.stringify(regions));    } catch {} }, [regions]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_tipos',      JSON.stringify(tipos));      } catch {} }, [tipos]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_materiales', JSON.stringify(materiales)); } catch {} }, [materiales]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_semillas',   JSON.stringify(semillas));   } catch {} }, [semillas]);
 
   // ── Sync state ──────────────────────────────────────────────────────────────
   const [online, setOnline]     = useState(navigator.onLine);
@@ -5337,11 +5359,12 @@ export default function App() {
     if (!sb.current || !online) return;
     setSyncing(true);
     try {
-      const [tasksRes, annRes, incRes, readRes] = await Promise.all([
+      const [tasksRes, annRes, incRes, readRes, sysRes] = await Promise.all([
         sb.current.from('assigned_tasks').select('*').order('id'),
         sb.current.from('announcements').select('*').order('created_at', { ascending: false }),
         sb.current.from('weekly_incidents').select('*'),
         sb.current.from('readings').select('*').order('fecha'),
+        sb.current.from('systems').select('*').order('id'),
       ]);
 
       if (tasksRes.data?.length) {
@@ -5402,6 +5425,39 @@ export default function App() {
           const merged = [...pulled, ...localOnly];
           try { localStorage.setItem('aq_readings_cache', JSON.stringify(merged)); } catch {}
           return merged;
+        });
+      }
+
+      // Merge remote systems with local — remote wins on conflict by id
+      if (sysRes.data?.length) {
+        const pulledSys = sysRes.data.map(r => ({
+          id:                r.id,
+          region:            r.region            || "",
+          poligono:          r.poligono          ?? 1,
+          pueblo:            r.pueblo            || "",
+          tipo:              r.tipo              || "",
+          familia:           r.familia           || "",
+          profundidad:       r.profundidad       || "",
+          materiales:        r.materiales        || "",
+          semillas:          r.semillas          || "",
+          estado:            r.estado            || "Activo",
+          coordenadas:       r.coordenadas       || "",
+          fechaInstalacion:  r.fecha_instalacion || "",
+          capitan:           r.capitan           || "",
+          buceador:          r.buceador          || "",
+          modulos:           r.modulos           ?? 0,
+          tamano:            r.tamano            || "",
+          categoria:         r.categoria         || "",
+          fechaCosecha:      r.fecha_cosecha     || null,
+          fechaLimpieza:     r.fecha_limpieza    || "",
+          notas:             r.notas             || "",
+        }));
+        setSystems(prev => {
+          const remoteIds = new Set(pulledSys.map(s => s.id));
+          const localOnly = prev.filter(s => !remoteIds.has(s.id));
+          const merged2 = [...pulledSys, ...localOnly];
+          try { localStorage.setItem('aq_systems_cache', JSON.stringify(merged2)); } catch {}
+          return merged2;
         });
       }
 
@@ -5542,20 +5598,20 @@ export default function App() {
     });
   };
 
-  // ── syncReadings — push every new/edited reading to Supabase + localStorage ──
-  // This is the critical fix: readings previously used raw setReadings
-  // which meant new field readings were lost on logout/refresh
+  // ── syncReadings — push every new/edited/deleted reading to Supabase + localStorage ──
   const syncReadings = (updater) => {
     setReadings(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Find only new or changed readings — avoid pushing all 16 seed entries on every save
+      // Find only new or changed readings
       const changed = next.filter(r => {
         const old = prev.find(x => x.id === r.id);
         return !old || JSON.stringify(old) !== JSON.stringify(r);
       });
+      // Find deleted readings (in prev but not in next)
+      const deleted = prev.filter(r => !next.find(x => x.id === r.id));
       // Push outside the setState callback so it doesn't block render
-      if (changed.length > 0) {
-        console.log(`[AquaOps] syncReadings: ${changed.length} changed readings to push`, changed.map(r => ({id:r.id,sistema:r.sistema})));
+      if (changed.length > 0 || deleted.length > 0) {
+        console.log(`[AquaOps] syncReadings: ${changed.length} changed, ${deleted.length} deleted`);
         setTimeout(() => {
           changed.forEach(r => {
             pushItem('readings', 'upsert', {
@@ -5580,6 +5636,9 @@ export default function App() {
               updated_at:  new Date().toISOString(),
             });
           });
+          deleted.forEach(r => {
+            pushItem('readings', 'delete', { id: r.id });
+          });
         }, 0);
       } else {
         console.log('[AquaOps] syncReadings: no changes detected');
@@ -5591,13 +5650,52 @@ export default function App() {
     });
   };
 
-  // ── syncSystems — persist new systems to localStorage immediately ─────────────
+  // ── syncSystems — persist to localStorage AND push changes to Supabase ──────
   const syncSystems = (updater) => {
     setSystems(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      try {
-        localStorage.setItem('aq_systems_cache', JSON.stringify(next));
-      } catch(e) { console.warn('systems cache write failed:', e); }
+      // Detect new or changed systems
+      const changed = next.filter(s => {
+        const old = prev.find(x => x.id === s.id);
+        return !old || JSON.stringify(old) !== JSON.stringify(s);
+      });
+      // Detect deleted systems (in prev but not in next)
+      const deleted = prev.filter(s => !next.find(x => x.id === s.id));
+      if (changed.length > 0 || deleted.length > 0) {
+        console.log(`[AquaOps] syncSystems: ${changed.length} changed, ${deleted.length} deleted`);
+        setTimeout(() => {
+          changed.forEach(s => {
+            pushItem('systems', 'upsert', {
+              id:                s.id,
+              region:            s.region            || null,
+              poligono:          s.poligono           ?? 1,
+              pueblo:            s.pueblo             || null,
+              tipo:              s.tipo               || null,
+              familia:           s.familia            || null,
+              profundidad:       s.profundidad        || null,
+              materiales:        s.materiales         || null,
+              semillas:          s.semillas           || null,
+              estado:            s.estado             || 'Activo',
+              coordenadas:       s.coordenadas        || null,
+              fecha_instalacion: s.fechaInstalacion   || null,
+              capitan:           s.capitan            || null,
+              buceador:          s.buceador           || null,
+              modulos:           s.modulos            ?? 0,
+              tamano:            s.tamano             || null,
+              categoria:         s.categoria          || null,
+              fecha_cosecha:     s.fechaCosecha       || null,
+              fecha_limpieza:    s.fechaLimpieza      || null,
+              notas:             s.notas              || "",
+              updated_at:        new Date().toISOString(),
+            });
+          });
+          deleted.forEach(s => {
+            pushItem('systems', 'delete', { id: s.id });
+          });
+        }, 0);
+      }
+      try { localStorage.setItem('aq_systems_cache', JSON.stringify(next)); }
+      catch(e) { console.warn('systems cache write failed:', e); }
       return next;
     });
   };
