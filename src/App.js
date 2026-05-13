@@ -3650,22 +3650,26 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [editSys, setEditSys] = useState(null);
   const [showReadingForm, setShowReadingForm]   = useState(false);
   const [readingForm, setReadingForm] = useState({
-    fecha:     new Date().toISOString().slice(0,10),
-    tipo:      "peso",
-    peso:      "",
-    sueltos:   "",
-    buoys:     Array(10).fill(""),
-    salt:      "",
-    ph:        "",
-    temp:      "",
-    salinidad: "",
-    notas:     "",
-    foto:      false,
+    fecha:       new Date().toISOString().slice(0,10),
+    tipo:        "peso",
+    peso:        "",
+    sueltos:     "",
+    buoys:       Array(15).fill(""),
+    salt:        "",
+    ph:          "",
+    temp:        "",
+    salinidad:   "",
+    notas:       "",
+    foto:        null,
+    cosechada:   "",
+    aguas:       "",
+    condiciones: "",
   });
   const [editingReadingId, setEditingReadingId] = useState(null);
   const [editReadingForm, setEditReadingForm] = useState({
-    fecha:"", tipo:"peso", peso:"", sueltos:"",
+    fecha:"", tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""),
     salt:"", ph:"", temp:"", salinidad:"", notas:"",
+    cosechada:"", aguas:"", condiciones:"", foto:null,
   });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
@@ -3894,16 +3898,20 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       temp:       readingForm.temp      ? parseFloat(readingForm.temp)      : null,
       salinidad:  readingForm.salinidad ? parseFloat(readingForm.salinidad) : null,
       notas:      readingForm.notas || "",
-      foto:       readingForm.foto ? `foto_${Date.now()}.jpg` : null,
-      cosechada:  null, sembrado: null, aguas: "", condiciones: "",
+      foto:       (readingForm.foto && readingForm.foto !== true) ? readingForm.foto : null,
+      cosechada:  readingForm.cosechada ? parseFloat(readingForm.cosechada) : null,
+      sembrado:   null,
+      aguas:       readingForm.aguas       || "",
+      condiciones: readingForm.condiciones || "",
     };
     const withNew = [...readings, newReading];
     setReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
     setShowReadingForm(false);
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
-      tipo:"peso", peso:"", sueltos:"", buoys:Array(10).fill(""),
-      salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:false,
+      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""),
+      salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:null,
+      cosechada:"", aguas:"", condiciones:"",
     });
   };
 
@@ -3914,15 +3922,20 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     const updated = readings.map(r =>
       r.id === readingId ? {
         ...r,
-        fecha:     editReadingForm.fecha,
-        tipo:      editReadingForm.tipo,
-        peso:      peso,
-        sueltos:   editReadingForm.sueltos   ? parseFloat(editReadingForm.sueltos)   : null,
-        salt:      editReadingForm.salt      ? parseFloat(editReadingForm.salt)      : null,
-        ph:        editReadingForm.ph        ? parseFloat(editReadingForm.ph)        : null,
-        temp:      editReadingForm.temp      ? parseFloat(editReadingForm.temp)      : null,
-        salinidad: editReadingForm.salinidad ? parseFloat(editReadingForm.salinidad) : null,
-        notas:     editReadingForm.notas     || "",
+        fecha:       editReadingForm.fecha,
+        tipo:        editReadingForm.tipo,
+        peso:        peso,
+        sueltos:     editReadingForm.sueltos   ? parseFloat(editReadingForm.sueltos)   : null,
+        buoys:       editReadingForm.buoys?.some(b=>b) ? editReadingForm.buoys.map(b=>parseFloat(b)||0) : r.buoys,
+        salt:        editReadingForm.salt      ? parseFloat(editReadingForm.salt)      : null,
+        ph:          editReadingForm.ph        ? parseFloat(editReadingForm.ph)        : null,
+        temp:        editReadingForm.temp      ? parseFloat(editReadingForm.temp)      : null,
+        salinidad:   editReadingForm.salinidad ? parseFloat(editReadingForm.salinidad) : null,
+        cosechada:   editReadingForm.cosechada ? parseFloat(editReadingForm.cosechada) : null,
+        aguas:       editReadingForm.aguas     || "",
+        condiciones: editReadingForm.condiciones || "",
+        notas:       editReadingForm.notas     || "",
+        foto:        editReadingForm.foto      || r.foto || null,
       } : r
     );
     setReadings(isPeso ? recalcAllTDC(updated, sistemaId) : updated);
@@ -4022,17 +4035,17 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                   {s.tipo==="Long Line" ? (
                     <div style={{marginBottom:8}}>
                       <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
-                        {s.id} — Buoys 1–10 (g each)
-                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Total = sum of all buoys</span>
+                        {s.id} — B1–B{s.modulos||15} (g)
+                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Total = sum</span>
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-                        {Array.from({length:10},(_,i)=>(
+                        {Array.from({length:s.modulos||15},(_,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:10,color:"#64748b",width:48,flexShrink:0,fontFamily:"monospace"}}>Buoy {i+1}</span>
+                            <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>B{i+1}</span>
                             <input type="number" placeholder="0"
                               value={readingForm.buoys?.[i]||""}
                               onChange={e=>{
-                                const buoys=[...(readingForm.buoys||Array(10).fill(""))];
+                                const buoys=[...(readingForm.buoys||Array(15).fill(""))];
                                 buoys[i]=e.target.value;
                                 const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);
                                 setReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));
@@ -4096,16 +4109,60 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                   ))}
                 </div>
               )}
-              {/* Photo */}
+              {/* Harvest + conditions (peso mode) */}
+              {readingForm.tipo==="peso"&&(
+                <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Cosechada (g)":"Harvested (g)"}</div>
+                      <input type="number" placeholder="0" value={readingForm.cosechada||""}
+                        onChange={e=>setReadingForm(p=>({...p,cosechada:e.target.value}))}
+                        style={{...S.input,fontSize:12,borderColor:readingForm.cosechada?"rgba(74,222,128,.4)":"rgba(148,163,184,.12)"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Condiciones":"Conditions"}</div>
+                      <select value={readingForm.condiciones||""} onChange={e=>setReadingForm(p=>({...p,condiciones:e.target.value}))}
+                        style={{...S.input,fontSize:12,appearance:"none"}}>
+                        <option value="">–</option>
+                        <option value="Saludables">Saludables</option>
+                        <option value="Epifitas">Epifitas</option>
+                        <option value="Ice-ice">Ice-ice</option>
+                        <option value="Decoloración">Decoloración</option>
+                        <option value="Excelente">Excelente</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:8}}>
+                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Aguas":"Water clarity"}</div>
+                    <select value={readingForm.aguas||""} onChange={e=>setReadingForm(p=>({...p,aguas:e.target.value}))}
+                      style={{...S.input,fontSize:12,appearance:"none"}}>
+                      <option value="">–</option>
+                      <option value="Claras">Claras</option>
+                      <option value="Transparente">Transparente</option>
+                      <option value="Turbia">Turbia</option>
+                    </select>
+                  </div>
+                </>
+              )}
+              {/* Photo capture — real camera on mobile, file picker on desktop */}
               <div style={{marginBottom:8}}>
-                <button onClick={()=>setReadingForm(p=>({...p,foto:!p.foto}))}
+                <input type="file" accept="image/*" capture="environment" id="new-reading-foto" style={{display:"none"}}
+                  onChange={e=>{
+                    const file=e.target.files?.[0];
+                    if(file){
+                      const reader=new FileReader();
+                      reader.onload=ev=>setReadingForm(p=>({...p,foto:ev.target.result}));
+                      reader.readAsDataURL(file);
+                    }
+                  }}/>
+                <button onClick={()=>document.getElementById('new-reading-foto')?.click()}
                   style={{width:"100%",padding:"9px 12px",borderRadius:9,cursor:"pointer",
-                    border:`1.5px dashed ${readingForm.foto?"rgba(13,148,136,.5)":"rgba(148,163,184,.2)"}`,
-                    background:readingForm.foto?"rgba(13,148,136,.06)":"transparent",
-                    color:readingForm.foto?"#2dd4bf":"#64748b",
+                    border:`1.5px dashed ${readingForm.foto&&readingForm.foto!==true?"rgba(74,222,128,.5)":"rgba(148,163,184,.2)"}`,
+                    background:readingForm.foto&&readingForm.foto!==true?"rgba(74,222,128,.06)":"transparent",
+                    color:readingForm.foto&&readingForm.foto!==true?"#4ade80":"#64748b",
                     fontWeight:600,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   <span>📷</span>
-                  {readingForm.foto?(lang==="es"?"✓ Foto incluida":"✓ Photo included"):(lang==="es"?"Adjuntar foto (opcional)":"Attach photo (optional)")}
+                  {readingForm.foto&&readingForm.foto!==true?(lang==="es"?"✓ Foto capturada":"✓ Photo captured"):(lang==="es"?"Tomar foto / elegir imagen":"Take photo / choose image")}
                 </button>
               </div>
               {/* Comments */}
@@ -4165,11 +4222,14 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                         const editCanSave = editReadingForm.tipo==="peso"
                           ? !!editReadingForm.peso
                           : !!(editReadingForm.ph||editReadingForm.temp||editReadingForm.salinidad||editReadingForm.salt);
+                        const isLongLine = s.tipo==="Long Line";
+                        const buoyCount = s.modulos || 15;
                         return (
                           <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.25)",borderRadius:10,padding:12,marginBottom:6}}>
                             <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
                               ✏️ {lang==="es"?"Editar lectura":"Edit reading"} — {fecha}{dupLabel}
                             </div>
+                            {/* Type toggle */}
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
                               {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
                                 <button key={t} onClick={()=>setEditReadingForm(p=>({...p,tipo:t}))}
@@ -4179,26 +4239,92 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                                 </button>
                               ))}
                             </div>
+                            {/* Date */}
                             <div style={{marginBottom:8}}>
                               <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
                               <input type="date" value={editReadingForm.fecha}
                                 onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
                                 style={{...S.input,colorScheme:"dark",fontSize:12}}/>
                             </div>
+                            {/* PESO mode */}
                             {editReadingForm.tipo==="peso"?(
-                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                                <div>
-                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
-                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                              <>
+                                {isLongLine ? (
+                                  <div style={{marginBottom:8}}>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
+                                      {s.id} — Buoys 1–{buoyCount} (g)
+                                      <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Total = sum</span>
+                                    </div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                                      {Array.from({length:buoyCount},(_,i)=>(
+                                        <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                                          <span style={{fontSize:10,color:"#64748b",width:48,flexShrink:0,fontFamily:"monospace"}}>B{i+1}</span>
+                                          <input type="number" placeholder="0"
+                                            value={editReadingForm.buoys?.[i]||""}
+                                            onChange={e=>{
+                                              const buoys=[...(editReadingForm.buoys||Array(buoyCount).fill(""))];
+                                              buoys[i]=e.target.value;
+                                              const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);
+                                              setEditReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));
+                                            }}
+                                            style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {editReadingForm.peso&&(
+                                      <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"rgba(245,158,11,.08)",marginBottom:8}}>
+                                        <span style={{fontSize:11,color:"#64748b"}}>Total</span>
+                                        <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"monospace"}}>{(parseFloat(editReadingForm.peso)/1000).toFixed(3)} kg</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                    <div>
+                                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                                      <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                    </div>
+                                    <div>
+                                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}</div>
+                                      <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Harvest field — disease protocol */}
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                  <div>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Cosechada (g)":"Harvested (g)"}</div>
+                                    <input type="number" placeholder="0" value={editReadingForm.cosechada}
+                                      onChange={e=>setEditReadingForm(p=>({...p,cosechada:e.target.value}))}
+                                      style={{...S.input,fontSize:12,borderColor:editReadingForm.cosechada?"rgba(74,222,128,.4)":"rgba(148,163,184,.12)"}}/>
+                                  </div>
+                                  <div>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Condiciones":"Conditions"}</div>
+                                    <select value={editReadingForm.condiciones} onChange={e=>setEditReadingForm(p=>({...p,condiciones:e.target.value}))}
+                                      style={{...S.input,fontSize:12,appearance:"none"}}>
+                                      <option value="">–</option>
+                                      <option value="Saludables">Saludables</option>
+                                      <option value="Epifitas">Epifitas</option>
+                                      <option value="Ice-ice">Ice-ice</option>
+                                      <option value="Decoloración">Decoloración</option>
+                                      <option value="Excelente">Excelente</option>
+                                    </select>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}</div>
-                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                <div style={{marginBottom:8}}>
+                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Aguas":"Water clarity"}</div>
+                                  <select value={editReadingForm.aguas} onChange={e=>setEditReadingForm(p=>({...p,aguas:e.target.value}))}
+                                    style={{...S.input,fontSize:12,appearance:"none"}}>
+                                    <option value="">–</option>
+                                    <option value="Claras">Claras</option>
+                                    <option value="Transparente">Transparente</option>
+                                    <option value="Turbia">Turbia</option>
+                                  </select>
                                 </div>
-                              </div>
+                              </>
                             ):(
                               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                                {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
+                                {[["ph","pH","9.2"],["temp","°C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt","Sal %","2.5"]].map(([key,label,ph])=>(
                                   <div key={key}>
                                     <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
                                     <input type="number" step="0.1" placeholder={ph} value={editReadingForm[key]} onChange={e=>setEditReadingForm(p=>({...p,[key]:e.target.value}))} style={{...S.input,fontSize:12}}/>
@@ -4206,8 +4332,28 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                                 ))}
                               </div>
                             )}
+                            {/* Photo capture */}
+                            <div style={{marginBottom:8}}>
+                              <input type="file" accept="image/*" capture="environment" id={`edit-foto-${r.id}`} style={{display:"none"}}
+                                onChange={e=>{
+                                  const file=e.target.files?.[0];
+                                  if(file){
+                                    const reader=new FileReader();
+                                    reader.onload=ev=>setEditReadingForm(p=>({...p,foto:ev.target.result}));
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}/>
+                              <button onClick={()=>document.getElementById(`edit-foto-${r.id}`)?.click()}
+                                style={{width:"100%",padding:"8px 12px",borderRadius:9,cursor:"pointer",
+                                  border:`1.5px dashed ${editReadingForm.foto?"rgba(74,222,128,.5)":"rgba(148,163,184,.2)"}`,
+                                  background:editReadingForm.foto?"rgba(74,222,128,.06)":"transparent",
+                                  color:editReadingForm.foto?"#4ade80":"#64748b",fontWeight:600,fontSize:11}}>
+                                📷 {editReadingForm.foto?(lang==="es"?"✓ Foto capturada":"✓ Photo captured"):(lang==="es"?"Tomar foto":"Take photo")}
+                              </button>
+                            </div>
+                            {/* Comments */}
                             <div style={{marginBottom:10}}>
-                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios":"Comments"}</div>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Notas":"Notes"}</div>
                               <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
                                 placeholder={lang==="es"?"Observaciones...":"Observations..."} style={{...S.input,fontSize:12}}/>
                             </div>
@@ -4242,7 +4388,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                             </div>
                             {canEditReadings&&(
                               <div style={{display:"flex",gap:4}}>
-                                <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
+                                <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),buoys:r.buoys?r.buoys.map(b=>String(b||"")):(Array(15).fill("")),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||"",cosechada:String(r.cosechada||""),aguas:r.aguas||"",condiciones:r.condiciones||"",foto:r.foto||null});setShowReadingForm(false);}}
                                   style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
                                 <button onClick={()=>{if(window.confirm(lang==="es"?"¿Eliminar esta lectura?":"Delete this reading?")){setReadings(prev=>prev.filter(x=>x.id!==r.id));}}}
                                   style={{padding:"3px 6px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
@@ -4258,65 +4404,54 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                       const isEditing = editingReadingId===r.id;
                       const dupLabel  = paramReadings.length>1?` (${pi+1})`:"";
 
-                      // Show full edit form for parametros too
+                      // Parametros edit — reuse same unified form as peso
                       if(isEditing && canEditReadings) {
                         const editCanSave = editReadingForm.tipo==="peso"
                           ? !!editReadingForm.peso
                           : !!(editReadingForm.ph||editReadingForm.temp||editReadingForm.salinidad||editReadingForm.salt);
+                        const isLongLine = s.tipo==="Long Line";
+                        const buoyCount = s.modulos || 15;
                         return (
                           <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.25)",borderRadius:10,padding:12,marginBottom:6}}>
                             <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
                               ✏️ {lang==="es"?"Editar lectura":"Edit reading"} — 🌊 {fecha}{dupLabel}
                             </div>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                              {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
+                              {[["peso","⚖️ Peso"],["parametros","🌊 Parámetros"]].map(([t,label])=>(
                                 <button key={t} onClick={()=>setEditReadingForm(p=>({...p,tipo:t}))}
                                   style={{padding:"7px 0",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
                                     background:editReadingForm.tipo===t?"rgba(245,158,11,.25)":"rgba(255,255,255,.03)",
-                                    color:editReadingForm.tipo===t?"#f59e0b":"#64748b"}}>{label}
-                                </button>
+                                    color:editReadingForm.tipo===t?"#f59e0b":"#64748b"}}>{label}</button>
                               ))}
                             </div>
                             <div style={{marginBottom:8}}>
-                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
-                              <input type="date" value={editReadingForm.fecha} onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
-                                style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Fecha</div>
+                              <input type="date" value={editReadingForm.fecha} onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))} style={{...S.input,colorScheme:"dark",fontSize:12}}/>
                             </div>
                             {editReadingForm.tipo==="peso"?(
                               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                                <div>
-                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
-                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/>
-                                </div>
-                                <div>
-                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}</div>
-                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/>
-                                </div>
+                                <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Peso total (g)</div>
+                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
+                                <div><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Alga suelta (g)</div>
+                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
                               </div>
                             ):(
                               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                                {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
-                                  <div key={key}>
-                                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
-                                    <input type="number" step="0.1" placeholder={ph} value={editReadingForm[key]} onChange={e=>setEditReadingForm(p=>({...p,[key]:e.target.value}))} style={{...S.input,fontSize:12}}/>
-                                  </div>
+                                {[["ph","pH","9.2"],["temp","°C","27"],["salinidad","Salinidad","19"],["salt","Sal %","2.5"]].map(([key,label,ph])=>(
+                                  <div key={key}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
+                                    <input type="number" step="0.1" placeholder={ph} value={editReadingForm[key]} onChange={e=>setEditReadingForm(p=>({...p,[key]:e.target.value}))} style={{...S.input,fontSize:12}}/></div>
                                 ))}
                               </div>
                             )}
                             <div style={{marginBottom:10}}>
-                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios":"Comments"}</div>
-                              <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
-                                placeholder={lang==="es"?"Observaciones...":"Observations..."} style={{...S.input,fontSize:12}}/>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 Notas</div>
+                              <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))} placeholder="Observaciones..." style={{...S.input,fontSize:12}}/>
                             </div>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                               <button onClick={()=>handleSaveEditReading(r.id,s.id)} disabled={!editCanSave}
-                                style={{padding:10,borderRadius:9,border:"none",background:editCanSave?"rgba(13,148,136,.8)":"rgba(148,163,184,.1)",color:editCanSave?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer"}}>
-                                {lang==="es"?"Guardar":"Save"}
-                              </button>
+                                style={{padding:10,borderRadius:9,border:"none",background:editCanSave?"rgba(13,148,136,.8)":"rgba(148,163,184,.1)",color:editCanSave?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer"}}>Guardar</button>
                               <button onClick={()=>setEditingReadingId(null)}
-                                style={{padding:10,borderRadius:9,border:"1px solid rgba(148,163,184,.12)",background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>
-                                {lang==="es"?"Cancelar":"Cancel"}
-                              </button>
+                                style={{padding:10,borderRadius:9,border:"1px solid rgba(148,163,184,.12)",background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>Cancelar</button>
                             </div>
                           </div>
                         );
@@ -4336,7 +4471,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             <span style={{fontSize:9,color:"#2dd4bf"}}>🌊{dupLabel}</span>
                             {canEditReadings&&(
-                              <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:"parametros",peso:"",sueltos:"",salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||""});setShowReadingForm(false);}}
+                              <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:"parametros",peso:"",sueltos:"",buoys:Array(15).fill(""),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||"",cosechada:"",aguas:r.aguas||"",condiciones:r.condiciones||"",foto:r.foto||null});setShowReadingForm(false);}}
                                 style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
                             )}
                           </div>
@@ -5359,13 +5494,16 @@ export default function App() {
     if (!sb.current || !online) return;
     setSyncing(true);
     try {
-      const [tasksRes, annRes, incRes, readRes, sysRes] = await Promise.all([
+      const [tasksRes, annRes, incRes, readRes] = await Promise.all([
         sb.current.from('assigned_tasks').select('*').order('id'),
         sb.current.from('announcements').select('*').order('created_at', { ascending: false }),
         sb.current.from('weekly_incidents').select('*'),
         sb.current.from('readings').select('*').order('fecha'),
-        sb.current.from('systems').select('*').order('id'),
       ]);
+      // Systems table may not exist yet — query separately to avoid breaking other pulls
+      let sysRes = { data: null };
+      try { sysRes = await sb.current.from('systems').select('*').order('id'); }
+      catch (e) { console.warn('[AquaOps] systems table not found, skipping pull'); }
 
       if (tasksRes.data?.length) {
         setAssignedTasks(tasksRes.data.map(r => ({
