@@ -2032,11 +2032,44 @@ function PruebasChart({ lang, data }) {
 
 
 // ─── CHART: Biomasa Total bar chart with targets ──────────────────────────────
-function BiomasaChart({ lang }) {
+function BiomasaChart({ lang, readings, systems }) {
   const [hovered, setHovered] = useState(null);
   const W = 320, H = 120, PL = 8, PR = 8, PT = 18, PB = 30;
   const cW = W - PL - PR, cH = H - PT - PB;
-  const data = BIOMASA_DATA;
+
+  // Build monthly biomass from live readings
+  // For each month: sum the LATEST weight reading per active system in that month
+  const monthNames = ["Dic","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic26"];
+  const monthTargets = { "Dic":null,"Ene":700,"Feb":null,"Mar":1400,"Abr":null,"May":null,"Jun":2800,"Sep":5600,"Dic26":11200 };
+
+  const activeSystems = (systems||[]).filter(s=>s.estado==="Activo");
+
+  // Calculate actual biomass per month from readings
+  const data = monthNames.map(mes => {
+    // Map month name to date range
+    const monthMap = {"Dic":"2025-12","Ene":"2026-01","Feb":"2026-02","Mar":"2026-03","Abr":"2026-04","May":"2026-05","Jun":"2026-06","Jul":"2026-07","Ago":"2026-08","Sep":"2026-09","Oct":"2026-10","Nov":"2026-11","Dic26":"2026-12"};
+    const monthKey = monthMap[mes];
+    if (!monthKey) return { mes, actual:null, target:monthTargets[mes]||null };
+
+    // For this month: find the latest peso reading per system
+    const monthReadings = (readings||[]).filter(r => r.fecha && r.fecha.startsWith(monthKey) && r.peso);
+    if (monthReadings.length === 0) {
+      // Fall back to seed BIOMASA_DATA if no live readings
+      const seed = BIOMASA_DATA.find(d=>d.mes===mes);
+      return { mes, actual:seed?.actual||null, target:monthTargets[mes]||null };
+    }
+
+    // Sum latest reading per system in this month
+    const bySystem = {};
+    monthReadings.forEach(r => {
+      if (!bySystem[r.sistema] || r.fecha > bySystem[r.sistema].fecha) {
+        bySystem[r.sistema] = r;
+      }
+    });
+    const totalKg = Object.values(bySystem).reduce((sum,r) => sum + (r.peso||0), 0) / 1000;
+    return { mes, actual: Math.round(totalKg), target: monthTargets[mes]||null };
+  }).filter(d => d.actual !== null || d.target !== null);
+
   const maxV = Math.max(...data.map(d => Math.max(d.actual||0, d.target||0)), 1400) * 1.08;
   const n = data.length;
   const barW = (cW / n) * 0.55;
@@ -2498,7 +2531,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
               <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{lang==="es"?"Biomasa Total (kg)":"Total Biomass (kg)"}</div>
               <div style={{fontSize:9,color:"#64748b"}}>{lang==="es"?"Meta Dic 2026: 11,200 kg":"Target Dec 2026: 11,200 kg"}</div>
             </div>
-            <BiomasaChart lang={lang}/>
+            <BiomasaChart lang={lang} readings={readings} systems={systems}/>
           </div>
 
           {/* ── COMENTARIOS DEL CAMPO ─────────────────────────────────────── */}
@@ -4049,7 +4082,71 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                     {paramReadings.map((r,pi)=>{
                       const isEditing = editingReadingId===r.id;
                       const dupLabel  = paramReadings.length>1?` (${pi+1})`:"";
-                      if(isEditing && canEditReadings) return null; // handled above
+
+                      // Show full edit form for parametros too
+                      if(isEditing && canEditReadings) {
+                        const editCanSave = editReadingForm.tipo==="peso"
+                          ? !!editReadingForm.peso
+                          : !!(editReadingForm.ph||editReadingForm.temp||editReadingForm.salinidad||editReadingForm.salt);
+                        return (
+                          <div key={r.id} style={{background:"rgba(245,158,11,.06)",border:"1px solid rgba(245,158,11,.25)",borderRadius:10,padding:12,marginBottom:6}}>
+                            <div style={{fontSize:10,color:"#f59e0b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
+                              ✏️ {lang==="es"?"Editar lectura":"Edit reading"} — 🌊 {fecha}{dupLabel}
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                              {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
+                                <button key={t} onClick={()=>setEditReadingForm(p=>({...p,tipo:t}))}
+                                  style={{padding:"7px 0",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
+                                    background:editReadingForm.tipo===t?"rgba(245,158,11,.25)":"rgba(255,255,255,.03)",
+                                    color:editReadingForm.tipo===t?"#f59e0b":"#64748b"}}>{label}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{marginBottom:8}}>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
+                              <input type="date" value={editReadingForm.fecha} onChange={e=>setEditReadingForm(p=>({...p,fecha:e.target.value}))}
+                                style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+                            </div>
+                            {editReadingForm.tipo==="peso"?(
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                <div>
+                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                                  <input type="number" value={editReadingForm.peso} onChange={e=>setEditReadingForm(p=>({...p,peso:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                </div>
+                                <div>
+                                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}</div>
+                                  <input type="number" placeholder="0" value={editReadingForm.sueltos} onChange={e=>setEditReadingForm(p=>({...p,sueltos:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                </div>
+                              </div>
+                            ):(
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                                {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
+                                  <div key={key}>
+                                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
+                                    <input type="number" step="0.1" placeholder={ph} value={editReadingForm[key]} onChange={e=>setEditReadingForm(p=>({...p,[key]:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{marginBottom:10}}>
+                              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios":"Comments"}</div>
+                              <input value={editReadingForm.notas} onChange={e=>setEditReadingForm(p=>({...p,notas:e.target.value}))}
+                                placeholder={lang==="es"?"Observaciones...":"Observations..."} style={{...S.input,fontSize:12}}/>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                              <button onClick={()=>handleSaveEditReading(r.id,s.id)} disabled={!editCanSave}
+                                style={{padding:10,borderRadius:9,border:"none",background:editCanSave?"rgba(13,148,136,.8)":"rgba(148,163,184,.1)",color:editCanSave?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+                                {lang==="es"?"Guardar":"Save"}
+                              </button>
+                              <button onClick={()=>setEditingReadingId(null)}
+                                style={{padding:10,borderRadius:9,border:"1px solid rgba(148,163,184,.12)",background:"transparent",color:"#64748b",fontSize:12,cursor:"pointer"}}>
+                                {lang==="es"?"Cancelar":"Cancel"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 0 3px 10px",borderLeft:"2px solid rgba(45,212,191,.2)"}}>
                           <div style={{flex:1}}>
