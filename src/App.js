@@ -2387,7 +2387,7 @@ function BoardProgressChart({ lang }) {
   );
 }
 
-function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson }) {
+function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson, chartPruebas }) {
   const [tab, setDashTab] = useState("resumen");
   const active = systems.filter(s=>s.estado==="Activo");
   const done   = assignedTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
@@ -2522,7 +2522,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0",marginBottom:6}}>
               {lang==="es"?"% Pruebas en Categorías":"% Tests by Category"}
             </div>
-            <PruebasChart lang={lang}/>
+            <PruebasChart lang={lang} data={chartPruebas}/>
           </div>
 
           {/* Chart 3: Biomasa */}
@@ -3641,7 +3641,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   regions=DEFAULT_REGIONS, setRegions=()=>{},
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
-  semillas=DEFAULT_SEMILLAS, setSemillas=()=>{} }) {
+  semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
+  onChartUpload=null }) {
   const canEdit = ["ceo","consultant","supervisor","capitan"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -3670,6 +3671,176 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   // Only Eduardo, Jason, Cameron can edit existing readings
   const canEditReadings = ["ceo","consultant","supervisor"].includes(user.role);
+  const canUpload = ["ceo","consultant","supervisor"].includes(user.role) && onChartUpload;
+
+  // ── TDC Excel/CSV upload state ──────────────────────────────────────────────
+  const [uploadStatus, setUploadStatus] = useState(null); // null | 'parsing' | 'done' | 'error'
+  const [uploadMsg, setUploadMsg] = useState("");
+  const uploadRef = useRef(null);
+
+  const handleTDCUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadStatus("parsing");
+    setUploadMsg("");
+    try {
+      // Load SheetJS from CDN if not already loaded
+      if (!window.XLSX) {
+        await new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      const XLSX = window.XLSX;
+      const buf  = await file.arrayBuffer();
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
+      const wb = isCSV
+        ? XLSX.read(buf, { type:"array" })
+        : XLSX.read(buf, { type:"array", cellDates:true });
+
+      // ── 1. Parse Pruebas Pesos → readings ──────────────────────────────────
+      let newReadingsCount = 0;
+      const ppSheet = wb.Sheets["Pruebas Pesos"];
+      if (ppSheet) {
+        const ppRows = XLSX.utils.sheet_to_json(ppSheet, { defval: null });
+        // Build a Set of existing sistema+fecha keys for dedup
+        const existingKeys = new Set(readings.map(r => `${r.sistema}__${r.fecha}`));
+        const newReadings = [];
+        const baseId = Date.now();
+
+        ppRows.forEach((row, i) => {
+          const sistema = row["q"];
+          let fecha = row["Fecha"];
+          if (!sistema || !fecha) return;
+
+          // Normalize fecha to YYYY-MM-DD
+          if (fecha instanceof Date) {
+            fecha = fecha.toISOString().slice(0,10);
+          } else if (typeof fecha === "string") {
+            // Handle DD/MM/YYYY format
+            const parts = fecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (parts) {
+              fecha = `${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+            }
+          } else if (typeof fecha === "number") {
+            // Excel serial number
+            const d = new Date((fecha - 25569) * 86400 * 1000);
+            fecha = d.toISOString().slice(0,10);
+          } else return;
+
+          const key = `${sistema}__${fecha}`;
+          if (existingKeys.has(key)) return; // Skip duplicates
+          existingKeys.add(key);
+
+          newReadings.push({
+            id:          baseId + i,
+            sistema:     sistema,
+            fecha:       fecha,
+            tipo:        "peso",
+            peso:        typeof row["Peso (g)"] === "number" ? row["Peso (g)"] : null,
+            sueltos:     typeof row["Sueltos (g)*"] === "number" ? row["Sueltos (g)*"] : null,
+            cosechada:   typeof row["Cosechada(g)"] === "number" ? row["Cosechada(g)"] : null,
+            sembrado:    typeof row["Sembrado(g)"] === "number" ? row["Sembrado(g)"] : null,
+            salt:        typeof row["SALT %"] === "number" ? row["SALT %"] : null,
+            ph:          typeof row["pH"] === "number" ? row["pH"] : null,
+            salinidad:   typeof row["Salinidad"] === "number" ? row["Salinidad"] : null,
+            temp:        typeof row["°C"] === "number" ? row["°C"] : null,
+            tdc:         typeof row["TDC %"] === "number" ? parseFloat((row["TDC %"] * 100).toFixed(4)) : null,
+            aguas:       row["Aguas"] || "",
+            condiciones: row["Condiciones"] || "",
+            notas:       row["Notas"] || "",
+            foto:        null,
+            buoys:       null,
+          });
+        });
+
+        if (newReadings.length > 0) {
+          newReadingsCount = newReadings.length;
+          // Merge with existing and push via syncReadings
+          const merged = [...readings, ...newReadings];
+          setReadings(merged);
+          console.log(`[AquaOps] TDC Upload: ${newReadings.length} new readings merged`);
+        }
+      }
+
+      // ── 2. Parse Resumen → chart data (TDC, Pruebas %, Biomasa) ─────────
+      const ws = wb.Sheets["Resumen"];
+      if (ws && onChartUpload) {
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        const newTDC = [], newPruebas = [], newBiomasa = [];
+        const seenBiomasa = {};
+
+        for (let i = 1; i < raw.length; i++) {
+          const row = raw[i];
+          if (!row[0]) continue;
+          let fecha = row[0];
+          let fechaStr = "";
+          if (fecha instanceof Date) {
+            fechaStr = fecha.toLocaleDateString("es-PA", { day:"2-digit", month:"2-digit", year:"numeric" });
+          } else if (typeof fecha === "string") {
+            fechaStr = fecha;
+          } else continue;
+
+          const d = fecha instanceof Date ? fecha : new Date(fecha);
+          const labelShort = isNaN(d) ? fechaStr :
+            d.toLocaleDateString("es-PA", { day:"numeric", month:"short" });
+
+          const tdcRaw = row[6];
+          const tdc = typeof tdcRaw === "number" ? parseFloat((tdcRaw * 100).toFixed(4)) : null;
+          const isHarvest = tdc === null && row[4] !== null && typeof row[4] === "number" &&
+            i > 1 && typeof raw[i-1]?.[4] === "number" && row[4] < raw[i-1][4] * 0.85;
+          newTDC.push({ fecha: fechaStr, tdc, label: labelShort, harvest: isHarvest });
+
+          // Pruebas — R%=col13, A%=col14, V%=col15, B%=col16
+          const r_pct = row[13], a_pct = row[14], v_pct = row[15], b_pct = row[16];
+          if ([r_pct, a_pct, v_pct, b_pct].some(x => typeof x === "number" && x > 0)) {
+            newPruebas.push({
+              label: labelShort,
+              r: Math.round((r_pct || 0) * 100),
+              a: Math.round((a_pct || 0) * 100),
+              v: Math.round((v_pct || 0) * 100),
+              b: Math.round((b_pct || 0) * 100),
+            });
+          }
+
+          const mes = row[18];
+          const bioVal = row[19];
+          if (mes && typeof mes === "string" && typeof bioVal === "number" && !seenBiomasa[mes]) {
+            seenBiomasa[mes] = true;
+            const mesMap = { December:"Dic", January:"Ene", February:"Feb", March:"Mar",
+                             April:"Abr", May:"May", June:"Jun", September:"Sep" };
+            newBiomasa.push({ mes: mesMap[mes] || mes, actual: Math.round(bioVal), target: null });
+          }
+        }
+
+        if (newTDC.length > 0) {
+          const mergedBiomasa = newBiomasa.map(b => {
+            const existing = BIOMASA_DATA.find(d => d.mes === b.mes);
+            return { ...b, target: existing?.target || null };
+          });
+          BIOMASA_DATA.forEach(d => {
+            if (d.target && !mergedBiomasa.find(b => b.mes === d.mes)) {
+              mergedBiomasa.push({ mes: d.mes, actual: null, target: d.target });
+            }
+          });
+          onChartUpload({ tdc: newTDC, pruebas: newPruebas, biomasa: mergedBiomasa });
+        }
+      }
+
+      const chartCount = ws ? "✓" : "–";
+      setUploadMsg(lang === "es"
+        ? `${newReadingsCount} lecturas importadas · Gráficos ${chartCount}`
+        : `${newReadingsCount} readings imported · Charts ${chartCount}`);
+      setUploadStatus("done");
+    } catch (err) {
+      console.error("[AquaOps] TDC Upload error:", err);
+      setUploadMsg(err.message || "Error al leer el archivo");
+      setUploadStatus("error");
+    }
+    e.target.value = "";
+  };
 
   // Calculate TDC from two readings: TDC = (ln(p2/p1) / days) * 100
   const calcTDC = (peso1, fecha1, peso2, fecha2) => {
@@ -4290,6 +4461,44 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:12}}>
         {["all",...regions].map(r=>{ const c=r==="all"?"#94a3b8":regionColor[r]||"#94a3b8"; return <button key={r} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?c:"rgba(148,163,184,.12)"}`,background:filterRegion===r?`${c}18`:"transparent",color:filterRegion===r?c:"#64748b",fontWeight:600,fontSize:11,cursor:"pointer"}}>{r==="all"?(lang==="es"?"Todas":"All"):r}</button>; })}
       </div>
+
+      {/* ── TDC Excel Upload (supervisor/CEO/consultant only) ──────────────── */}
+      {canUpload && (
+        <div style={{...S.card, borderColor: uploadStatus==="done" ? "rgba(74,222,128,.25)" : uploadStatus==="error" ? "rgba(248,113,113,.25)" : "rgba(13,148,136,.15)", marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0",marginBottom:2}}>
+                📊 {lang==="es"?"Importar TDC de Semillero":"Import TDC Spreadsheet"}
+              </div>
+              <div style={{fontSize:10,color:"#64748b",lineHeight:1.5}}>
+                {lang==="es"
+                  ? "Sube TDC_de_Semillero.xlsx — importa lecturas de Pruebas Pesos y actualiza gráficos del dashboard."
+                  : "Upload TDC_de_Semillero.xlsx — imports Pruebas Pesos readings and updates dashboard charts."}
+              </div>
+              {uploadStatus==="done" && uploadMsg && (
+                <div style={{fontSize:10,color:"#4ade80",marginTop:5,fontWeight:600}}>✓ {uploadMsg}</div>
+              )}
+              {uploadStatus==="error" && (
+                <div style={{fontSize:10,color:"#f87171",marginTop:5}}>{uploadMsg}</div>
+              )}
+            </div>
+            <div>
+              <input ref={uploadRef} type="file" accept=".xlsx,.xlsm,.xls,.csv"
+                style={{display:"none"}} onChange={handleTDCUpload}/>
+              <button onClick={()=>uploadRef.current?.click()}
+                disabled={uploadStatus==="parsing"}
+                style={{padding:"9px 14px",borderRadius:10,border:"none",
+                  background: uploadStatus==="done" ? "rgba(74,222,128,.15)" : "linear-gradient(135deg,#0d9488,#0f766e)",
+                  color: uploadStatus==="done" ? "#4ade80" : "#fff",
+                  fontWeight:700,fontSize:12,cursor:uploadStatus==="parsing"?"wait":"pointer",
+                  whiteSpace:"nowrap",flexShrink:0}}>
+                {uploadStatus==="parsing" ? "⏳ Procesando..." : uploadStatus==="done" ? "✓ Importado" : lang==="es" ? "📂 Subir Excel" : "📂 Upload Excel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {Object.entries(grouped).map(([region,polygons])=>(
         <div key={region} style={{marginBottom:18}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
@@ -4648,7 +4857,7 @@ function ExportButtons({ readings, systems, evaluations, weeklyIncidents, profSc
   );
 }
 
-function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assignedTasks, weeklyIncidents, readings, systems, lang, user }) {
+function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assignedTasks, weeklyIncidents, readings, systems, lang, user, chartTDC, chartPruebas, chartBiomasa, onChartUpload }) {
   const [view, setView] = useState("overview"); // overview | eval
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedQ, setSelectedQ] = useState(CURRENT_QUARTER);
@@ -4657,15 +4866,13 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
   const [saved, setSaved] = useState(false);
   const [poolAmount, setPoolAmount] = useState(3000);
 
-  // ── TDC live data — starts from seed, replaced on upload ──────────────────
-  const [liveTDC,     setLiveTDC]     = useState(TDC_DATA);
-  const [livePruebas, setLivePruebas] = useState(PRUEBAS_DATA);
-  const [liveBiomasa, setLiveBiomasa] = useState(BIOMASA_DATA);
+  // ── TDC live data — now from App-level props ──────────────────
+  const liveTDC     = chartTDC;
+  const livePruebas = chartPruebas;
+  const liveBiomasa = chartBiomasa;
 
   const handleTDCUpload = ({ tdc, pruebas, biomasa }) => {
-    setLiveTDC(tdc);
-    setLivePruebas(pruebas);
-    setLiveBiomasa(biomasa);
+    onChartUpload({ tdc, pruebas, biomasa });
   };
 
 
@@ -5040,6 +5247,25 @@ export default function App() {
   const [timecards, setTimecards]             = useState(SEED_TIMECARDS);
   const [announcements, setAnnouncements]     = useState(SEED_ANNOUNCEMENTS);
 
+  // ── Chart data state — persisted to localStorage, updated by TDC upload ─────
+  const [chartPruebas, setChartPruebas] = useState(() => {
+    try { const c = localStorage.getItem('aq_chart_pruebas'); return c ? JSON.parse(c) : PRUEBAS_DATA; }
+    catch { return PRUEBAS_DATA; }
+  });
+  const [chartTDC, setChartTDC] = useState(() => {
+    try { const c = localStorage.getItem('aq_chart_tdc'); return c ? JSON.parse(c) : TDC_DATA; }
+    catch { return TDC_DATA; }
+  });
+  const [chartBiomasa, setChartBiomasa] = useState(() => {
+    try { const c = localStorage.getItem('aq_chart_biomasa'); return c ? JSON.parse(c) : BIOMASA_DATA; }
+    catch { return BIOMASA_DATA; }
+  });
+  const handleChartDataUpload = ({ tdc, pruebas, biomasa }) => {
+    setChartTDC(tdc);     try { localStorage.setItem('aq_chart_tdc',     JSON.stringify(tdc));     } catch {}
+    setChartPruebas(pruebas); try { localStorage.setItem('aq_chart_pruebas', JSON.stringify(pruebas)); } catch {}
+    setChartBiomasa(biomasa); try { localStorage.setItem('aq_chart_biomasa', JSON.stringify(biomasa)); } catch {}
+  };
+
   // ── Editable catalog lists (Level 2+ can add new options) ───────────────────
   const [regions,    setRegions]    = useState(DEFAULT_REGIONS);
   const [tipos,      setTipos]      = useState(DEFAULT_TIPOS);
@@ -5063,8 +5289,9 @@ export default function App() {
       .then(m => {
         sb.current = m.supabase;
         setSbReady(true);
+        console.log('[AquaOps] Supabase client loaded ✓', !!m.supabase);
       })
-      .catch(e => console.warn('Supabase load failed:', e));
+      .catch(e => console.warn('[AquaOps] Supabase load FAILED:', e));
   }, []);
 
   // ── Online/offline detection ─────────────────────────────────────────────────
@@ -5082,7 +5309,14 @@ export default function App() {
   // ── Poll for remote updates every 30s when online and sb ready ──────────────
   useEffect(() => {
     if (!online || !sbReady) return;
-    const id = setInterval(() => pullRemoteData(), 30000);
+    const id = setInterval(() => {
+      // Flush any queued offline items before pulling fresh data
+      if (offlineQueue.current.length > 0) {
+        triggerSync();
+      } else {
+        pullRemoteData();
+      }
+    }, 30000);
     return () => clearInterval(id);
   }, [online, user, sbReady]);
 
@@ -5182,11 +5416,13 @@ export default function App() {
   // ── PUSH: write one item to Supabase, then refresh dashboard ────────────────
   const pushItem = async (table, op, payload) => {
     if (!sb.current || !online) {
+      console.warn(`[AquaOps] pushItem queued (sb=${!!sb.current}, online=${online}):`, table, op, payload?.id);
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
       return false;
     }
     try {
+      console.log(`[AquaOps] pushItem → ${table}.${op}`, payload?.id);
       let error;
       if (op === 'upsert') {
         // weekly_incidents uses composite PK (week, initials) not id
@@ -5201,7 +5437,7 @@ export default function App() {
       setLastSync(new Date());
       return true;
     } catch (e) {
-      console.error(`[AquaOps] Push to ${table} failed:`, e.message, payload);
+      console.error(`[AquaOps] Push to ${table} FAILED:`, e?.message || e?.code || e, JSON.stringify(e), 'payload:', payload);
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
       return false;
@@ -5214,6 +5450,7 @@ export default function App() {
       pullRemoteData();
       return;
     }
+    console.log(`[AquaOps] triggerSync: flushing ${offlineQueue.current.length} queued items`);
     setSyncing(true);
     const queue = [...offlineQueue.current];
     offlineQueue.current = [];
@@ -5318,6 +5555,7 @@ export default function App() {
       });
       // Push outside the setState callback so it doesn't block render
       if (changed.length > 0) {
+        console.log(`[AquaOps] syncReadings: ${changed.length} changed readings to push`, changed.map(r => ({id:r.id,sistema:r.sistema})));
         setTimeout(() => {
           changed.forEach(r => {
             pushItem('readings', 'upsert', {
@@ -5338,10 +5576,13 @@ export default function App() {
               foto:        r.foto        ?? null,
               cosechada:   r.cosechada   ?? null,
               sembrado:    r.sembrado    ?? null,
+              buoys:       r.buoys       ?? null,
               updated_at:  new Date().toISOString(),
             });
           });
         }, 0);
+      } else {
+        console.log('[AquaOps] syncReadings: no changes detected');
       }
       // Persist to localStorage — survives inactivity logout
       try { localStorage.setItem('aq_readings_cache', JSON.stringify(next)); }
@@ -5516,26 +5757,26 @@ export default function App() {
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
-        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
+        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
         {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
-        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
+        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} onChartUpload={handleChartDataUpload}/>}
         {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 3 — CEO + Consultant */}
-        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)}/>}
+        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={(t,id)=>{setTab(t);}} onViewPerson={(initials)=>setPersonalView(initials)} chartPruebas={chartPruebas}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
-        {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user}/>}
+        {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
       </div>
 
