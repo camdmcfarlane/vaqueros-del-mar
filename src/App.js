@@ -1681,7 +1681,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
     { id:"resumen",  label:lang==="es"?"Resumen":"Summary" },
     { id:"biomasa",  label:lang==="es"?"Biomasa":"Biomass" },
     { id:"equipo",   label:lang==="es"?"Equipo":"Crew" },
-    { id:"ciclos",   label:lang==="es"?"Tareas":"Tasks" },
+    { id:"tareas",   label:lang==="es"?"Tareas":"Tasks" },
   ];
 
   return (
@@ -1986,7 +1986,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                 {s.daysToHarvest!==null&&(
                   <div style={{marginTop:8}}>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#475569",marginBottom:3}}>
-                      <span>{lang==="es"?"Ciclo cosecha (45d)":"Harvest cycle (45d)"}</span>
+                      <span>{lang==="es"?"Cosecha (45d)":"Harvest (45d)"}</span>
                       <span style={{color:s.daysToHarvest<=7?"#4ade80":"#64748b",fontWeight:600}}>
                         {s.daysToHarvest<=0?(lang==="es"?"¡Cosechar!":"Harvest now!"):`${s.daysToHarvest}d ${lang==="es"?"restantes":"left"}`}
                       </span>
@@ -2106,13 +2106,13 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         </div>
       )}
 
-      {/* ═══ TAB 4: CICLOS ═══ */}
-      {tab==="ciclos" && (
+      {/* ═══ TAB 4: TAREAS ═══ */}
+      {tab==="tareas" && (
         <div>
           <p style={{color:"#64748b",fontSize:12,margin:"0 0 14px",lineHeight:1.5}}>
             {lang==="es"
-              ?"Ciclo cosecha: 45 días · Ciclo limpieza: 22 días. Días contados desde el último peso registrado."
-              :"Harvest cycle: 45 days · Cleaning cycle: 22 days. Days counted from last recorded weight."}
+              ?"Cosecha: cada 45 días · Limpieza: cada 3 días · Vigilancia: diaria. Basado en último peso registrado."
+              :"Harvest: every 45 days · Cleaning: every 3 days · Surveillance: daily. Based on last recorded weight."}
           </p>
 
           {/* Due soon callouts */}
@@ -2771,20 +2771,8 @@ function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, a
                         Buc: {s.buceador}
                       </span>
                     )}
-                    {s.fechaCosecha && (
-                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
-                        background:"rgba(74,222,128,.08)",color:"#4ade80"}}>
-                        🌿 {s.fechaCosecha}
-                      </span>
-                    )}
                   </div>
                 </div>
-                {!s.fechaCosecha && (
-                  <span style={{fontSize:9,padding:"2px 7px",borderRadius:6,
-                    background:"rgba(251,191,36,.1)",color:"#fbbf24",fontWeight:700}}>
-                    ⚠ fecha pendiente
-                  </span>
-                )}
               </div>
             </div>
           ))}
@@ -2799,48 +2787,110 @@ function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, a
   );
 }
 
-function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user, navigateTo=()=>{} }) {
-  const [selected, setSelected] = useState(null);
+function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user, navigateTo=()=>{}, selectedPerson=null, setSelectedPerson=()=>{} }) {
 
-  if (selected) {
-    return <PersonalDashboard
-      initials={selected}
-      onBack={()=>setSelected(null)}
-      assignedTasks={assignedTasks}
-      systems={systems}
-      readings={readings}
-      weeklyIncidents={weeklyIncidents}
-      timecards={timecards}
-      setTimecards={setTimecards}
-      lang={lang}
-      canEdit={["supervisor","ceo","consultant"].includes(user.role)}
-      user={user}
-      navigateTo={navigateTo}
-    />;
+  const person = selectedPerson ? CREW.find(c => c.initials === selectedPerson) : null;
+
+  if (person) {
+    const mySystems = systems.filter(s =>
+      (s.capitan === person.initials || s.buceador === person.initials) && s.estado === "Activo"
+    );
+    const sysWithRate = mySystems.map(s => {
+      const sysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      const latest = sysR[sysR.length-1]||null;
+      const prev = sysR[sysR.length-2]||null;
+      let rate = null;
+      if (latest && prev && prev.peso) {
+        const days = Math.max(1,(new Date(latest.fecha)-new Date(prev.fecha))/(1000*60*60*24));
+        rate = parseFloat(((Math.log(latest.peso/prev.peso)/days)*100).toFixed(2));
+      }
+      return { ...s, latest, rate };
+    });
+    const rates = sysWithRate.map(s=>s.rate).filter(r=>r!==null);
+    const avgRate = rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) : null;
+    const rateCol = avgRate===null?"#475569":parseFloat(avgRate)>=2.5?"#4ade80":parseFloat(avgRate)>=0?"#0d9488":"#f87171";
+    const totalBio = sysWithRate.reduce((sum,s) => sum + (s.latest?.peso||0), 0);
+
+    return (
+      <div style={{padding:"16px 16px 100px"}}>
+        <button onClick={()=>setSelectedPerson(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
+          \u2190 {lang==="es"?"Equipo":"Team"}
+        </button>
+        <div style={{...S.card,background:"linear-gradient(135deg,rgba(13,148,136,.08),rgba(2,8,24,.5))",textAlign:"center",padding:20,marginBottom:12}}>
+          <div style={{width:48,height:48,borderRadius:14,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 8px"}}><span style={{fontSize:16,fontWeight:800,color:"#0d9488"}}>{person.initials}</span></div>
+          <h2 style={{color:"#e2e8f0",fontSize:17,fontWeight:800,margin:"0 0 2px"}}>{person.name}</h2>
+          <span style={{fontSize:11,color:"#64748b"}}>{person.role}</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+          <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Sistemas</div><div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{mySystems.length}</div></div>
+          <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Crecimiento</div><div style={{fontSize:18,fontWeight:800,color:rateCol,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "\u2014"}</div></div>
+          <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Biomasa</div><div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{(totalBio/1000).toFixed(1)}kg</div></div>
+        </div>
+        {sysWithRate.length > 0 && (
+          <>
+            <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",textTransform:"uppercase",letterSpacing:1}}>
+              {lang==="es"?"Sistemas a cargo":"Responsible systems"} \u2014 {sysWithRate.length}
+            </div>
+            {sysWithRate.map(s=>{
+              const rc = s.rate===null?"#475569":s.rate>=2.5?"#4ade80":s.rate>=1?"#fb923c":"#f87171";
+              return (
+                <div key={s.id} style={{...S.card,borderLeft:`3px solid ${rc}`,cursor:"pointer"}}
+                  onClick={()=>navigateTo("sistema", s.id)}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{s.region} \u00b7 {s.tipo}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:16,fontWeight:800,color:rc,fontFamily:"monospace"}}>
+                        {s.rate!==null?`${s.rate>=0?"+":""}${s.rate}%`:"\u2014"}
+                      </div>
+                      <div style={{fontSize:10,color:"#64748b"}}>/d\u00eda</div>
+                      {s.latest&&<div style={{fontSize:10,color:"#475569",marginTop:2}}>{(s.latest.peso/1000).toFixed(2)}kg</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+    );
   }
 
+  // Team list view
   return (
     <div style={{padding:"16px 16px 100px"}}>
-      <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:"0 0 16px"}}>{lang==="es"?"Equipo":"Team"}</h2>
-      {CREW.filter(c=>c.role!=="Supervisor").map((c,i)=>{
-        const tasks=assignedTasks.filter(t=>t.assignedTo===c.initials);
-        const done=tasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
-        const pct=tasks.length?Math.round((done/tasks.length)*100):0;
-        const incidents=weeklyIncidents.filter(i=>i.initials===c.initials).reduce((s,i)=>s+i.tardanzas+i.ausencias,0);
+      <h2 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:"0 0 14px"}}>{lang==="es"?"Equipo":"Team"}</h2>
+      {CREW.map(c=>{
+        const mySys = systems.filter(s=>(s.capitan===c.initials||s.buceador===c.initials)&&s.estado==="Activo");
+        const sysR = mySys.flatMap(s => {
+          const rs = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+          const lat = rs[rs.length-1], prev = rs[rs.length-2];
+          if (lat && prev && prev.peso) {
+            const days = Math.max(1,(new Date(lat.fecha)-new Date(prev.fecha))/(1000*60*60*24));
+            return [parseFloat(((Math.log(lat.peso/prev.peso)/days)*100).toFixed(2))];
+          }
+          return [];
+        });
+        const avgRate = sysR.length ? (sysR.reduce((a,b)=>a+b,0)/sysR.length).toFixed(2) : null;
+        const rc = avgRate===null?"#475569":parseFloat(avgRate)>=2.5?"#4ade80":parseFloat(avgRate)>=0?"#0d9488":"#f87171";
+        const regions = [...new Set(mySys.map(s=>s.region))];
         return (
-          <div key={c.initials} style={{...S.card,cursor:"pointer"}} onClick={()=>setSelected(c.initials)}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:40,height:40,borderRadius:11,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:11,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
+          <div key={c.initials} style={{...S.card,cursor:"pointer",borderLeft:`3px solid ${rc}`}}
+            onClick={()=>setSelectedPerson(c.initials)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:34,height:34,borderRadius:10,background:`${rc}15`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:11,fontWeight:800,color:rc}}>{c.initials}</span></div>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
+                  <div style={{fontSize:10,color:"#64748b"}}>{mySys.length} sistemas \u00b7 {regions.join(", ") || "\u2013"}</div>
+                  {mySys.length > 0 && <div style={{fontSize:9,color:"#475569",marginTop:2}}>{mySys.map(s=>s.id).slice(0,5).join(", ")}{mySys.length>5?"...":""}</div>}
+                </div>
               </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
-                <div style={{fontSize:11,color:"#64748b"}}>{c.role}</div>
-                {S.scoreBar(pct/100,pct===100?"#4ade80":pct>=70?"#fb923c":"#f87171")}
-              </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontSize:15,fontWeight:800,color:pct===100?"#4ade80":pct>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{pct}%</div>
-                {incidents>0&&<div style={{fontSize:10,color:"#f87171",fontWeight:700}}>⏰{incidents}</div>}
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:14,fontWeight:800,color:rc,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "\u2014"}</div>
+                <span style={{fontSize:10,color:"#475569"}}>\u2192</span>
               </div>
             </div>
           </div>
@@ -4040,8 +4090,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                         <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
                           {s.categoria && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(13,148,136,.15)":s.categoria==="semillero"?"rgba(74,222,128,.15)":"rgba(251,191,36,.15)",color:s.categoria==="comercial"?"#0d9488":s.categoria==="semillero"?"#4ade80":"#fbbf24",fontWeight:700}}>{s.categoria}</span>}
                           {s.tamano && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>{s.tamano}</span>}
-                          {s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(74,222,128,.08)",color:"#4ade80"}}>🌿 {s.fechaCosecha}</span>}
-                          {!s.fechaCosecha && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(251,191,36,.08)",color:"#fbbf24"}}>⚠ fecha pendiente</span>}
+                          {s.categoria&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(13,148,136,.08)":"rgba(74,222,128,.08)",color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>{s.categoria}</span>}
                         </div>
                       </div>
                     </div>
@@ -4683,23 +4732,22 @@ function BottomNav({ tab, setTab, role, lang }) {
     ],
     capitan: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
-      { id:"tareas",   icon:"task",     label: lang==="es"?"Mis Tareas":"My Tasks" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
-      { id:"mapa",     icon:"map",      label: "Mapa" },
+      { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     supervisor: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
-      { id:"plan",     icon:"calendar", label: lang==="es"?"Plan":"Plan" },
+      { id:"plan",     icon:"calendar", label: "Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
-      { id:"mapa",     icon:"map",      label: "Mapa" },
+      { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     default: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
-      { id:"plan",     icon:"calendar", label: lang==="es"?"Plan Semanal":"Weekly Plan" },
+      { id:"plan",     icon:"calendar", label: "Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
-      { id:"rrhh",     icon:"rrhh",     label: "RRHH" },
+      { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
   };
@@ -4744,6 +4792,7 @@ export default function App() {
       setPersonalView(null);
     } else if (target === "persona") {
       setPersonalView(id); // initials
+      setTab("equipo");    // navigate to Equipo tab with person selected
     } else if (target === "tareas" || target === "plan") {
       setTab("plan");
       setPersonalView(null);
@@ -4921,10 +4970,18 @@ export default function App() {
         sb.current.from('weekly_incidents').select('*'),
         sb.current.from('readings').select('*').order('fecha'),
       ]);
-      // Systems table may not exist yet — query separately to avoid breaking other pulls
-      let sysRes = { data: null };
-      try { sysRes = await sb.current.from('systems').select('*').order('id'); }
-      catch (e) { console.warn('[AquaOps] systems table not found, skipping pull'); }
+      // Systems table — query separately so failures don't break other pulls
+      let sysRes = { data: null, error: null };
+      try {
+        sysRes = await sb.current.from('systems').select('*').order('id');
+        if (sysRes.error) {
+          console.warn('[AquaOps] systems pull error:', sysRes.error.message, sysRes.error.code);
+        } else {
+          console.log(`[AquaOps] systems pulled: ${sysRes.data?.length || 0} rows`);
+        }
+      } catch (e) {
+        console.warn('[AquaOps] systems pull exception:', e);
+      }
 
       if (tasksRes.data?.length) {
         setAssignedTasks(tasksRes.data.map(r => ({
@@ -5444,23 +5501,6 @@ export default function App() {
       )}
 
       {/* Screen routing */}
-      {/* Personal dashboard overlay — reachable from any screen */}
-      {!initialLoading && personalView && (
-        <PersonalDashboard
-          initials={personalView}
-          onBack={()=>setPersonalView(null)}
-          assignedTasks={assignedTasks}
-          systems={systems}
-          readings={readings}
-          weeklyIncidents={weeklyIncidents}
-          timecards={timecards}
-          setTimecards={setTimecards}
-          lang={lang}
-          canEdit={["supervisor","ceo","consultant"].includes(user.role)}
-          user={user}
-          navigateTo={navigateTo}
-        />
-      )}
       <div role="main" aria-label="Contenido principal" style={{display: initialLoading ? "none" : "block"}}>
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
@@ -5472,22 +5512,21 @@ export default function App() {
         {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/>}
-        {isCapitan && tab==="mapa"      && <MapaTab systems={systems} lang={lang}/>}
+        {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 2 — Supervisor */}
         {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/>}
-        {isSup && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
-        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo}/>}
+        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 3 — CEO + Consultant */}
         {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/>}
-        {isL3 && tab==="mapa"      && <MapaTab      systems={systems} lang={lang}/>}
+        {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
       </div>
