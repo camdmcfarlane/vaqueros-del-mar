@@ -22,6 +22,7 @@ import { T } from "./data/translations";
 import { getAlert, getLatestReading, calcGrowth, calcTaskScore, calcProfScore, calcTotalScore, calcBonusShare, calcHoras } from "./data/helpers";
 import { S, AUTH_ISTYLE, AUTH_LSTYLE } from "./styles";
 import SyncTest from "./components/SyncTest";
+import { useSyncHealth, SyncHealthDot } from "./components/SyncHealth";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────────
 const Icon = ({ name, size=20, color="currentColor" }) => {
@@ -4803,7 +4804,7 @@ export default function App() {
   const inactivityTimer = useRef(null);
 
   // Auto-logout timeouts by role (ms)
-  const INACTIVITY_MS = { vaquero: 60*60*1000, supervisor: 30*60*1000, ceo: 30*60*1000, consultant: 30*60*1000 };
+  const INACTIVITY_MS = { vaquero: 24*60*60*1000, supervisor: 24*60*60*1000, ceo: 24*60*60*1000, consultant: 24*60*60*1000 };
 
   const doLogout = useCallback(() => {
     localStorage.removeItem('vdm_user');
@@ -4920,6 +4921,9 @@ export default function App() {
       })
       .catch(e => console.warn('[AquaOps] Supabase load FAILED:', e));
   }, []);
+
+  // ── Sync health doctests — continuous monitoring ───────────────────────────
+  const syncHealth = useSyncHealth(sb.current, sbReady, online, addToast);
 
   // ── Online/offline detection ─────────────────────────────────────────────────
   useEffect(() => {
@@ -5350,26 +5354,15 @@ export default function App() {
   };
 
   // ── SYNC INDICATOR COMPONENT ─────────────────────────────────────────────────
-  const SyncDot = () => {
-    if (syncing) return (
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:"#fb923c",animation:"pulse 1s infinite"}}/>
-        <span style={{fontSize:9,color:"#fb923c"}}>sync</span>
-      </div>
-    );
-    if (!online) return (
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:"#475569"}}/>
-        {pendingCount>0&&<span style={{fontSize:9,color:"#475569"}}>{pendingCount} pendiente{pendingCount>1?"s":""}</span>}
-      </div>
-    );
-    return (
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>
-        {lastSync&&<span style={{fontSize:9,color:"#334155"}}>{lastSync.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-      </div>
-    );
-  };
+  const SyncDot = () => (
+    <SyncHealthDot
+      health={syncHealth}
+      syncing={syncing}
+      online={online}
+      pendingCount={pendingCount}
+      lastSync={lastSync}
+    />
+  );
 
   const isVaquero  = user?.role === "vaquero";
   const isCapitan  = user?.role === "capitan";
