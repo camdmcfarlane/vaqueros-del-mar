@@ -4892,6 +4892,27 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem('aq_cat_materiales', JSON.stringify(materiales)); } catch {} }, [materiales]);
   useEffect(() => { try { localStorage.setItem('aq_cat_semillas',   JSON.stringify(semillas));   } catch {} }, [semillas]);
 
+  // Sync new regions to Supabase — push any region not yet in the DB
+  const knownRemoteRegions = useRef(new Set());
+  useEffect(() => {
+    if (!sb.current || !sbReady || !online) return;
+    regions.forEach(name => {
+      if (!knownRemoteRegions.current.has(name)) {
+        sb.current.from('regions').upsert(
+          { name, supervisor: null, active: true },
+          { onConflict: 'name', ignoreDuplicates: true }
+        ).then(({ error }) => {
+          if (error) {
+            console.warn(`[AquaOps] region push failed for "${name}":`, error.message);
+          } else {
+            knownRemoteRegions.current.add(name);
+            console.log(`[AquaOps] region synced: ${name}`);
+          }
+        });
+      }
+    });
+  }, [regions, sbReady, online]);
+
   // ── Sync state ──────────────────────────────────────────────────────────────
   const [online, setOnline]     = useState(navigator.onLine);
   const [syncing, setSyncing]   = useState(false);
@@ -4985,6 +5006,25 @@ export default function App() {
         }
       } catch (e) {
         console.warn('[AquaOps] systems pull exception:', e);
+      }
+
+      // Regions table — pull and merge with local
+      let regRes = { data: null, error: null };
+      try {
+        regRes = await sb.current.from('regions').select('*').order('name');
+        if (regRes.error) {
+          console.warn('[AquaOps] regions pull error:', regRes.error.message);
+        } else if (regRes.data?.length) {
+          const remoteRegions = regRes.data.map(r => r.name);
+          setRegions(prev => {
+            const merged = [...new Set([...remoteRegions, ...prev])];
+            try { localStorage.setItem('aq_cat_regions', JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+          console.log(`[AquaOps] regions pulled: ${regRes.data.length} rows`);
+        }
+      } catch (e) {
+        console.warn('[AquaOps] regions pull exception:', e);
       }
 
       if (tasksRes.data?.length) {
@@ -5315,7 +5355,30 @@ export default function App() {
       const deleted = prev.filter(s => !next.find(x => x.id === s.id));
       if (changed.length > 0 || deleted.length > 0) {
         console.log(`[AquaOps] syncSystems: ${changed.length} changed, ${deleted.length} deleted`);
-        setTimeout(() => {
+        setTimeout(async () => {
+          // Ensure all referenced regions exist in Supabase first (FK constraint)
+          const uniqueRegions = [...new Set(changed.map(s => s.region).filter(Boolean))];
+          for (const regionName of uniqueRegions) {
+            await sb.current?.from('regions').upsert(
+              { name: regionName, active: true },
+              { onConflict: 'name', ignoreDuplicates: true }
+            ).then(({ error }) => {
+              if (error) console.warn(`[AquaOps] region ensure failed: ${regionName}`, error.message);
+              else knownRemoteRegions.current.add(regionName);
+            });
+          }
+          // Ensure all referenced crew members exist (FK constraint on capitan/buceador)
+          const crewRefs = [...new Set([
+            ...changed.map(s => s.capitan).filter(Boolean),
+            ...changed.map(s => s.buceador).filter(Boolean),
+          ])];
+          for (const initials of crewRefs) {
+            await sb.current?.from('crew').upsert(
+              { initials, name: initials, role: 'Buceador' },
+              { onConflict: 'initials', ignoreDuplicates: true }
+            );
+          }
+          // Now push systems
           changed.forEach(s => {
             pushItem('systems', 'upsert', {
               id:                s.id,
