@@ -2815,7 +2815,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     return (
       <div style={{padding:"16px 16px 100px"}}>
         <button onClick={()=>setSelectedPerson(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"#0d9488",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:14,padding:0}}>
-          \u2190 {lang==="es"?"Equipo":"Team"}
+          ← {lang==="es"?"Equipo":"Team"}
         </button>
         <div style={{...S.card,background:"linear-gradient(135deg,rgba(13,148,136,.08),rgba(2,8,24,.5))",textAlign:"center",padding:20,marginBottom:12}}>
           <div style={{width:48,height:48,borderRadius:14,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 8px"}}><span style={{fontSize:16,fontWeight:800,color:"#0d9488"}}>{person.initials}</span></div>
@@ -2824,13 +2824,13 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
           <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Sistemas</div><div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{mySystems.length}</div></div>
-          <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Crecimiento</div><div style={{fontSize:18,fontWeight:800,color:rateCol,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "\u2014"}</div></div>
+          <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Crecimiento</div><div style={{fontSize:18,fontWeight:800,color:rateCol,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "—"}</div></div>
           <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Biomasa</div><div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{(totalBio/1000).toFixed(1)}kg</div></div>
         </div>
         {sysWithRate.length > 0 && (
           <>
             <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",textTransform:"uppercase",letterSpacing:1}}>
-              {lang==="es"?"Sistemas a cargo":"Responsible systems"} \u2014 {sysWithRate.length}
+              {lang==="es"?"Sistemas a cargo":"Responsible systems"} — {sysWithRate.length}
             </div>
             {sysWithRate.map(s=>{
               const rc = s.rate===null?"#475569":s.rate>=2.5?"#4ade80":s.rate>=1?"#fb923c":"#f87171";
@@ -2840,13 +2840,13 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
                       <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{s.region} \u00b7 {s.tipo}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{s.region} · {s.tipo}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:16,fontWeight:800,color:rc,fontFamily:"monospace"}}>
-                        {s.rate!==null?`${s.rate>=0?"+":""}${s.rate}%`:"\u2014"}
+                        {s.rate!==null?`${s.rate>=0?"+":""}${s.rate}%`:"—"}
                       </div>
-                      <div style={{fontSize:10,color:"#64748b"}}>/d\u00eda</div>
+                      <div style={{fontSize:10,color:"#64748b"}}>/día</div>
                       {s.latest&&<div style={{fontSize:10,color:"#475569",marginTop:2}}>{(s.latest.peso/1000).toFixed(2)}kg</div>}
                     </div>
                   </div>
@@ -2885,13 +2885,13 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
                 <div style={{width:34,height:34,borderRadius:10,background:`${rc}15`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:11,fontWeight:800,color:rc}}>{c.initials}</span></div>
                 <div>
                   <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
-                  <div style={{fontSize:10,color:"#64748b"}}>{mySys.length} sistemas \u00b7 {regions.join(", ") || "\u2013"}</div>
+                  <div style={{fontSize:10,color:"#64748b"}}>{mySys.length} sistemas · {regions.join(", ") || "–"}</div>
                   {mySys.length > 0 && <div style={{fontSize:9,color:"#475569",marginTop:2}}>{mySys.map(s=>s.id).slice(0,5).join(", ")}{mySys.length>5?"...":""}</div>}
                 </div>
               </div>
               <div style={{textAlign:"right"}}>
-                <div style={{fontSize:14,fontWeight:800,color:rc,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "\u2014"}</div>
-                <span style={{fontSize:10,color:"#475569"}}>\u2192</span>
+                <div style={{fontSize:14,fontWeight:800,color:rc,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "—"}</div>
+                <span style={{fontSize:10,color:"#475569"}}>→</span>
               </div>
             </div>
           </div>
