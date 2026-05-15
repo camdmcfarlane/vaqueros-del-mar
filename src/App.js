@@ -4892,27 +4892,6 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem('aq_cat_materiales', JSON.stringify(materiales)); } catch {} }, [materiales]);
   useEffect(() => { try { localStorage.setItem('aq_cat_semillas',   JSON.stringify(semillas));   } catch {} }, [semillas]);
 
-  // Sync new regions to Supabase — push any region not yet in the DB
-  const knownRemoteRegions = useRef(new Set());
-  useEffect(() => {
-    if (!sb.current || !sbReady || !online) return;
-    regions.forEach(name => {
-      if (!knownRemoteRegions.current.has(name)) {
-        sb.current.from('regions').upsert(
-          { name, supervisor: null, active: true },
-          { onConflict: 'name', ignoreDuplicates: true }
-        ).then(({ error }) => {
-          if (error) {
-            console.warn(`[AquaOps] region push failed for "${name}":`, error.message);
-          } else {
-            knownRemoteRegions.current.add(name);
-            console.log(`[AquaOps] region synced: ${name}`);
-          }
-        });
-      }
-    });
-  }, [regions, sbReady, online]);
-
   // ── Sync state ──────────────────────────────────────────────────────────────
   const [online, setOnline]     = useState(navigator.onLine);
   const [syncing, setSyncing]   = useState(false);
@@ -4945,6 +4924,27 @@ export default function App() {
 
   // ── Sync health doctests — continuous monitoring ───────────────────────────
   const syncHealth = useSyncHealth(sb.current, sbReady, online, addToast);
+
+  // ── Sync new regions to Supabase — push any not yet in DB ─────────────────
+  const knownRemoteRegions = useRef(new Set());
+  useEffect(() => {
+    if (!sb.current || !sbReady || !online) return;
+    regions.forEach(name => {
+      if (!knownRemoteRegions.current.has(name)) {
+        sb.current.from('regions').upsert(
+          { name, supervisor: null, active: true },
+          { onConflict: 'name', ignoreDuplicates: true }
+        ).then(({ error }) => {
+          if (error) {
+            console.warn(`[AquaOps] region push failed for "${name}":`, error.message);
+          } else {
+            knownRemoteRegions.current.add(name);
+            console.log(`[AquaOps] region synced: ${name}`);
+          }
+        });
+      }
+    });
+  }, [regions, sbReady, online]);
 
   // ── Online/offline detection ─────────────────────────────────────────────────
   useEffect(() => {
