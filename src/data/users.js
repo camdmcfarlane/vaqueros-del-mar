@@ -3,12 +3,12 @@
 
 const USERS = [
   // ── Level 3 — CEO / Consultant ──────────────────────────────────────────────
-  { username:"jason_heckathorn", password:"AGPanama1", role:"ceo",        name:"Jason Heckathorn", initials:"JH",  assignedSystems: null },
-  { username:"cameron_mcfarlane",password:"AGPanama1", role:"consultant",  name:"Cameron McFarlane",initials:"CM",  assignedSystems: null },
+  { username:"jason_heckathorn", password:"AGPanama1", role:"admin",     name:"Jason Heckathorn", initials:"JH",  assignedSystems: null },
+  { username:"cameron_mcfarlane",password:"AGPanama1", role:"consultor",  name:"Cameron McFarlane",initials:"CM",  assignedSystems: null },
 
-  // ── Level 2 — Supervisor ─────────────────────────────────────────────────────
-  { username:"eduardo_valdes",   password:"AGPanama1", role:"supervisor",  name:"Eduardo Valdés",   initials:"EV",  assignedSystems: null },
-  { username:"supervisor",       password:"AGPanama1", role:"supervisor",  name:"Supervisor (test)",initials:"EV",  assignedSystems: null }, // audit account
+  // ── Level 2 — Director ───────────────────────────────────────────────────────
+  { username:"eduardo_valdes",   password:"AGPanama1", role:"director",  name:"Eduardo Valdés",   initials:"EV",  assignedSystems: null },
+  { username:"supervisor",       password:"AGPanama1", role:"director",  name:"Supervisor (test)",initials:"EV",  assignedSystems: null }, // audit account
 
   // ── Level 1 — Vaqueros (real crew) ───────────────────────────────────────────
   { username:"hilario_migar",    password:"1234", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
@@ -22,8 +22,8 @@ const USERS = [
 
   // ── Audit / test accounts ─────────────────────────────────────────────────────
   { username:"test_vaquero",     password:"1234", role:"vaquero",     name:"Test Vaquero",     initials:"HM",  assignedSystems: null }, // sees HM's tasks
-  { username:"test_supervisor",  password:"AGPanama1", role:"supervisor",  name:"Test Supervisor",  initials:"EV",  assignedSystems: null }, // sees supervisor view
-  { username:"test_ceo",         password:"AGPanama1", role:"ceo",         name:"Test CEO",         initials:"JH",  assignedSystems: null }, // sees full L3 view
+  { username:"test_supervisor",  password:"AGPanama1", role:"director",  name:"Test Supervisor",  initials:"EV",  assignedSystems: null }, // sees director view
+  { username:"test_ceo",         password:"AGPanama1", role:"admin",     name:"Test CEO",         initials:"JH",  assignedSystems: null }, // sees full admin view
 ];
 
 export { USERS };

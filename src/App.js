@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import ProtectedRoute from './components/ProtectedRoute';
+import VigilanciaQueue from './components/VigilanciaQueue';
+import CapitanSistemas from './protocol/CapitanSistemas';
+import { ReadingActionButtons, EditReading, DeleteReading } from './protocol/ReadingActions';
+import { AuthContext } from './contexts/AuthContext';
+import { getRedirectForRole } from './utils/roleGuard';
 
 // ─── DATA LAYER ──────────────────────────────────────────────────────────────
 import { SYSTEMS_DATA } from "./data/systems";
@@ -2948,7 +2954,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
   onChartUpload=null, addToast=()=>{}, deepLinkSystem=null, setDeepLinkSystem=()=>{}, navigateTo=()=>{} }) {
-  const canEdit = ["ceo","consultant","supervisor","capitan"].includes(user.role);
+  const canEdit = ["admin","consultor","director","capitan"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
   const [selected, setSelected] = useState(null);
 
@@ -2988,9 +2994,11 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
-  // Only Eduardo, Jason, Cameron can edit existing readings
-  const canEditReadings = ["ceo","consultant","supervisor"].includes(user.role);
-  const canUpload = ["ceo","consultant","supervisor"].includes(user.role) && onChartUpload;
+  // Only admin/consultor/director can edit/delete readings
+  const canEditReadings = ["admin","consultor","director"].includes(user.role);
+  const canUpload = ["admin","consultor","director"].includes(user.role) && onChartUpload;
+  const [editingViaModal, setEditingViaModal] = useState(null);
+  const [deletingViaModal, setDeletingViaModal] = useState(null);
 
   // ── TDC Excel/CSV upload state ──────────────────────────────────────────────
   const [uploadStatus, setUploadStatus] = useState(null); // null | 'parsing' | 'done' | 'error'
@@ -3789,14 +3797,11 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                               {r.sueltos&&<div style={{fontSize:10,color:"#64748b"}}>+{(r.sueltos/1000).toFixed(2)}kg sueltos</div>}
                               {r.tdc!==null&&<div style={{fontSize:10,fontWeight:700,color:col}}>{r.tdc>=0?"+":""}{r.tdc}%/día</div>}
                             </div>
-                            {canEditReadings&&(
-                              <div style={{display:"flex",gap:4}}>
-                                <button onClick={()=>{setEditingReadingId(r.id);setEditReadingForm({fecha:r.fecha,tipo:r.tipo||"peso",peso:String(r.peso||""),sueltos:String(r.sueltos||""),buoys:r.buoys?r.buoys.map(b=>String(b||"")):(Array(15).fill("")),salt:String(r.salt||""),ph:String(r.ph||""),temp:String(r.temp||""),salinidad:String(r.salinidad||""),notas:r.notas||"",cosechada:String(r.cosechada||""),aguas:r.aguas||"",condiciones:r.condiciones||"",foto:r.foto||null});setShowReadingForm(false);}}
-                                  style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(245,158,11,.1)",color:"#f59e0b",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
-                                <button onClick={()=>{if(window.confirm(lang==="es"?"¿Eliminar esta lectura?":"Delete this reading?")){setReadings(prev=>prev.filter(x=>x.id!==r.id));}}}
-                                  style={{padding:"3px 6px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
-                              </div>
-                            )}
+                            <ReadingActionButtons
+                              reading={r}
+                              onEdit={(reading) => setEditingViaModal(reading)}
+                              onDelete={(reading) => setDeletingViaModal(reading)}
+                            />
                           </div>
                         </div>
                       );
@@ -3926,6 +3931,20 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
             </div>
           )}
         </div>
+        {editingViaModal && (
+          <EditReading
+            reading={editingViaModal}
+            onSaved={() => { setReadings(prev => prev.map(x => x.id === editingViaModal.id ? { ...x, ...editingViaModal } : x)); setEditingViaModal(null); }}
+            onCancel={() => setEditingViaModal(null)}
+          />
+        )}
+        {deletingViaModal && (
+          <DeleteReading
+            reading={deletingViaModal}
+            onDeleted={() => { setReadings(prev => prev.filter(x => x.id !== deletingViaModal.id)); setDeletingViaModal(null); }}
+            onCancel={() => setDeletingViaModal(null)}
+          />
+        )}
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
         {canEdit&&(
           <div style={{display:"flex",gap:8,marginTop:4}}>
@@ -4726,13 +4745,13 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
 function BottomNav({ tab, setTab, role, lang }) {
   const navConfig = {
     vaquero: [
+      { id:"vigilancia",icon:"wave",    label: "Vigilancia" },
       { id:"inicio",   icon:"task",     label: lang==="es"?"Inicio":"Home" },
       { id:"score",    icon:"star",     label: lang==="es"?"Mi Puntaje":"My Score" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     capitan: [
-      { id:"dashboard",icon:"chart",    label: "Dashboard" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
@@ -4781,7 +4800,11 @@ export default function App() {
 
   const [lang, setLang]               = useState(localStorage.getItem('vdm_lang') || "es");
   const [user, setUser]               = useState(savedUser);
-  const [tab, setTab]                 = useState(savedUser?.role==="vaquero" ? "inicio" : "dashboard");
+  const [tab, setTab]                 = useState(
+    savedUser?.role === "vaquero" ? "vigilancia" :
+    savedUser?.role === "capitan" ? "sistemas" :
+    "dashboard"
+  );
   const [personalView, setPersonalView] = useState(null);
   const [deepLinkSystem, setDeepLinkSystem] = useState(null); // system ID to auto-select in SistemasTab
 
@@ -5429,20 +5452,22 @@ export default function App() {
 
   const isVaquero  = user?.role === "vaquero";
   const isCapitan  = user?.role === "capitan";
-  const isSup      = user?.role === "supervisor";
-  const isL3       = user?.role === "ceo" || user?.role === "consultant";
+  const isSup      = user?.role === "director";
+  const isL3       = user?.role === "admin" || user?.role === "consultor";
 
   const handleLogin = (u) => {
     localStorage.setItem('vdm_user', JSON.stringify(u));
     setUser(u);
-    if(u.role==="vaquero") setTab("inicio");
-    else if(u.role==="capitan") setTab("tareas");
-    else setTab("dashboard");
+    const redirect = getRedirectForRole(u.role);
+    if (redirect === '/vigilancia') setTab('vigilancia');
+    else if (redirect === '/sistemas') setTab('sistemas');
+    else setTab('dashboard');
   };
 
   if(!user) return <LoginScreen onLogin={handleLogin} lang={lang} setLang={setLang}/>;
 
   return (
+    <AuthContext.Provider value={{ user, profile: user }}>
     <div className="vdm-root" style={{minHeight:"100vh",background:"#021c1e",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
@@ -5559,29 +5584,29 @@ export default function App() {
       {/* Screen routing */}
       <div role="main" aria-label="Contenido principal" style={{display: initialLoading ? "none" : "block"}}>
         {/* Level 1 — Vaquero */}
+        {isVaquero && tab==="vigilancia"&& <ProtectedRoute path="/vigilancia"><VigilanciaQueue /></ProtectedRoute>}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
-        {isVaquero && tab==="sistemas" && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/>}
+        {isVaquero && tab==="sistemas" && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
-        {/* Level 1.5 — Capitán (Sistemas edit + Announcements, no evaluations/bonuses) */}
-        {isCapitan && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
+        {/* Level 1.5 — Capitán (Sistemas overview + Equipo, no evaluations/bonuses) */}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
-        {isCapitan && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/>}
+        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas">{user?.role === 'capitan' ? <CapitanSistemas /> : <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/>}</ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
-        {/* Level 2 — Supervisor */}
-        {isSup && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
+        {/* Level 2 — Director */}
+        {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/>}
+        {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
-        {/* Level 3 — CEO + Consultant */}
-        {isL3 && tab==="dashboard" && <SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/>}
+        {/* Level 3 — Admin + Consultor */}
+        {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/>}
+        {isL3 && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
@@ -5589,5 +5614,6 @@ export default function App() {
 
       <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>
     </div>
+    </AuthContext.Provider>
   );
 }
