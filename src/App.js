@@ -4795,7 +4795,13 @@ function BottomNav({ tab, setTab, role, lang }) {
 export default function App() {
   // ── Auth — persist to localStorage, role-aware auto-logout ──────────────────
   const savedUser = (() => {
-    try { return JSON.parse(localStorage.getItem('vdm_user')); } catch { return null; }
+    try {
+      const u = JSON.parse(localStorage.getItem('vdm_user'));
+      if (!u) return null;
+      const legacyRoles = { ceo: 'admin', consultant: 'consultor', supervisor: 'director' };
+      if (legacyRoles[u.role]) u.role = legacyRoles[u.role];
+      return u;
+    } catch { return null; }
   })();
 
   const [lang, setLang]               = useState(localStorage.getItem('vdm_lang') || "es");
