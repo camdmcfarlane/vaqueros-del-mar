@@ -20,8 +20,9 @@ const COND_META = {
   decoloracion: { color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
 };
 
-export default function CapitanSistemas() {
+export default function CapitanSistemas({ userInitials }) {
   const { profile } = useAuth();
+  const myInitials = userInitials || profile?.initials || profile?.id;
   const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
@@ -34,12 +35,10 @@ export default function CapitanSistemas() {
   async function loadSystems() {
     setLoading(true);
     try {
-      // Fetch systems for this capitán's region
-      // Adjust to match actual schema — capitan might have a region field
-      const { data: sysData } = await supabase
-        .from('sistemas')
-        .select('*')
-        .order('id');
+      // Fetch only systems assigned to this capitán
+      let sysQuery = supabase.from('sistemas').select('*').order('id');
+      if (myInitials) sysQuery = sysQuery.eq('capitan', myInitials);
+      const { data: sysData } = await sysQuery;
 
       // Fetch latest reading per system
       const { data: readingsData } = await supabase

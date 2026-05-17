@@ -5086,8 +5086,8 @@ export default function App() {
         })));
       }
 
-      // Merge remote readings with local — remote wins on conflict by id
-      // This prevents wiping locally-entered readings not yet pushed
+      // Replace local readings with Supabase data — Supabase is authoritative.
+      // Locally-queued (offline) items are preserved by id so they survive the pull.
       if (readRes.data?.length) {
         const pulled = readRes.data.map(r => ({
           id:          r.id,
@@ -5111,27 +5111,15 @@ export default function App() {
           updated_by:  null,
           updated_at:  r.editado_en  ?? null,
         }));
-        // Merge: keep local-only readings (id not in remote), override with remote for shared ids
-        setReadings(prev => {
+        setReadings(() => {
+          // Keep only offline-queued readings not yet in Supabase
           const remoteIds = new Set(pulled.map(r => r.id));
-          const localOnly = prev.filter(r => !remoteIds.has(r.id));
-          // Detect new or changed readings from other users
-          const otherUserChanges = pulled.filter(r => {
-            if (r.updated_by && r.updated_by !== user?.initials) {
-              const local = prev.find(x => x.id === r.id);
-              if (!local) return true; // new reading from another user
-              if (JSON.stringify(local) !== JSON.stringify(r)) return true; // changed
-            }
-            return false;
-          });
-          if (otherUserChanges.length > 0) {
-            const who = [...new Set(otherUserChanges.map(r => r.updated_by))].join(", ");
-            const systems = [...new Set(otherUserChanges.map(r => r.sistema))].slice(0, 3).join(", ");
-            addToast(`⚠ ${otherUserChanges.length} lectura(s) actualizada(s) por ${who} — ${systems}`, "sync");
-          }
-          const merged = [...pulled, ...localOnly];
-          try { localStorage.setItem('aq_readings_cache', JSON.stringify(merged)); } catch {}
-          return merged;
+          const queued = (offlineQueue.current || [])
+            .filter(item => item.table === 'lecturas' && item.op !== 'delete' && item.payload?.id && !remoteIds.has(item.payload.id))
+            .map(item => item.payload);
+          const next = [...pulled, ...queued];
+          try { localStorage.setItem('aq_readings_cache', JSON.stringify(next)); } catch {}
+          return next;
         });
       }
 
@@ -5160,26 +5148,14 @@ export default function App() {
           notas:             r.notas             || "",
           updated_by:        r.updated_by        ?? null,
         }));
-        setSystems(prev => {
+        setSystems(() => {
           const remoteIds = new Set(pulledSys.map(s => s.id));
-          const localOnly = prev.filter(s => !remoteIds.has(s.id));
-          // Detect new or changed systems from other users
-          const otherSysChanges = pulledSys.filter(s => {
-            if (s.updated_by && s.updated_by !== user?.initials) {
-              const local = prev.find(x => x.id === s.id);
-              if (!local) return true;
-              if (JSON.stringify(local) !== JSON.stringify(s)) return true;
-            }
-            return false;
-          });
-          if (otherSysChanges.length > 0) {
-            const who = [...new Set(otherSysChanges.map(s => s.updated_by))].join(", ");
-            const ids = otherSysChanges.map(s => s.id).slice(0, 3).join(", ");
-            addToast(`⚠ Sistema(s) actualizado(s) por ${who} — ${ids}`, "sync");
-          }
-          const merged2 = [...pulledSys, ...localOnly];
-          try { localStorage.setItem('aq_systems_cache', JSON.stringify(merged2)); } catch {}
-          return merged2;
+          const queued = (offlineQueue.current || [])
+            .filter(item => item.table === 'sistemas' && item.op !== 'delete' && item.payload?.id && !remoteIds.has(item.payload.id))
+            .map(item => item.payload);
+          const next = [...pulledSys, ...queued];
+          try { localStorage.setItem('aq_systems_cache', JSON.stringify(next)); } catch {}
+          return next;
         });
       }
 
@@ -5559,18 +5535,28 @@ export default function App() {
 
       {/* Screen routing */}
       <div role="main" aria-label="Contenido principal" style={{display: initialLoading ? "none" : "block"}}>
+        {/* Systems scoped to the logged-in user's responsibility */}
+        {(() => {
+          const mySystems = user?.role === 'vaquero'
+            ? systems.filter(s => s.buceador === user.initials || s.capitan === user.initials)
+            : user?.role === 'capitan'
+              ? systems.filter(s => s.capitan === user.initials)
+              : systems;
+          return (<>
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="vigilancia"&& <ProtectedRoute path="/vigilancia"><VigilanciaQueue /></ProtectedRoute>}
-        {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
+        {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={mySystems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
-        {isVaquero && tab==="sistemas" && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
+        {isVaquero && tab==="sistemas" && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán (Sistemas overview + Equipo, no evaluations/bonuses) */}
-        {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} user={user} lang={lang} announcements={announcements}/>}
-        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas">{user?.role === 'capitan' ? <CapitanSistemas /> : <SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/>}</ProtectedRoute>}
-        {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
+        {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={mySystems} user={user} lang={lang} announcements={announcements}/>}
+        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} /></ProtectedRoute>}
+        {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={mySystems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+          </>);
+        })()}
 
         {/* Level 2 — Director */}
         {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}

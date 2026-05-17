@@ -28,18 +28,26 @@ function useSyncHealth(sbClient, sbReady, online, addToast) {
     const results = {};
     const start = Date.now();
 
-    // Test 1: readings table reachable
+    // Test 1: lecturas table reachable + count
     try {
-      const { error } = await sbClient.from("readings").select("id").limit(1);
-      results.readings = error ? { ok: false, error: error.message, code: error.code } : { ok: true };
+      const { count, error } = await sbClient
+        .from("lecturas")
+        .select("*", { count: "exact", head: true });
+      results.readings = error
+        ? { ok: false, error: error.message, code: error.code }
+        : { ok: true, count };
     } catch (e) {
       results.readings = { ok: false, error: e.message };
     }
 
-    // Test 2: systems table reachable
+    // Test 2: sistemas table reachable
     try {
-      const { error } = await sbClient.from("systems").select("id").limit(1);
-      results.systems = error ? { ok: false, error: error.message, code: error.code } : { ok: true };
+      const { count, error } = await sbClient
+        .from("sistemas")
+        .select("*", { count: "exact", head: true });
+      results.systems = error
+        ? { ok: false, error: error.message, code: error.code }
+        : { ok: true, count };
     } catch (e) {
       results.systems = { ok: false, error: e.message };
     }
@@ -144,8 +152,8 @@ function SyncHealthDot({ health, syncing, online, pendingCount, lastSync }) {
           </div>
           {health.details && (
             <div style={{fontSize:9,color:"#64748b",lineHeight:1.8}}>
-              {health.details.readings && <div>readings: <span style={{color:health.details.readings.ok?"#4ade80":"#f87171"}}>{health.details.readings.ok?"\u2713":health.details.readings.error}</span></div>}
-              {health.details.systems && <div>systems: <span style={{color:health.details.systems.ok?"#4ade80":"#f87171"}}>{health.details.systems.ok?"\u2713":health.details.systems.error}</span></div>}
+              {health.details.readings && <div>lecturas: <span style={{color:health.details.readings.ok?"#4ade80":"#f87171"}}>{health.details.readings.ok?`\u2713 ${health.details.readings.count?.toLocaleString()} rows`:health.details.readings.error}</span></div>}
+              {health.details.systems && <div>sistemas: <span style={{color:health.details.systems.ok?"#4ade80":"#f87171"}}>{health.details.systems.ok?`\u2713 ${health.details.systems.count?.toLocaleString()} rows`:health.details.systems.error}</span></div>}
               {health.details.write && <div>write: <span style={{color:health.details.write.ok?"#4ade80":"#f87171"}}>{health.details.write.ok?(health.details.write.roundtrip?"\u2713 round-trip":"\u2713 write only"):health.details.write.error}</span></div>}
               {health.details.latency !== undefined && <div>latency: <span style={{color:health.details.latency<2000?"#4ade80":health.details.latency<5000?"#fb923c":"#f87171"}}>{health.details.latency}ms</span></div>}
               {health.lastCheck && <div>checked: {health.lastCheck.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>}
