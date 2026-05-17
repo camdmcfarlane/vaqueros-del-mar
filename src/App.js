@@ -4752,6 +4752,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     capitan: [
+      { id:"tareas",   icon:"task",     label: "Tareas" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
@@ -5552,7 +5553,7 @@ export default function App() {
 
         {/* Level 1.5 — Capitán (Sistemas overview + Equipo, no evaluations/bonuses) */}
         {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={mySystems} user={user} lang={lang} announcements={announcements}/>}
-        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} /></ProtectedRoute>}
+        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} systems={mySystems} readings={readings} /></ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={mySystems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
           </>);
