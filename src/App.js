@@ -5022,12 +5022,12 @@ export default function App() {
         sb.current.from('assigned_tasks').select('*').order('id'),
         sb.current.from('announcements').select('*').order('created_at', { ascending: false }),
         sb.current.from('weekly_incidents').select('*'),
-        sb.current.from('readings').select('*').order('fecha'),
+        sb.current.from('lecturas').select('*').order('fecha'),
       ]);
       // Systems table — query separately so failures don't break other pulls
       let sysRes = { data: null, error: null };
       try {
-        sysRes = await sb.current.from('systems').select('*').order('id');
+        sysRes = await sb.current.from('sistemas').select('*').order('id');
         if (sysRes.error) {
           console.warn('[AquaOps] systems pull error:', sysRes.error.message, sysRes.error.code);
         } else {
@@ -5091,23 +5091,23 @@ export default function App() {
           id:          r.id,
           sistema:     r.sistema,
           fecha:       r.fecha,
-          tipo:        r.tipo || 'peso',
+          tipo:        r.tipo || 'vigilancia',
           peso:        r.peso,
           sueltos:     r.sueltos     ?? null,
-          tdc:         r.tdc         ?? null,
-          salt:        r.salt        ?? null,
+          tdc:         null,
+          salt:        null,
           ph:          r.ph          ?? null,
           salinidad:   r.salinidad   ?? null,
           temp:        r.temp        ?? null,
           condiciones: r.condiciones ?? null,
-          aguas:       r.aguas       ?? null,
+          aguas:       null,
           notas:       r.notas       || "",
           foto:        null,
           cosechada:   r.cosechada   ?? null,
-          sembrado:    r.sembrado    ?? null,
+          sembrado:    null,
           buoys:       r.buoys       ?? null,
-          updated_by:  r.updated_by  ?? null,
-          updated_at:  r.updated_at  ?? null,
+          updated_by:  null,
+          updated_at:  r.editado_en  ?? null,
         }));
         // Merge: keep local-only readings (id not in remote), override with remote for shared ids
         setReadings(prev => {
@@ -5334,31 +5334,24 @@ export default function App() {
         console.log(`[AquaOps] syncReadings: ${changed.length} changed, ${deleted.length} deleted`);
         setTimeout(() => {
           changed.forEach(r => {
-            pushItem('readings', 'upsert', {
+            pushItem('lecturas', 'upsert', {
               id:          r.id,
               sistema:     r.sistema,
               fecha:       r.fecha,
-              tipo:        r.tipo        ?? "peso",
+              tipo:        r.tipo        ?? "vigilancia",
               peso:        r.peso        ?? null,
               sueltos:     r.sueltos     ?? null,
-              tdc:         r.tdc         ?? null,
-              salt:        r.salt        ?? null,
               ph:          r.ph          ?? null,
               temp:        r.temp        ?? null,
               salinidad:   r.salinidad   ?? null,
               condiciones: r.condiciones ?? null,
-              aguas:       r.aguas       ?? null,
               notas:       r.notas       ?? "",
-              foto:        r.foto        ?? null,
               cosechada:   r.cosechada   ?? null,
-              sembrado:    r.sembrado    ?? null,
               buoys:       r.buoys       ?? null,
-              updated_by:  user?.initials || null,
-              updated_at:  new Date().toISOString(),
             });
           });
           deleted.forEach(r => {
-            pushItem('readings', 'delete', { id: r.id });
+            pushItem('lecturas', 'delete', { id: r.id });
           });
         }, 0);
       } else {
@@ -5385,31 +5378,8 @@ export default function App() {
       if (changed.length > 0 || deleted.length > 0) {
         console.log(`[AquaOps] syncSystems: ${changed.length} changed, ${deleted.length} deleted`);
         setTimeout(async () => {
-          // Ensure all referenced regions exist in Supabase first (FK constraint)
-          const uniqueRegions = [...new Set(changed.map(s => s.region).filter(Boolean))];
-          for (const regionName of uniqueRegions) {
-            await sb.current?.from('regions').upsert(
-              { name: regionName, active: true },
-              { onConflict: 'name', ignoreDuplicates: true }
-            ).then(({ error }) => {
-              if (error) console.warn(`[AquaOps] region ensure failed: ${regionName}`, error.message);
-              else knownRemoteRegions.current.add(regionName);
-            });
-          }
-          // Ensure all referenced crew members exist (FK constraint on capitan/buceador)
-          const crewRefs = [...new Set([
-            ...changed.map(s => s.capitan).filter(Boolean),
-            ...changed.map(s => s.buceador).filter(Boolean),
-          ])];
-          for (const initials of crewRefs) {
-            await sb.current?.from('crew').upsert(
-              { initials, name: initials, role: 'Buceador' },
-              { onConflict: 'initials', ignoreDuplicates: true }
-            );
-          }
-          // Now push systems
           changed.forEach(s => {
-            pushItem('systems', 'upsert', {
+            pushItem('sistemas', 'upsert', {
               id:                s.id,
               region:            s.region            || null,
               poligono:          s.poligono           ?? 1,
@@ -5430,12 +5400,10 @@ export default function App() {
               fecha_cosecha:     s.fechaCosecha       || null,
               fecha_limpieza:    s.fechaLimpieza      || null,
               notas:             s.notas              || "",
-              updated_by:        user?.initials       || null,
-              updated_at:        new Date().toISOString(),
             });
           });
           deleted.forEach(s => {
-            pushItem('systems', 'delete', { id: s.id });
+            pushItem('sistemas', 'delete', { id: s.id });
           });
         }, 0);
       }
