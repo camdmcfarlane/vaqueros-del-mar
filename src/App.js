@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import ProtectedRoute from './components/ProtectedRoute';
 import VigilanciaQueue from './components/VigilanciaQueue';
 import CapitanSistemas from './protocol/CapitanSistemas';
+import CapitanTareasComponent from './protocol/CapitanTareas';
 import { ReadingActionButtons, EditReading, DeleteReading } from './protocol/ReadingActions';
 import { AuthContext } from './contexts/AuthContext';
 import { getRedirectForRole } from './utils/roleGuard';
@@ -2618,12 +2619,14 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
 
 
 const CAPITAN_REGIONS = {
-  JV:  { regions:["Bahía Azul"], color:"#0d9488", note:"Avispa · Ensenada · Igle. Apostólica · P26-x semilleros" },
-  RBC: { regions:["Playa Roja"], color:"#f87171", note:"Gallinazo · P36-x · P39-x" },
-  RBM: { regions:["Cayo de Agua"], color:"#4ade80", note:"Jobori · P5-x" },
+  JV:  { regions:["Isla Tigre"],   color:"#0d9488", note:"Avispa · Ensenada · Igle. Apostólica · P26-x semilleros" },
   RV:  { regions:["Cayo de Agua"], color:"#4ade80", note:"Cayo de Agua · Ensenada" },
+  RBM: { regions:["Playa Roja"],   color:"#f87171", note:"Tobobe · Gallinazo · P5-x · P13-x · P36-x · P39-x" },
+  RBC: { regions:["Playa Roja"],   color:"#f87171", note:"Gallinazo · P14 · P36-1" },
+  EV:  { regions:["Bahía Azul"],   color:"#8b5cf6", note:"Playa Verde · P12-x · P15-x · P16-x" },
 };
 
+// eslint-disable-next-line no-unused-vars
 function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, announcements }) {
   const myInitials = user.initials;
   const regionInfo = CAPITAN_REGIONS[myInitials] || { regions:[], color:"#64748b", note:"" };
@@ -4764,6 +4767,13 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
+    director: [
+      { id:"tareas",   icon:"task",     label: "Tareas" },
+      { id:"dashboard",icon:"chart",    label: "Dashboard" },
+      { id:"sistemas", icon:"grid",     label: "Sistemas" },
+      { id:"equipo",   icon:"users",    label: "Equipo" },
+      { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+    ],
     default: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
       { id:"plan",     icon:"calendar", label: "Plan" },
@@ -4809,7 +4819,8 @@ export default function App() {
   const [user, setUser]               = useState(savedUser);
   const [tab, setTab]                 = useState(
     savedUser?.role === "vaquero" ? "vigilancia" :
-    savedUser?.role === "capitan" ? "sistemas" :
+    savedUser?.role === "capitan" ? "tareas" :
+    savedUser?.role === "director" ? "tareas" :
     "dashboard"
   );
   const [personalView, setPersonalView] = useState(null);
@@ -5343,6 +5354,15 @@ export default function App() {
     });
   };
 
+  // ── handleReadingSaved — called from CapitanTareas after entering a vigilancia ──
+  const handleReadingSaved = (reading) => {
+    syncReadings(prev => {
+      // Replace any existing same-day reading for this system, then append
+      const filtered = prev.filter(r => !(r.sistema === reading.sistema && r.fecha === reading.fecha));
+      return [...filtered, reading];
+    });
+  };
+
   // ── syncSystems — persist to localStorage AND push changes to Supabase ──────
   const syncSystems = (updater) => {
     setSystems(prev => {
@@ -5442,7 +5462,7 @@ export default function App() {
 
       {/* Top bar */}
       <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(2,8,24,.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(148,163,184,.06)",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div onClick={()=>setTab(user.role==="vaquero"?"inicio":user.role==="capitan"?"sistemas":"dashboard")} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+        <div onClick={()=>setTab(user.role==="vaquero"?"inicio":user.role==="capitan"?"tareas":user.role==="director"?"tareas":"dashboard")} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
           <div style={{width:30,height:30,borderRadius:8,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <img src="data:image/jpeg;base64,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" alt="logo" style={{width:28,height:28,objectFit:"contain"}}/>
           </div>
@@ -5551,15 +5571,22 @@ export default function App() {
         {isVaquero && tab==="sistemas" && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
-        {/* Level 1.5 — Capitán (Sistemas overview + Equipo, no evaluations/bonuses) */}
-        {isCapitan && tab==="tareas"    && <CapitanTareas assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={mySystems} user={user} lang={lang} announcements={announcements}/>}
+        {/* Level 1.5 — Capitán */}
+        {isCapitan && tab==="tareas"    && <CapitanTareasComponent systems={mySystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved}/>}
         {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} systems={mySystems} readings={readings} /></ProtectedRoute>}
-        {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={mySystems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
+        {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
           </>);
         })()}
 
         {/* Level 2 — Director */}
+        {isSup && tab==="tareas" && (()=>{
+          const myRegions = CAPITAN_REGIONS[user?.initials]?.regions || [];
+          const supSystems = myRegions.length > 0
+            ? systems.filter(s => myRegions.some(r => s.region === r) && s.estado === "Activo")
+            : systems.filter(s => s.estado === "Activo");
+          return <CapitanTareasComponent systems={supSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved}/>;
+        })()}
         {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}

@@ -15,7 +15,7 @@ const USERS = [
   { username:"jairo_lorenzo",    password:"1234", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
   { username:"charles_ebersole", password:"1234", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
   { username:"rodolfo_viquez",   password:"1234", role:"capitan",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
-  { username:"rodolfo_banard",   password:"1234", role:"vaquero",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
+  { username:"rodolfo_banard",   password:"1234", role:"capitan",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
   { username:"romelio_bekar",    password:"1234", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
   { username:"joel_valdes",      password:"1234", role:"capitan",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
   { username:"luis_alvarado",    password:"1234", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
