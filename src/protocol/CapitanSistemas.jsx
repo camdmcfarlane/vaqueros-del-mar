@@ -171,6 +171,48 @@ export default function CapitanSistemas({ userInitials, systems: propSystems, re
           ))}
         </div>
 
+        {/* System details */}
+        <div style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: '0.5px solid rgba(255,255,255,0.08)',
+          borderRadius: '10px', padding: '12px', marginBottom: '14px',
+        }}>
+          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '10px' }}>
+            Detalles del sistema
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              { l: 'Pueblo',      v: detail.pueblo },
+              { l: 'Región',      v: detail.region },
+              { l: 'Tipo',        v: detail.tipo },
+              { l: 'Profundidad', v: detail.profundidad || detail.depth },
+              { l: 'Materiales',  v: detail.materiales },
+              { l: 'Semillas',    v: detail.semillas },
+              { l: 'Módulos',     v: detail.modulos || null },
+              { l: 'Tamaño',      v: detail.tamano },
+              { l: 'Familia',     v: detail.familia },
+              { l: 'Instalado',   v: detail.fechaInstalacion },
+            ].filter(f => f.v).map(f => (
+              <div key={f.l}>
+                <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px' }}>{f.l}</div>
+                <div style={{ fontSize: '13px', color: '#e2e8f0', marginTop: '2px' }}>{f.v}</div>
+              </div>
+            ))}
+          </div>
+          {detail.coordenadas && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '3px' }}>Coordenadas</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>{detail.coordenadas}</div>
+            </div>
+          )}
+          {detail.notas && (
+            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '0.5px solid rgba(255,255,255,0.06)',
+              fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+              {detail.notas}
+            </div>
+          )}
+        </div>
+
         {/* Buceador assignment */}
         <div style={{
           background: 'rgba(255,255,255,0.03)',
