@@ -122,7 +122,7 @@ function useSyncHealth(sbClient, sbReady, online, addToast) {
 }
 
 // Status dot with expandable detail panel
-function SyncHealthDot({ health, syncing, online, pendingCount, lastSync }) {
+function SyncHealthDot({ health, syncing, online, pendingCount, lastSync, onSync }) {
   const [expanded, setExpanded] = useState(false);
   const colors = { healthy:"#4ade80", degraded:"#fb923c", down:"#f87171", offline:"#475569", loading:"#64748b" };
   const color = syncing ? "#fb923c" : (colors[health.status] || "#475569");
@@ -159,6 +159,13 @@ function SyncHealthDot({ health, syncing, online, pendingCount, lastSync }) {
               {health.lastCheck && <div>checked: {health.lastCheck.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>}
               {pendingCount > 0 && <div style={{color:"#fb923c",fontWeight:600}}>{pendingCount} pending</div>}
             </div>
+          )}
+          {pendingCount > 0 && onSync && (
+            <button onClick={()=>{ onSync(); setExpanded(false); }}
+              style={{width:"100%",marginTop:8,padding:"5px 0",borderRadius:6,border:"none",
+                background:"#0d9488",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>
+              ↑ Sync now ({pendingCount})
+            </button>
           )}
           <div onClick={()=>setExpanded(false)} style={{fontSize:9,color:"#475569",marginTop:6,cursor:"pointer",textAlign:"center"}}>tap to close</div>
         </div>

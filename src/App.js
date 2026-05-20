@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { supabase as sbStatic } from './supabase';
 import ProtectedRoute from './components/ProtectedRoute';
 import VigilanciaQueue from './components/VigilanciaQueue';
 import CapitanSistemas from './protocol/CapitanSistemas';
@@ -16,6 +17,7 @@ import {
   CREW, EVAL_SPLIT, CURRENT_QUARTER, ROLE_KPIS,
   COMPORTAMIENTOS_LIST, GALLUP_12, TOTAL_PTS,
   PRICE_PER_KG_WET, TASK_SCHEMA, CONDICION_EMOJIS,
+  SYSTEMS_DATA_VERSION, READING_CADENCE_DAYS,
 } from "./data/constants";
 import {
   INITIAL_READINGS, TDC_DATA, PRUEBAS_DATA, BIOMASA_DATA,
@@ -166,6 +168,7 @@ function LoginScreen({ onLogin, lang, setLang }) {
   const [un, setUn]             = useState("");
   const [pw, setPw]             = useState("");
   const [err, setErr]           = useState("");
+  const [logging, setLogging]   = useState(false);
   const [primerNombre, setPrimerNombre]   = useState("");
   const [segundoNombre, setSegundoNombre] = useState("");
   const [apellido, setApellido]           = useState("");
@@ -175,10 +178,21 @@ function LoginScreen({ onLogin, lang, setLang }) {
   const [regErr, setRegErr]     = useState("");
   const [regSuccess, setRegSuccess] = useState(false);
 
-  const handleLogin = () => {
-    const u = USERS.find(u=>u.username===un && u.password===pw);
-    if(u){setErr("");onLogin(u);}
-    else setErr(lang==="es"?"Usuario o contraseña incorrectos":"Invalid username or password");
+  const handleLogin = async () => {
+    setLogging(true); setErr("");
+    // Static accounts first — works offline
+    const staticU = USERS.find(u=>u.username===un && u.password===pw);
+    if(staticU){ setLogging(false); onLogin(staticU); return; }
+    // Dynamic accounts — Supabase usuarios table
+    try {
+      const { data } = await sbStatic.from('usuarios').select('*').eq('username',un).eq('active',true).maybeSingle();
+      if(data && data.password_plain===pw){
+        const u={ username:data.username, password:data.password_plain, role:data.role, name:data.name, initials:data.initials, assignedSystems:null };
+        setLogging(false); onLogin(u); return;
+      }
+    } catch {}
+    setLogging(false);
+    setErr(lang==="es"?"Usuario o contraseña incorrectos":"Invalid username or password");
   };
 
   const handleRegister = () => {
@@ -238,8 +252,8 @@ function LoginScreen({ onLogin, lang, setLang }) {
             <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={AUTH_ISTYLE} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/>
           </div>
           {err&&<div style={{display:"flex",alignItems:"center",gap:6,color:"#f87171",fontSize:12,marginTop:10,padding:"7px 10px",borderRadius:8,background:"rgba(248,113,113,.08)"}}><Icon name="alert" size={13} color="#f87171"/>{err}</div>}
-          <button onClick={handleLogin} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",marginTop:14}}>
-            {lang==="es"?"Entrar":"Sign In"}
+          <button onClick={handleLogin} disabled={logging} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:15,cursor:logging?"default":"pointer",marginTop:14,opacity:logging?0.7:1}}>
+            {logging?(lang==="es"?"Verificando...":"Checking..."):(lang==="es"?"Entrar":"Sign In")}
           </button>
           <div style={{marginTop:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,.03)",border:"1px solid rgba(148,163,184,.08)"}}>
             <p style={{fontSize:10,color:"#475569",margin:"0 0 4px",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Cuentas de prueba · All passwords: AGPanama1</p>
@@ -1023,7 +1037,7 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
 
 // ─── BIOMASS HELPERS ─────────────────────────────────────────────────────────
 function getSystemReadings(readings, sysId) {
-  return readings.filter(r=>r.sistema===sysId).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  return readings.filter(r=>r.sistema===sysId && r.tipo==='peso' && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 }
 function latestReading(readings, sysId) {
   const rs = getSystemReadings(readings, sysId);
@@ -1071,10 +1085,10 @@ function MiniSparkline({ data, color="#4ade80", w=60, h=24 }) {
 function TDCChart({ lang, data }) {
   const chartData = data || TDC_DATA;
   const [hovered, setHovered] = useState(null);
-  const W = 320, H = 120, PL = 42, PR = 8, PT = 12, PB = 28;
+  const W = 320, H = 126, PL = 42, PR = 8, PT = 12, PB = 34;
   const cW = W - PL - PR, cH = H - PT - PB;
   const vals = chartData.map(d => d.tdc).filter(v => v !== null);
-  const minV = Math.min(...vals, -1), maxV = Math.max(...vals, 3);
+  const minV = Math.min(...vals, -0.5), maxV = Math.max(...vals, 2.5);
   const range = maxV - minV || 1;
   const xStep = cW / Math.max(chartData.length - 1, 1);
   const yZero = PT + cH - ((0 - minV) / range) * cH;
@@ -1082,7 +1096,12 @@ function TDCChart({ lang, data }) {
   const toX = i => PL + i * xStep;
   const toY = v => PT + cH - ((v - minV) / range) * cH;
   const pts = chartData.map((d, i) => d.tdc !== null ? `${toX(i)},${toY(d.tdc)}` : null).filter(Boolean).join(" ");
-  const ticks = [-1, 0, 1, 2, 3];
+  // Dynamic ticks — 4-5 evenly spaced values covering the actual data range
+  const _rawStep = range / 4;
+  const _niceStep = [0.5, 1, 2, 3, 5].find(s => s >= _rawStep) || Math.ceil(_rawStep);
+  const _tickStart = Math.ceil(minV / _niceStep) * _niceStep;
+  const ticks = [];
+  for (let t = _tickStart; t <= maxV + _niceStep * 0.5; t = parseFloat((t + _niceStep).toFixed(2))) ticks.push(t);
 
   // Derivative: week-over-week change in TDC (acceleration/deceleration)
   const getDerivative = (i) => {
@@ -1128,10 +1147,16 @@ function TDCChart({ lang, data }) {
           </g>
         );
       })}
-      {/* X labels — every other one */}
+      {/* X labels — every other one, two-line (day + month) */}
       {chartData.filter((_,i) => i % 2 === 0).map((d, idx) => {
         const i = idx * 2;
-        return <text key={i} x={toX(i)} y={H-4} textAnchor="middle" fontSize="7" fill="#475569">{d.label.split(" ")[0]}</text>;
+        const parts = d.label.split(" ");
+        return (
+          <g key={i}>
+            <text x={toX(i)} y={H-16} textAnchor="middle" fontSize="7" fill="#475569">{parts[0]}</text>
+            <text x={toX(i)} y={H-7}  textAnchor="middle" fontSize="7" fill="#334155">{parts[1]||""}</text>
+          </g>
+        );
       })}
       {/* Harvest annotation */}
       {chartData.map((d, i) => d.harvest ? (
@@ -1646,6 +1671,149 @@ function BoardProgressChart({ lang }) {
   );
 }
 
+// Returns true for any system that is a dummy/test entry (exclude from all charts)
+function isTestSystem(s) {
+  if (!s) return false;
+  const testFields = [s.id, s.tipo, s.familia, s.semillas, s.pueblo, s.categoria, s.capitan, s.buceador];
+  return testFields.some(v => v && String(v).toLowerCase() === 'test');
+}
+
+// Returns true for "prueba" category systems (individual research plots, IDs often start with "Pi")
+function isPruebaSystem(s) {
+  if (!s) return false;
+  const cat = (s.categoria || '').toLowerCase();
+  const tipo = (s.tipo || '').toLowerCase();
+  const id = (s.id || '');
+  return cat === 'prueba' || tipo === 'prueba' || /^pi\d/i.test(id);
+}
+
+function buildLiveTDCData(readings, systems) {
+  // Formula: (1 + (curr_total - (prev_total - prev_harvest)) / (prev_total - prev_harvest))^(1/7) - 1
+  // Matches the TDC Oro spreadsheet — aggregates all active systems weekly, deducts prior-week harvest
+
+  const activeSysIds = new Set(
+    (systems||[]).filter(s => s.estado === "Activo" && !isTestSystem(s)).map(s => s.id)
+  );
+  const pesoR = (readings||[]).filter(r => activeSysIds.has(r.sistema) && r.tipo === 'peso' && r.peso);
+  if (!pesoR.length) return null;
+
+  const mondayOf = (fecha) => {
+    const d = new Date(fecha + 'T12:00:00');
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  };
+
+  // For each week, build: total biomass (latest per-system reading that week) + harvest deducted that week
+  const weekData = {};
+  for (const r of pesoR) {
+    const wk = mondayOf(r.fecha);
+    if (!weekData[wk]) weekData[wk] = { bySys: {}, harvest: 0 };
+    // Keep latest reading per system per week
+    const prev = weekData[wk].bySys[r.sistema];
+    if (!prev || new Date(r.fecha) > new Date(prev.fecha)) {
+      weekData[wk].bySys[r.sistema] = r;
+    }
+    // Accumulate harvest removed this week (cosechada field on peso readings)
+    if (r.cosechada) weekData[wk].harvest += parseFloat(r.cosechada) || 0;
+  }
+
+  // Collapse to weekly totals
+  const weeks = Object.keys(weekData).sort();
+  if (weeks.length < 2) return null;
+
+  const weekTotals = {};
+  for (const wk of weeks) {
+    weekTotals[wk] = {
+      total: Object.values(weekData[wk].bySys).reduce((s, r) => s + (r.peso || 0), 0),
+      harvest: weekData[wk].harvest,
+    };
+  }
+
+  // Build TDC series
+  const result = [];
+  for (let i = 1; i < weeks.length; i++) {
+    const curr = weekTotals[weeks[i]];
+    const prev = weekTotals[weeks[i - 1]];
+    const adjustedPrev = prev.total - prev.harvest;
+    if (adjustedPrev <= 0) continue;
+    const growthRatio = (curr.total - adjustedPrev) / adjustedPrev;
+    const tdc = (Math.pow(1 + growthRatio, 1 / 7) - 1) * 100;
+    const d = new Date(weeks[i] + 'T12:00:00');
+    const label = d.toLocaleDateString('es-PA', { month: 'short', day: 'numeric' });
+    result.push({ label, tdc: parseFloat(tdc.toFixed(3)), harvest: curr.harvest > 0 });
+  }
+
+  return result.length ? result.slice(-12) : null;
+}
+
+function buildLivePruebas(readings, systems) {
+  // For each week, count how many prueba systems fall in each TDC category (B/V/A/R)
+  // "prueba" = categoria==='prueba', OR tipo==='prueba', OR ID starting with "Pi" (e.g. Pi3-7)
+  const pruebaSysIds = new Set(
+    (systems||[])
+      .filter(s => s.estado === 'Activo' && isPruebaSystem(s) && !isTestSystem(s))
+      .map(s => s.id)
+  );
+  if (!pruebaSysIds.size) return null;
+
+  const pesoR = (readings||[]).filter(r => pruebaSysIds.has(r.sistema) && r.tipo === 'peso' && r.peso);
+  if (!pesoR.length) return null;
+
+  const mondayOf = (fecha) => {
+    const d = new Date(fecha + 'T12:00:00');
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  };
+
+  // Group readings per system, ascending
+  const bySys = {};
+  for (const r of pesoR) {
+    if (!bySys[r.sistema]) bySys[r.sistema] = [];
+    bySys[r.sistema].push(r);
+  }
+  for (const id of Object.keys(bySys)) {
+    bySys[id].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  }
+
+  const allWeeks = [...new Set(pesoR.map(r => mondayOf(r.fecha)))].sort();
+  if (allWeeks.length < 2) return null;
+
+  const result = [];
+  for (let wi = 1; wi < allWeeks.length; wi++) {
+    const wk = allWeeks[wi];
+    const prevWk = allWeeks[wi - 1];
+    let b = 0, v = 0, a = 0, r = 0;
+
+    for (const sysReadings of Object.values(bySys)) {
+      // Latest reading at or before this week / previous week
+      const currR = [...sysReadings].reverse().find(rd => mondayOf(rd.fecha) <= wk);
+      const prevR = [...sysReadings].reverse().find(rd => mondayOf(rd.fecha) <= prevWk);
+      if (!currR || !prevR || currR.id === prevR.id) continue;
+      const days = Math.max(1, (new Date(currR.fecha) - new Date(prevR.fecha)) / 864e5);
+      const tdc = (Math.log(currR.peso / prevR.peso) / days) * 100;
+      if (tdc >= 6) b++;
+      else if (tdc >= 3) v++;
+      else if (tdc >= 0) a++;
+      else r++;
+    }
+
+    const total = b + v + a + r;
+    if (!total) continue;
+
+    const d = new Date(wk + 'T12:00:00');
+    const label = d.toLocaleDateString('es-PA', { month: 'short', day: 'numeric' });
+    result.push({
+      label,
+      b: Math.round((b / total) * 100),
+      v: Math.round((v / total) * 100),
+      a: Math.round((a / total) * 100),
+      r: Math.round((r / total) * 100),
+    });
+  }
+
+  return result.length ? result.slice(-12) : null;
+}
+
 function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson, chartPruebas }) {
   const [tab, setDashTab] = useState("resumen");
   const active = systems.filter(s=>s.estado==="Activo");
@@ -1654,6 +1822,11 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
   const HARVEST_CYCLE = 45;  // Cosecha cada 45 días
   const SEED_CYCLE    = 30;  // Siembra cada 30 días
   const CLEAN_CYCLE   = 3;   // Limpieza cada 3 días
+
+  // Live TDC time-series — falls back to seed if no readings
+  const liveTDCData = buildLiveTDCData(readings, systems);
+  // Live pruebas category breakdown — falls back to chartPruebas prop (manual upload) if no live data
+  const livePruebasData = buildLivePruebas(readings, systems);
 
   // Compute per-system biomass metrics
   const systemMetrics = active.map(s=>{
@@ -1774,7 +1947,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                 <span style={{fontSize:9,color:"#f59e0b"}}>🌿 cosecha</span>
               </div>
             </div>
-            <TDCChart lang={lang}/>
+            <TDCChart lang={lang} data={liveTDCData||undefined}/>
           </div>
 
           {/* Chart 2: Pruebas */}
@@ -1782,7 +1955,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0",marginBottom:6}}>
               {lang==="es"?"% Pruebas en Categorías":"% Tests by Category"}
             </div>
-            <PruebasChart lang={lang} data={chartPruebas}/>
+            <PruebasChart lang={lang} data={livePruebasData || chartPruebas}/>
           </div>
 
           {/* Chart 3: Biomasa */}
@@ -2080,7 +2253,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             {lang==="es"?"Capitanes — sistemas por polígono":"Captains — systems by polygon"}
           </div>
           {CREW.filter(c=>c.role==="Capitán").map(c=>{
-            const mySystems = systemMetrics.filter(s=>s.capitan===c.initials);
+            const mySystems = systemMetrics.filter(s=>getCapitan(s)===c.initials);
             const rates = mySystems.map(s=>s.rate).filter(r=>r!==null);
             const avgRate = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
             const col = growthColor(avgRate);
@@ -2203,7 +2376,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const lStyle = S.label;
   const today = new Date().toISOString().slice(0,10);
 
-  const emptyForm = { assignedTo:"HM", taskType:"vigilancia", sistema:"", objetivo:"", date:today, day:selectedDay, notas:"" };
+  const emptyForm = { assignedTo:"HM", taskType:"vigilancia", sistema:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
   const [form, setForm] = useState(emptyForm);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
@@ -2220,7 +2393,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   };
 
   const handleDelete = (id) => setAssignedTasks(prev=>prev.filter(t=>t.id!==id));
-  const handleEdit = (t) => { setEditTask(t); setForm({assignedTo:t.assignedTo,taskType:t.taskType,sistema:t.sistema||"",objetivo:t.objetivo||"",date:t.date,day:t.day}); setShowForm(true); };
+  const handleEdit = (t) => { setEditTask(t); setForm({assignedTo:t.assignedTo,taskType:t.taskType,sistema:t.sistema||"",objetivo:t.objetivo||"",date:t.date,day:t.day,notas:t.notas||"",supportCrew:t.supportCrew||[]}); setShowForm(true); };
 
   return (
     <div style={{padding:"16px 16px 100px"}}>
@@ -2271,7 +2444,9 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
                 <div>
                   <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{lang==="es"?schema.label:schema.labelEn}</div>
                   <div style={{fontSize:11,color:"#64748b"}}>{CREW.find(c=>c.initials===t.assignedTo)?.name||t.assignedTo} {sys?`· ${sys.id}`:""}</div>
+                  {t.supportCrew?.length>0&&<div style={{fontSize:10,color:"#475569"}}>+ {t.supportCrew.join(", ")}</div>}
                   {t.objetivo&&<div style={{fontSize:10,color:"#475569"}}>{lang==="es"?"Objetivo:":"Target:"} {t.objetivo} {schema.unit}</div>}
+                  {t.notas&&<div style={{fontSize:10,color:"#475569",fontStyle:"italic",marginTop:2}}>{t.notas}</div>}
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
@@ -2351,6 +2526,25 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
                 placeholder={lang==="es"?"ej. Mover sistema hacia coordenadas X, revisar aceite...":"e.g. Relocate system to coordinates X, check oil..."}/>
             </div>
 
+            <div style={{marginBottom:12}}>
+              <label style={lStyle}>{lang==="es"?"Equipo de apoyo":"Support crew"}</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {CREW.filter(c=>c.initials!==form.assignedTo&&c.role!=="Supervisor").map(c=>{
+                  const sel=(form.supportCrew||[]).includes(c.initials);
+                  return (
+                    <button key={c.initials} onClick={()=>{
+                      const crew=form.supportCrew||[];
+                      F("supportCrew",sel?crew.filter(x=>x!==c.initials):[...crew,c.initials]);
+                    }} style={{padding:"5px 10px",borderRadius:20,border:`1px solid ${sel?"#0d9488":"rgba(148,163,184,.15)"}`,
+                      background:sel?"rgba(13,148,136,.15)":"transparent",
+                      color:sel?"#0d9488":"#64748b",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                      {c.initials}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <button onClick={handleSaveTask} style={{...S.btn(true),marginTop:4}}>
               {lang==="es"?"Guardar":"Save"}
             </button>
@@ -2381,7 +2575,7 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
 
   // ── Systems ────────────────────────────────────────────────────────────────
   const mySystems = systems.filter(s =>
-    (s.capitan === initials || s.buceador === initials) && s.estado === "Activo"
+    (getCapitan(s) === initials || hasBuceador(s, initials)) && s.estado === "Activo"
   );
 
   // Per-system growth
@@ -2563,7 +2757,7 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
                         background:s.categoria==="comercial"?"rgba(13,148,136,.15)":"rgba(74,222,128,.15)",
                         color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>
                         {s.categoria}</span>}
-                      {s.capitan===initials&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                      {getCapitan(s)===initials&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
                         background:"rgba(251,146,60,.15)",color:"#fb923c",fontWeight:700}}>Cap</span>}
                       {s.buceador===initials&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
                         background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>Buc</span>}
@@ -2619,12 +2813,27 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
 
 
 const CAPITAN_REGIONS = {
-  JV:  { regions:["Isla Tigre"],   color:"#0d9488", note:"Avispa · Ensenada · Igle. Apostólica · P26-x semilleros" },
-  RV:  { regions:["Cayo de Agua"], color:"#4ade80", note:"Cayo de Agua · Ensenada" },
-  RBM: { regions:["Playa Roja"],   color:"#f87171", note:"Tobobe · Gallinazo · P5-x · P13-x · P36-x · P39-x" },
-  RBC: { regions:["Playa Roja"],   color:"#f87171", note:"Gallinazo · P14 · P36-1" },
-  EV:  { regions:["Bahía Azul"],   color:"#8b5cf6", note:"Playa Verde · P12-x · P15-x · P16-x" },
+  RBC: { regions:["Bahía Azul","Playa Verde"],  color:"#0d9488", note:"Bahía Azul · Playa Verde (Polígonos 3-5)" },
+  CE:  { regions:["Playa Roja","Tobobe","Isla Tiburón"], color:"#f87171", note:"Tobobe · Playa Roja · Isla Tiburón" },
+  LA:  { regions:["Cayo de Agua"],              color:"#4ade80", note:"Cayo de Agua" },
+  JV:  { regions:["Isla Tigre"],                color:"#64748b", note:"Isla Tigre" },
 };
+
+// Derive captain initials from a system's region — single source of truth
+function getCapitan(system) {
+  if (system.capitan) return system.capitan;
+  for (const [initials, info] of Object.entries(CAPITAN_REGIONS)) {
+    if (info.regions.some(r => r.toLowerCase() === (system.region||'').toLowerCase())) return initials;
+  }
+  return '';
+}
+function getBuceadores(sys) {
+  if (!sys?.buceador) return [];
+  return sys.buceador.split(',').map(s => s.trim()).filter(Boolean);
+}
+function hasBuceador(sys, initials) {
+  return getBuceadores(sys).includes(initials);
+}
 
 // eslint-disable-next-line no-unused-vars
 function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, announcements }) {
@@ -2799,22 +3008,97 @@ function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, a
 
 function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user, navigateTo=()=>{}, selectedPerson=null, setSelectedPerson=()=>{} }) {
 
-  const person = selectedPerson ? CREW.find(c => c.initials === selectedPerson) : null;
+  const canManage = ["admin","consultor","director"].includes(user?.role);
+
+  // Dynamic users from Supabase usuarios table
+  const [dynamicUsers, setDynamicUsers]   = useState([]);
+  const [showAddForm, setShowAddForm]     = useState(false);
+  const [addSaving, setAddSaving]         = useState(false);
+  const [addError, setAddError]           = useState('');
+  const [addForm, setAddForm]             = useState({ name:'', initials:'', username:'', password:'1234' });
+  const [promotingId, setPromotingId]     = useState(null); // initials of person being promoted
+  const [promoteRole, setPromoteRole]     = useState('');
+
+  useEffect(() => { loadDynamicUsers(); }, []);
+
+  async function loadDynamicUsers() {
+    try {
+      const { data } = await sbStatic.from('usuarios').select('*').eq('active', true).order('created_at');
+      setDynamicUsers(data || []);
+    } catch {}
+  }
+
+  function autoFill(name) {
+    const words = name.trim().split(/\s+/);
+    const initials = words.map(w=>w[0]||'').join('').toUpperCase().slice(0,4);
+    const username = name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    setAddForm(p=>({ ...p, name, initials: p.initials||initials, username: p.username||username }));
+  }
+
+  async function createUser() {
+    const { name, initials, username, password } = addForm;
+    if (!name||!initials||!username||!password) { setAddError('Todos los campos son requeridos'); return; }
+    setAddSaving(true); setAddError('');
+    try {
+      const { error } = await sbStatic.from('usuarios').insert([{
+        username, password_plain: password, role:'vaquero',
+        name, initials: initials.toUpperCase(),
+        created_by: user?.initials, active: true,
+      }]);
+      if (error) throw error;
+      // Sync to localStorage so SistemasTab assignment dropdowns see them immediately
+      try {
+        const ec = JSON.parse(localStorage.getItem('aq_extra_crew')||'[]');
+        if (!ec.find(c=>c.initials===initials.toUpperCase())) {
+          ec.push({ initials:initials.toUpperCase(), name, role:'Buceador', username });
+          localStorage.setItem('aq_extra_crew', JSON.stringify(ec));
+        }
+      } catch {}
+      await loadDynamicUsers();
+      setAddForm({ name:'', initials:'', username:'', password:'1234' });
+      setShowAddForm(false);
+    } catch(e) { setAddError(e.message||'Error al crear usuario'); }
+    setAddSaving(false);
+  }
+
+  async function promoteUser(initials, newRole) {
+    try {
+      await sbStatic.from('usuarios').update({ role: newRole }).eq('initials', initials);
+      setDynamicUsers(prev => prev.map(u => u.initials===initials ? {...u, role:newRole} : u));
+      setPromotingId(null);
+    } catch {}
+  }
+
+  // Merge static CREW + dynamic users (dedupe by initials)
+  const staticInits = new Set(CREW.map(c=>c.initials));
+  const allCrew = [...CREW, ...dynamicUsers.filter(u=>!staticInits.has(u.initials))];
+
+  const ROLE_BADGE = { admin:'rgba(245,158,11,.15)', consultor:'rgba(139,92,246,.15)', director:'rgba(13,148,136,.15)', capitan:'rgba(74,222,128,.15)', vaquero:'rgba(148,163,184,.1)' };
+  const ROLE_COLOR = { admin:'#f59e0b', consultor:'#a78bfa', director:'#0d9488', capitan:'#4ade80', vaquero:'#94a3b8' };
+  const ROLE_LABEL = { admin:'Admin', consultor:'Consultor', director:'Director', capitan:'Capitán', vaquero:'Vaquero' };
+
+  const person = selectedPerson
+    ? (CREW.find(c=>c.initials===selectedPerson) || dynamicUsers.find(u=>u.initials===selectedPerson) || null)
+    : null;
+  const personDynamic = selectedPerson ? dynamicUsers.find(u=>u.initials===selectedPerson) : null;
 
   if (person) {
     const mySystems = systems.filter(s =>
-      (s.capitan === person.initials || s.buceador === person.initials) && s.estado === "Activo"
+      (getCapitan(s) === person.initials || hasBuceador(s, person.initials)) && s.estado === "Activo"
     );
     const sysWithRate = mySystems.map(s => {
-      const sysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      // Credit only readings logged by this person — coverage/absence tracked here
+      const sysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso && (r.logged_by===person.initials||!r.logged_by)).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      const allSysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
       const latest = sysR[sysR.length-1]||null;
       const prev = sysR[sysR.length-2]||null;
+      const daysMissed = allSysR.filter(r=>r.logged_by && r.logged_by!==person.initials).length;
       let rate = null;
       if (latest && prev && prev.peso) {
         const days = Math.max(1,(new Date(latest.fecha)-new Date(prev.fecha))/(1000*60*60*24));
         rate = parseFloat(((Math.log(latest.peso/prev.peso)/days)*100).toFixed(2));
       }
-      return { ...s, latest, rate };
+      return { ...s, latest, rate, daysMissed };
     });
     const rates = sysWithRate.map(s=>s.rate).filter(r=>r!==null);
     const avgRate = rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) : null;
@@ -2836,6 +3120,34 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
           <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Crecimiento</div><div style={{fontSize:18,fontWeight:800,color:rateCol,fontFamily:"monospace"}}>{avgRate ? `${parseFloat(avgRate)>=0?"+":""}${avgRate}%` : "—"}</div></div>
           <div style={S.card}><div style={{fontSize:9,color:"#64748b"}}>Biomasa</div><div style={{fontSize:18,fontWeight:800,color:"#e2e8f0"}}>{(totalBio/1000).toFixed(1)}kg</div></div>
         </div>
+        {/* Role & Access card — only for dynamic users when canManage */}
+        {canManage && personDynamic && (
+          <div style={{...S.card,marginBottom:12}}>
+            <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Rol y acceso</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+              <span style={{padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,background:ROLE_BADGE[personDynamic.role]||ROLE_BADGE.vaquero,color:ROLE_COLOR[personDynamic.role]||ROLE_COLOR.vaquero}}>
+                {ROLE_LABEL[personDynamic.role]||personDynamic.role}
+              </span>
+              {promotingId===personDynamic.initials ? (
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {['vaquero','capitan','director'].filter(r=>r!==personDynamic.role).map(r=>(
+                    <button key={r} onClick={()=>promoteUser(personDynamic.initials, r)}
+                      style={{padding:"4px 12px",borderRadius:20,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:ROLE_BADGE[r],color:ROLE_COLOR[r]}}>
+                      → {ROLE_LABEL[r]}
+                    </button>
+                  ))}
+                  <button onClick={()=>setPromotingId(null)} style={{padding:"4px 10px",borderRadius:20,border:"1px solid rgba(100,116,139,.3)",background:"none",color:"#64748b",fontSize:11,cursor:"pointer"}}>Cancelar</button>
+                </div>
+              ) : (
+                <button onClick={()=>setPromotingId(personDynamic.initials)}
+                  style={{padding:"4px 12px",borderRadius:20,border:"1px solid rgba(13,148,136,.4)",background:"none",color:"#0d9488",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                  Cambiar rol
+                </button>
+              )}
+            </div>
+            <div style={{marginTop:8,fontSize:11,color:"#475569"}}>Usuario: <span style={{fontFamily:"monospace",color:"#94a3b8"}}>{personDynamic.username}</span></div>
+          </div>
+        )}
         {sysWithRate.length > 0 && (
           <>
             <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",textTransform:"uppercase",letterSpacing:1}}>
@@ -2857,6 +3169,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
                       </div>
                       <div style={{fontSize:10,color:"#64748b"}}>/día</div>
                       {s.latest&&<div style={{fontSize:10,color:"#475569",marginTop:2}}>{(s.latest.peso/1000).toFixed(2)}kg</div>}
+                      {s.daysMissed>0&&<div style={{fontSize:9,color:"#f87171",marginTop:2}}>{s.daysMissed} {lang==="es"?"día(s) sin crédito":"day(s) no credit"}</div>}
                     </div>
                   </div>
                 </div>
@@ -2871,9 +3184,69 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   // Team list view
   return (
     <div style={{padding:"16px 16px 100px"}}>
-      <h2 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:"0 0 14px"}}>{lang==="es"?"Equipo":"Team"}</h2>
-      {CREW.map(c=>{
-        const mySys = systems.filter(s=>(s.capitan===c.initials||s.buceador===c.initials)&&s.estado==="Activo");
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <h2 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:0}}>{lang==="es"?"Equipo":"Team"} <span style={{color:"#475569",fontWeight:400,fontSize:13}}>({allCrew.length})</span></h2>
+        {canManage && (
+          <button onClick={()=>{ setShowAddForm(f=>!f); setAddError(''); setAddForm({name:'',initials:'',username:'',password:'1234'}); }}
+            style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:"1px solid rgba(13,148,136,.5)",background:"rgba(13,148,136,.08)",color:"#0d9488",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            <Icon name="plus" size={13}/> Nuevo
+          </button>
+        )}
+      </div>
+
+      {/* Add user form */}
+      {showAddForm && canManage && (
+        <div style={{...S.card,marginBottom:14,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.04)"}}>
+          <div style={{fontSize:11,color:"#0d9488",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Nuevo trabajador</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <input
+              placeholder="Nombre completo"
+              value={addForm.name}
+              onChange={e=>autoFill(e.target.value)}
+              style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px"}}
+            />
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <input
+                placeholder="Iniciales (ej: RV)"
+                value={addForm.initials}
+                maxLength={4}
+                onChange={e=>setAddForm(p=>({...p,initials:e.target.value.toUpperCase()}))}
+                style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px",fontFamily:"monospace"}}
+              />
+              <input
+                placeholder="Usuario"
+                value={addForm.username}
+                onChange={e=>setAddForm(p=>({...p,username:e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))}
+                style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px",fontFamily:"monospace"}}
+              />
+            </div>
+            <input
+              placeholder="Contraseña inicial"
+              type="text"
+              value={addForm.password}
+              onChange={e=>setAddForm(p=>({...p,password:e.target.value}))}
+              style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px"}}
+            />
+            {addError && <div style={{fontSize:11,color:"#f87171"}}>{addError}</div>}
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={createUser} disabled={addSaving}
+                style={{flex:1,padding:"9px",borderRadius:12,border:"none",background:"#0d9488",color:"#fff",fontSize:13,fontWeight:700,cursor:addSaving?"wait":"pointer",opacity:addSaving?.6:1}}>
+                {addSaving?"Guardando…":"Crear cuenta"}
+              </button>
+              <button onClick={()=>setShowAddForm(false)}
+                style={{padding:"9px 14px",borderRadius:12,border:"1px solid rgba(100,116,139,.3)",background:"none",color:"#64748b",fontSize:13,cursor:"pointer"}}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {allCrew.map(c=>{
+        const isDynamic = !staticInits.has(c.initials);
+        const dynUser = dynamicUsers.find(u=>u.initials===c.initials);
+        const roleKey = dynUser?.role || (c.role==='Capitán'?'capitan':c.role==='Supervisor'?'director':null);
+        const mySys = systems.filter(s=>(getCapitan(s)===c.initials||hasBuceador(s,c.initials))&&s.estado==="Activo");
         const sysR = mySys.flatMap(s => {
           const rs = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
           const lat = rs[rs.length-1], prev = rs[rs.length-2];
@@ -2893,7 +3266,11 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:34,height:34,borderRadius:10,background:`${rc}15`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:11,fontWeight:800,color:rc}}>{c.initials}</span></div>
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</span>
+                    {roleKey && <span style={{fontSize:9,padding:"1px 6px",borderRadius:10,background:ROLE_BADGE[roleKey]||ROLE_BADGE.vaquero,color:ROLE_COLOR[roleKey]||ROLE_COLOR.vaquero,fontWeight:700}}>{ROLE_LABEL[roleKey]||roleKey}</span>}
+                    {isDynamic && <span style={{fontSize:9,padding:"1px 6px",borderRadius:10,background:"rgba(139,92,246,.12)",color:"#a78bfa",fontWeight:600}}>nuevo</span>}
+                  </div>
                   <div style={{fontSize:10,color:"#64748b"}}>{mySys.length} sistemas · {regions.join(", ") || "–"}</div>
                   {mySys.length > 0 && <div style={{fontSize:9,color:"#475569",marginTop:2}}>{mySys.map(s=>s.id).slice(0,5).join(", ")}{mySys.length>5?"...":""}</div>}
                 </div>
@@ -2971,8 +3348,15 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   const [showForm, setShowForm] = useState(false);
   const [editSys, setEditSys] = useState(null);
+  const [archivedOpen, setArchivedOpen]         = useState(false);
+  const [retiredOpen,  setRetiredOpen]          = useState(false);
   const [showReadingForm, setShowReadingForm]   = useState(false);
   const [showGrowthChart, setShowGrowthChart]   = useState(null); // sistemaId or null
+  const [editingTeam, setEditingTeam]           = useState(null); // sistemaId or null
+  const [teamForm, setTeamForm]                 = useState({capitan:'', buceadores:[]});
+  const [extraCrew, setExtraCrew]               = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
+  const [addingHire, setAddingHire]             = useState(false);
+  const [hireForm, setHireForm]                 = useState({name:'', initials:'', role:'Buceador'});
   const [readingForm, setReadingForm] = useState({
     fecha:       new Date().toISOString().slice(0,10),
     tipo:        "peso",
@@ -2986,6 +3370,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     notas:       "",
     foto:        null,
     cosechada:   "",
+    sembrado:    "",
     aguas:       "",
     condiciones: "",
   });
@@ -3172,12 +3557,15 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     e.target.value = "";
   };
 
-  // Calculate TDC from two readings: TDC = (ln(p2/p1) / days) * 100
-  const calcTDC = (peso1, fecha1, peso2, fecha2) => {
-    if (!peso1 || !peso2 || !fecha1 || !fecha2) return null;
+  // TDC = (ln(adjNow / adjPrev) / days) * 100 — adjusted for harvest and seeding
+  // r1 = previous reading, r2 = current reading (or their individual components)
+  const calcTDC = (peso1, fecha1, peso2, fecha2, cosechada1 = 0, sembrado2 = 0) => {
+    const adj1 = (peso1 || 0) - (cosechada1 || 0);
+    const adj2 = (peso2 || 0) - (sembrado2  || 0);
+    if (!adj1 || !adj2 || adj1 <= 0 || adj2 <= 0 || !fecha1 || !fecha2) return null;
     const days = (new Date(fecha2) - new Date(fecha1)) / (1000 * 60 * 60 * 24);
     if (days <= 0) return null;
-    return parseFloat(((Math.log(peso2 / peso1) / days) * 100).toFixed(4));
+    return parseFloat(((Math.log(adj2 / adj1) / days) * 100).toFixed(4));
   };
 
   // Recalculate TDC for all readings of a system after any edit
@@ -3187,7 +3575,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
     const updated = sorted.map((r, i) => {
       const prev = sorted[i-1] || null;
-      const tdc = prev ? calcTDC(prev.peso, prev.fecha, r.peso, r.fecha) : null;
+      const tdc = prev ? calcTDC(prev.peso, prev.fecha, r.peso, r.fecha, prev.cosechada, r.sembrado) : null;
       return { ...r, tdc };
     });
     return allReadings.map(r => {
@@ -3220,11 +3608,11 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     const prev = prevReadings[0] || null;
     const tdc  = (isPeso && prev?.peso)
-      ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha)
+      ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha, prev.cosechada, readingForm.cosechada ? parseFloat(readingForm.cosechada) : 0)
       : null;
 
     const newReading = {
-      id:         Date.now(),
+      id:         `${sistemaId}_${readingForm.fecha}_${user?.initials||'CM'}`,
       sistema:    sistemaId,
       fecha:      readingForm.fecha,
       tipo:       readingForm.tipo,
@@ -3239,9 +3627,10 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       notas:      readingForm.notas || "",
       foto:       (readingForm.foto && readingForm.foto !== true) ? readingForm.foto : null,
       cosechada:  readingForm.cosechada ? parseFloat(readingForm.cosechada) : null,
-      sembrado:   null,
+      sembrado:   readingForm.sembrado  ? parseFloat(readingForm.sembrado)  : null,
       aguas:       readingForm.aguas       || "",
       condiciones: readingForm.condiciones || "",
+      logged_by:   user?.initials || null,
     };
     const withNew = [...readings, newReading];
     setReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
@@ -3251,7 +3640,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       fecha: new Date().toISOString().slice(0,10),
       tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""),
       salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:null,
-      cosechada:"", aguas:"", condiciones:"",
+      cosechada:"", sembrado:"", aguas:"", condiciones:"",
     });
   };
 
@@ -3286,9 +3675,12 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [form, setForm] = useState(EMPTY);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
-  const filtered = systems.filter(s=>filterRegion==="all"||s.region===filterRegion);
+  const filtered         = systems.filter(s=>(filterRegion==="all"||s.region===filterRegion));
+  const activeFiltered   = filtered.filter(s=>s.estado==="Activo");
+  const retiredFiltered  = filtered.filter(s=>s.estado==="Retirado");
+  const archivedFiltered = filtered.filter(s=>s.estado==="Archivado");
   const grouped  = {};
-  filtered.forEach(s=>{
+  activeFiltered.forEach(s=>{
     if(!grouped[s.region]) grouped[s.region]={};
     const pk=`Polígono ${s.poligono}`;
     if(!grouped[s.region][pk]) grouped[s.region][pk]=[];
@@ -3334,15 +3726,105 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           </div>
         </div>
         <div style={S.card}>
-          <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Equipo responsable":"Responsible crew"}</div>
-          {(()=>{
-            const regionSup = REGION_SUPERVISORS[s.region];
-            const supName = regionSup ? regionSup.name : "–";
-            const supInitials = regionSup ? regionSup.initials : "–";
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Equipo responsable":"Responsible crew"}</div>
+            {canEditReadings && (
+              editingTeam===s.id
+                ? <div style={{display:"flex",gap:6}}>
+                    <button onClick={()=>{
+                      const newBuceador = teamForm.buceadores.join(',') || null;
+                      setSystems(prev=>prev.map(x=>x.id===s.id?{...x,capitan:teamForm.capitan||null,buceador:newBuceador}:x));
+                      setEditingTeam(null); setAddingHire(false);
+                    }} style={{fontSize:10,padding:"2px 8px",borderRadius:6,border:"none",background:"#0d9488",color:"#fff",fontWeight:700,cursor:"pointer"}}>
+                      {lang==="es"?"Guardar":"Save"}
+                    </button>
+                    <button onClick={()=>{setEditingTeam(null);setAddingHire(false);}} style={{fontSize:10,padding:"2px 8px",borderRadius:6,border:"1px solid rgba(148,163,184,.2)",background:"transparent",color:"#64748b",cursor:"pointer"}}>
+                      {lang==="es"?"Cancelar":"Cancel"}
+                    </button>
+                  </div>
+                : <button onClick={()=>{setTeamForm({capitan:s.capitan||'',buceadores:getBuceadores(s)});setEditingTeam(s.id);setAddingHire(false);}}
+                    style={{fontSize:10,padding:"2px 8px",borderRadius:6,border:"1px solid rgba(148,163,184,.15)",background:"rgba(255,255,255,.04)",color:"#94a3b8",cursor:"pointer"}}>
+                    ✏️ {lang==="es"?"Asignar":"Assign"}
+                  </button>
+            )}
+          </div>
+          {editingTeam===s.id ? (
+            <div>
+              {/* Capitán */}
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>Capitán</div>
+                <select value={teamForm.capitan} onChange={e=>setTeamForm(p=>({...p,capitan:e.target.value}))}
+                  style={{...S.input,appearance:"none",fontSize:12}}>
+                  <option value="">— {lang==="es"?"Regional por defecto":"Regional default"} —</option>
+                  {[...CREW, ...extraCrew].filter(c=>c.role==="Capitán").map(c=>(
+                    <option key={c.initials} value={c.initials}>{c.initials} – {c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Buceadores — multi-select checkboxes */}
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>Buceadores</div>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  {[...CREW, ...extraCrew].filter(c=>c.role==="Buceador").map(c=>{
+                    const checked = teamForm.buceadores.includes(c.initials);
+                    return (
+                      <label key={c.initials} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:7,background:checked?"rgba(13,148,136,.1)":"rgba(255,255,255,.02)",cursor:"pointer",fontSize:12,color:checked?"#0d9488":"#94a3b8"}}>
+                        <input type="checkbox" checked={checked} onChange={()=>setTeamForm(p=>({
+                          ...p,
+                          buceadores: checked ? p.buceadores.filter(x=>x!==c.initials) : [...p.buceadores, c.initials]
+                        }))} style={{accentColor:"#0d9488"}}/>
+                        <span style={{fontWeight:700,minWidth:32}}>{c.initials}</span>
+                        <span>{c.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Add new hire — admin/consultor/director */}
+              {["admin","consultor","director"].includes(user?.role) && (
+                addingHire ? (
+                  <div style={{background:"rgba(139,92,246,.06)",border:"1px solid rgba(139,92,246,.2)",borderRadius:8,padding:10,marginTop:6}}>
+                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:8}}>{lang==="es"?"Nuevo integrante":"New hire"}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:6,marginBottom:6}}>
+                      <input placeholder={lang==="es"?"Nombre completo":"Full name"} value={hireForm.name} onChange={e=>setHireForm(p=>({...p,name:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                      <input placeholder="Iniciales" maxLength={4} value={hireForm.initials} onChange={e=>setHireForm(p=>({...p,initials:e.target.value.toUpperCase()}))} style={{...S.input,fontSize:12}}/>
+                    </div>
+                    <select value={hireForm.role} onChange={e=>setHireForm(p=>({...p,role:e.target.value}))} style={{...S.input,appearance:"none",fontSize:12,marginBottom:6}}>
+                      <option value="Buceador">Buceador</option>
+                      <option value="Capitán">Capitán</option>
+                    </select>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>{
+                        if(!hireForm.name||!hireForm.initials) return;
+                        const newMember = {initials:hireForm.initials,name:hireForm.name,role:hireForm.role,username:hireForm.name.toLowerCase().replace(/\s+/g,'_')};
+                        const updated = [...extraCrew, newMember];
+                        setExtraCrew(updated);
+                        try { localStorage.setItem('aq_extra_crew', JSON.stringify(updated)); } catch {}
+                        if(hireForm.role==="Buceador") setTeamForm(p=>({...p,buceadores:[...p.buceadores,hireForm.initials]}));
+                        setHireForm({name:'',initials:'',role:'Buceador'});
+                        setAddingHire(false);
+                      }} style={{fontSize:10,padding:"3px 10px",borderRadius:6,border:"none",background:"#8b5cf6",color:"#fff",fontWeight:700,cursor:"pointer"}}>
+                        {lang==="es"?"Agregar":"Add"}
+                      </button>
+                      <button onClick={()=>setAddingHire(false)} style={{fontSize:10,padding:"3px 10px",borderRadius:6,border:"1px solid rgba(148,163,184,.2)",background:"transparent",color:"#64748b",cursor:"pointer"}}>
+                        {lang==="es"?"Cancelar":"Cancel"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={()=>setAddingHire(true)} style={{fontSize:10,padding:"4px 10px",borderRadius:6,border:"1px dashed rgba(139,92,246,.4)",background:"transparent",color:"#a78bfa",cursor:"pointer",marginTop:4}}>
+                    + {lang==="es"?"Agregar nuevo integrante":"Add new hire"}
+                  </button>
+                )
+              )}
+            </div>
+          ) : (()=>{
+            const allCrew = [...CREW, ...extraCrew];
+            const cap = getCapitan(s);
+            const bucs = getBuceadores(s);
             const team = [
-              {role:lang==="es"?"Supervisor de región":"Region supervisor", name:supName, initials:supInitials, color:"#f59e0b", note:s.region},
-              {role:"Capitán", name:CREW.find(c=>c.initials===s.capitan)?.name||s.capitan, initials:s.capitan, color:"#0d9488", note:`Polígono ${s.poligono}`},
-              {role:"Buceador", name:CREW.find(c=>c.initials===s.buceador)?.name||s.buceador, initials:s.buceador, color:"#4ade80", note:lang==="es"?"Este sistema":"This system"},
+              ...(cap ? [{role:"Capitán", name:allCrew.find(c=>c.initials===cap)?.name||cap, initials:cap, color:"#0d9488", note:`Polígono ${s.poligono}`}] : []),
+              ...bucs.map(b=>({role:"Buceador", name:allCrew.find(c=>c.initials===b)?.name||b, initials:b, color:"#4ade80", note:lang==="es"?"Este sistema":"This system"})),
             ];
             return team.map(item=>(
               <div key={item.role} onClick={()=>item.initials && item.initials!=="–" && navigateTo("persona", item.initials)}
@@ -3498,7 +3980,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                     </div>
                   )}
                   {readingForm.peso&&lastR?.peso&&(()=>{
-                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha);
+                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha,lastR.cosechada,readingForm.cosechada?parseFloat(readingForm.cosechada):0);
                     if(preview===null)return null;
                     const col=preview>=2.5?"#4ade80":preview>=0?"#0d9488":"#f87171";
                     return(
@@ -3785,12 +4267,18 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                         );
                       }
                       // Normal peso row
+                      const isCoverage = r.logged_by && !hasBuceador(s, r.logged_by) && r.logged_by !== getCapitan(s);
                       return (
                         <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}>
                           <div style={{flex:1}}>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
                               <span style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>⚖️</span>
                               {dupLabel&&<span style={{fontSize:9,color:"#64748b"}}>{dupLabel}</span>}
+                              {r.logged_by&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
+                                background:isCoverage?"rgba(245,158,11,.15)":"rgba(13,148,136,.1)",
+                                color:isCoverage?"#f59e0b":"#0d9488",fontWeight:700}}>
+                                {isCoverage?(lang==="es"?"Cubrió: ":"Covered: "):""}{r.logged_by}
+                              </span>}
                             </div>
                             {r.notas&&<div style={{fontSize:10,color:"#64748b",fontStyle:"italic"}}>"{r.notas}"</div>}
                           </div>
@@ -3952,7 +4440,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         {canEdit&&(
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button onClick={()=>{setForm({...s});setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
-            {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Eliminar ${s.id}? Esto no se puede deshacer.`:`Delete ${s.id}? This cannot be undone.`)){setSystems(prev=>prev.filter(x=>x.id!==s.id));setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
+            {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Archivar ${s.id}? El sistema quedará inactivo y desaparecerá de las vistas de capitanes.`:`Archive ${s.id}? The system will become inactive and disappear from captains' views.`)){setSystems(prev=>prev.map(x=>x.id===s.id?{...x,estado:"Archivado"}:x));setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
           </div>
         )}
       </div>
@@ -4033,7 +4521,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
             <AddableSelect value={form.semillas} onChange={v=>F("semillas",v)} options={semillas}
               onAddOption={v=>setSemillas(prev=>[...prev,v])} lang={lang}/>
           </div>
-          <div><label style={S.label}>Estado</label><select value={form.estado} onChange={e=>F("estado",e.target.value)} style={{...S.input,appearance:"none"}}><option>Activo</option><option>Retirado</option></select></div>
+          <div><label style={S.label}>Estado</label><select value={form.estado} onChange={e=>F("estado",e.target.value)} style={{...S.input,appearance:"none"}}><option>Activo</option><option>Retirado</option><option>Archivado</option></select></div>
         </div>,
         ]}
         <button onClick={handleSave} disabled={!form.id} style={{...S.btn(!!form.id),boxShadow:form.id?"0 0 20px rgba(13,148,136,.25)":"none"}}>
@@ -4048,7 +4536,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div>
           <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>Sistemas</h2>
-          <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>{systems.filter(s=>s.estado==="Activo").length} {lang==="es"?"activos":"active"} · {systems.length} total</p>
+          <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>{systems.filter(s=>s.estado==="Activo").length} {lang==="es"?"activos":"active"} · {archivedFiltered.length>0?`${archivedFiltered.length} archivados · `:""}{systems.length} total</p>
         </div>
         {canEdit&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
       </div>
@@ -4126,6 +4614,54 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           ))}
         </div>
       ))}
+
+      {/* ── Retired systems — collapsible ──────────────────────────────────── */}
+      {retiredFiltered.length > 0 && (
+        <div style={{marginTop:8}}>
+          <button onClick={()=>setRetiredOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"rgba(148,163,184,.06)",border:"0.5px solid rgba(148,163,184,.12)",borderRadius:10,padding:"10px 14px",cursor:"pointer",color:"#64748b",fontWeight:700,fontSize:12}}>
+            <span style={{flex:1,textAlign:"left"}}>🗂 {lang==="es"?"Retirados":"Retired"} ({retiredFiltered.length})</span>
+            <span>{retiredOpen?"▲":"▼"}</span>
+          </button>
+          {retiredOpen && retiredFiltered.map(s=>(
+            <div key={s.id} style={{...S.card,borderLeft:"3px solid #334155",cursor:"pointer",opacity:0.6,marginTop:6}} onClick={()=>setSelected(s.id)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(148,163,184,.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:"#64748b"}}>{s.id}</span></div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#94a3b8"}}>{s.pueblo||s.id}</div>
+                    <div style={{fontSize:11,color:"#475569"}}>{s.tipo} · {s.region} · {s.capitan||"–"}</div>
+                  </div>
+                </div>
+                <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:"rgba(148,163,184,.08)",color:"#475569",fontWeight:600}}>Retirado</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Archived systems — collapsible ─────────────────────────────────── */}
+      {archivedFiltered.length > 0 && (
+        <div style={{marginTop:8}}>
+          <button onClick={()=>setArchivedOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"rgba(148,163,184,.06)",border:"0.5px solid rgba(148,163,184,.12)",borderRadius:10,padding:"10px 14px",cursor:"pointer",color:"#64748b",fontWeight:700,fontSize:12}}>
+            <span style={{flex:1,textAlign:"left"}}>📦 {lang==="es"?"Archivados":"Archived"} ({archivedFiltered.length})</span>
+            <span>{archivedOpen?"▲":"▼"}</span>
+          </button>
+          {archivedOpen && archivedFiltered.map(s=>(
+            <div key={s.id} style={{...S.card,borderLeft:"3px solid #334155",cursor:"pointer",opacity:0.7,marginTop:6}} onClick={()=>setSelected(s.id)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(148,163,184,.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:"#64748b"}}>{s.id}</span></div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#94a3b8"}}>{s.pueblo}</div>
+                    <div style={{fontSize:11,color:"#475569"}}>{s.tipo} · {s.region}</div>
+                  </div>
+                </div>
+                <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:"rgba(148,163,184,.08)",color:"#475569",fontWeight:600}}>Archivado</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -4880,8 +5416,13 @@ export default function App() {
 
   const [systems,  setSystems]  = useState(() => {
     try {
-      const cached = localStorage.getItem('aq_systems_cache');
-      return cached ? JSON.parse(cached) : SYSTEMS_DATA;
+      const cached        = localStorage.getItem('aq_systems_cache');
+      const cachedVersion = localStorage.getItem('aq_systems_version');
+      if (cached && cachedVersion === SYSTEMS_DATA_VERSION) return JSON.parse(cached);
+      // Version mismatch — bundle has newer data; seed from bundle and stamp the version
+      localStorage.setItem('aq_systems_version', SYSTEMS_DATA_VERSION);
+      localStorage.setItem('aq_systems_cache', JSON.stringify(SYSTEMS_DATA));
+      return SYSTEMS_DATA;
     } catch { return SYSTEMS_DATA; }
   });
   const [readings, setReadings] = useState(() => {
@@ -4940,8 +5481,14 @@ export default function App() {
   const [syncing, setSyncing]   = useState(false);
   const [lastSync, setLastSync] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const offlineQueue = useRef([]);  // { table, op, payload }
-  const syncTimer    = useRef(null);
+  const offlineQueue     = useRef((() => {
+    try { return JSON.parse(localStorage.getItem('aq_offline_queue') || '[]'); } catch { return []; }
+  })());  // persisted across app restarts
+  const syncInProgress   = useRef(false); // guard against concurrent triggerSync calls
+  const syncTimer        = useRef(null);
+  const pendingReadingIds = useRef(new Set(
+    (() => { try { return JSON.parse(localStorage.getItem('aq_pending_ids') || '[]'); } catch { return []; } })()
+  ));
 
   // ── Toast notifications (sync awareness) ──────────────────────────────────
   const [toasts, setToasts] = useState([]);
@@ -5005,7 +5552,6 @@ export default function App() {
   useEffect(() => {
     if (!online || !sbReady) return;
     const id = setInterval(() => {
-      // Flush any queued offline items before pulling fresh data
       if (offlineQueue.current.length > 0) {
         triggerSync();
       } else {
@@ -5014,6 +5560,7 @@ export default function App() {
     }, 30000);
     return () => clearInterval(id);
   }, [online, user, sbReady]);
+
 
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -5071,16 +5618,25 @@ export default function App() {
       }
 
       if (tasksRes.data?.length) {
-        setAssignedTasks(tasksRes.data.map(r => ({
-          id: r.id, assignedTo: r.assigned_to, day: r.day,
-          taskType: r.task_type, sistema: r.sistema,
-          objetivo: r.objetivo, date: r.date, actual: r.actual,
-          condicion: r.condicion, voiceNote: null,
-          foto: r.foto_url, confirmed: r.confirmed,
-          notas: r.notas || "",
-          comentarioVaquero: r.comentario_vaquero || null,
-          comentarioFecha:   r.comentario_fecha   || null,
-        })));
+        setAssignedTasks(prev => {
+          const localById = Object.fromEntries(prev.map(t => [t.id, t]));
+          return tasksRes.data.map(r => {
+            const local = localById[r.id];
+            return {
+              id: r.id, assignedTo: r.assigned_to, day: r.day,
+              taskType: r.task_type, sistema: r.sistema,
+              objetivo: r.objetivo, date: r.date, actual: r.actual,
+              condicion: r.condicion, voiceNote: null,
+              foto: r.foto_url,
+              // Local confirmed wins — prevents pull from un-confirming a task mid-flight
+              confirmed: local?.confirmed || r.confirmed,
+              notas: r.notas || "",
+              supportCrew: r.support_crew ? r.support_crew.split(',').map(s => s.trim()).filter(Boolean) : [],
+              comentarioVaquero: r.comentario_vaquero || null,
+              comentarioFecha:   r.comentario_fecha   || null,
+            };
+          });
+        });
       }
 
       if (annRes.data?.length) {
@@ -5118,18 +5674,49 @@ export default function App() {
           notas:       r.notas       || "",
           foto:        null,
           cosechada:   r.cosechada   ?? null,
-          sembrado:    null,
+          sembrado:    r.sembrado    ?? null,
           buoys:       r.buoys       ?? null,
+          logged_by:   r.logged_by   ?? null,
           updated_by:  null,
           updated_at:  r.editado_en  ?? null,
         }));
-        setReadings(() => {
-          // Keep only offline-queued readings not yet in Supabase
+        setReadings(localReadings => {
           const remoteIds = new Set(pulled.map(r => r.id));
+          // Clear pending IDs that Supabase now confirms
+          for (const id of pendingReadingIds.current) {
+            if (remoteIds.has(id)) pendingReadingIds.current.delete(id);
+          }
+          // Offline-queued reads not yet in Supabase
           const queued = (offlineQueue.current || [])
             .filter(item => item.table === 'lecturas' && item.op !== 'delete' && item.payload?.id && !remoteIds.has(item.payload.id))
             .map(item => item.payload);
-          const next = [...pulled, ...queued];
+          // Pending local reads not yet confirmed by Supabase (survives the pull)
+          const pending = localReadings.filter(r => pendingReadingIds.current.has(r.id) && !remoteIds.has(r.id));
+
+          // Recovery: re-queue any pending readings that fell out of the offline queue
+          // (happens when triggerSync consumed items without checking Supabase error responses)
+          // Skip recovery while a sync is in progress to avoid feedback loops
+          const alreadyQueued = new Set((offlineQueue.current || []).map(i => i.payload?.id));
+          for (const r of pending) {
+            if (!alreadyQueued.has(r.id) && !syncInProgress.current) {
+              console.warn('[AquaOps] re-queuing orphaned reading:', r.id);
+              offlineQueue.current.push({ table: 'lecturas', op: 'upsert', payload: {
+                id: r.id, sistema: r.sistema, fecha: r.fecha,
+                tipo: r.tipo ?? 'peso', peso: r.peso ?? null,
+                sueltos: r.sueltos ?? null, ph: r.ph ?? null,
+                temp: r.temp ?? null, salinidad: r.salinidad ?? null,
+                condiciones: r.condiciones ?? null, notas: r.notas ?? '',
+                cosechada: r.cosechada ?? null, sembrado: r.sembrado ?? null,
+                buoys: r.buoys ?? null, logged_by: r.logged_by ?? null,
+              }});
+            }
+          }
+          if (offlineQueue.current.length > 0) {
+            setPendingCount(offlineQueue.current.length);
+            persistQueue();
+          }
+
+          const next = [...pulled, ...queued, ...pending];
           try { localStorage.setItem('aq_readings_cache', JSON.stringify(next)); } catch {}
           return next;
         });
@@ -5179,19 +5766,24 @@ export default function App() {
     }
   };
 
+  const persistQueue = () => {
+    try { localStorage.setItem('aq_offline_queue', JSON.stringify(offlineQueue.current)); } catch {}
+    try { localStorage.setItem('aq_pending_ids', JSON.stringify([...pendingReadingIds.current])); } catch {}
+  };
+
   // ── PUSH: write one item to Supabase, then refresh dashboard ────────────────
   const pushItem = async (table, op, payload) => {
     if (!sb.current || !online) {
       console.warn(`[AquaOps] pushItem queued (sb=${!!sb.current}, online=${online}):`, table, op, payload?.id);
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
+      persistQueue();
       return false;
     }
     try {
       console.log(`[AquaOps] pushItem → ${table}.${op}`, payload?.id);
       let error;
       if (op === 'upsert') {
-        // weekly_incidents uses composite PK (week, initials) not id
         const conflictCol = table === 'weekly_incidents' ? 'week,initials' : 'id';
         ({ error } = await sb.current.from(table).upsert(payload, { onConflict: conflictCol }));
       } else if (op === 'insert') {
@@ -5206,42 +5798,55 @@ export default function App() {
       console.error(`[AquaOps] Push to ${table} FAILED:`, e?.message || e?.code || e, JSON.stringify(e), 'payload:', payload);
       offlineQueue.current.push({ table, op, payload });
       setPendingCount(offlineQueue.current.length);
+      persistQueue();
       return false;
     }
   };
 
   // ── SYNC: flush the offline queue ────────────────────────────────────────────
   const triggerSync = async () => {
+    if (syncInProgress.current) return; // prevent concurrent runs
     if (!sb.current || offlineQueue.current.length === 0) {
       pullRemoteData();
       return;
     }
+    syncInProgress.current = true;
     console.log(`[AquaOps] triggerSync: flushing ${offlineQueue.current.length} queued items`);
     setSyncing(true);
     const queue = [...offlineQueue.current];
     offlineQueue.current = [];
     setPendingCount(0);
+    persistQueue();
     let failed = [];
     for (const item of queue) {
       try {
+        let res;
         if (item.op === 'upsert') {
-          await sb.current.from(item.table).upsert(item.payload, { onConflict: 'id' });
+          res = await sb.current.from(item.table).upsert(item.payload, { onConflict: 'id' });
         } else if (item.op === 'insert') {
-          await sb.current.from(item.table).insert(item.payload);
+          res = await sb.current.from(item.table).insert(item.payload);
         } else if (item.op === 'delete') {
-          await sb.current.from(item.table).delete().eq('id', item.payload.id);
+          res = await sb.current.from(item.table).delete().eq('id', item.payload.id);
         }
-      } catch {
+        // Supabase never throws — must explicitly check the error response
+        if (res?.error) {
+          console.error('[AquaOps] triggerSync item failed:', res.error.message, 'payload id:', item.payload?.id);
+          failed.push(item);
+        }
+      } catch (e) {
+        console.error('[AquaOps] triggerSync exception:', e?.message);
         failed.push(item);
       }
     }
     if (failed.length) {
       offlineQueue.current = failed;
       setPendingCount(failed.length);
+      persistQueue();
     }
     await pullRemoteData();
     setSyncing(false);
     setLastSync(new Date());
+    syncInProgress.current = false;
   };
 
   // ── WRAPPED SETTERS — update local state AND push to Supabase ────────────────
@@ -5259,6 +5864,7 @@ export default function App() {
             date: task.date, actual: task.actual,
             condicion: task.condicion, confirmed: task.confirmed,
             notas: task.notas || "",
+            support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
             updated_at: new Date().toISOString(),
           });
         }
@@ -5338,6 +5944,7 @@ export default function App() {
               notas:       r.notas       ?? "",
               cosechada:   r.cosechada   ?? null,
               buoys:       r.buoys       ?? null,
+              logged_by:   r.logged_by   ?? null,
             });
           });
           deleted.forEach(r => {
@@ -5354,11 +5961,12 @@ export default function App() {
     });
   };
 
-  // ── handleReadingSaved — called from CapitanTareas after entering a vigilancia ──
+  // ── handleReadingSaved — called from CapitanTareas after saving a reading ──
   const handleReadingSaved = (reading) => {
+    pendingReadingIds.current.add(reading.id);
+    persistQueue();
     syncReadings(prev => {
-      // Replace any existing same-day reading for this system, then append
-      const filtered = prev.filter(r => !(r.sistema === reading.sistema && r.fecha === reading.fecha));
+      const filtered = prev.filter(r => !(r.sistema === reading.sistema && r.fecha === reading.fecha && r.logged_by === reading.logged_by));
       return [...filtered, reading];
     });
   };
@@ -5420,6 +6028,7 @@ export default function App() {
       online={online}
       pendingCount={pendingCount}
       lastSync={lastSync}
+      onSync={triggerSync}
     />
   );
 
@@ -5559,9 +6168,14 @@ export default function App() {
         {/* Systems scoped to the logged-in user's responsibility */}
         {(() => {
           const mySystems = user?.role === 'vaquero'
-            ? systems.filter(s => s.buceador === user.initials || s.capitan === user.initials)
+            ? systems.filter(s => hasBuceador(s, user.initials) && s.estado === "Activo")
             : user?.role === 'capitan'
-              ? systems.filter(s => s.capitan === user.initials)
+              ? (() => {
+                  const myRegions = CAPITAN_REGIONS[user.initials]?.regions || [];
+                  return myRegions.length > 0
+                    ? systems.filter(s => myRegions.some(r => s.region === r) && s.estado === "Activo")
+                    : systems.filter(s => s.capitan === user.initials && s.estado === "Activo");
+                })()
               : systems;
           return (<>
         {/* Level 1 — Vaquero */}
@@ -5572,7 +6186,13 @@ export default function App() {
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
 
         {/* Level 1.5 — Capitán */}
-        {isCapitan && tab==="tareas"    && <CapitanTareasComponent systems={mySystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved}/>}
+        {isCapitan && tab==="tareas"    && (()=>{
+          const myRegions = CAPITAN_REGIONS[user?.initials]?.regions || [];
+          const capSystems = myRegions.length > 0
+            ? systems.filter(s => myRegions.some(r => s.region === r) && s.estado === "Activo")
+            : systems.filter(s => s.capitan === user.initials && s.estado === "Activo");
+          return <CapitanTareasComponent systems={capSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved} assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} pendingCount={pendingCount} cadenceDays={READING_CADENCE_DAYS}/>;
+        })()}
         {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} systems={mySystems} readings={readings} /></ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}

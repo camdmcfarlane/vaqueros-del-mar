@@ -2,7 +2,7 @@
 // Extracted from App.js for maintainability
 
 // ─── REGIONS & POLYGONS ──────────────────────────────────────────────────────
-const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Tobobe","Playa Verde"];
+const DEFAULT_REGIONS   = ["Bahía Azul","Cayo de Agua","Playa Roja","Tobobe","Playa Verde","Isla Tiburón"];
 const DEFAULT_TIPOS     = ["Canasta","Long Line","Sistema 75m","Linea","Comercial"];
 const DEFAULT_MATERIALES= ["Tie-tie","Redes tubular","PVC","HDPE","Cuerda"];
 const DEFAULT_SEMILLAS  = ["Brazil","Mixed","Bahía Azul","Yellow","Brown","Spinosum"];
@@ -57,15 +57,19 @@ const SCORE_WEIGHTS = { tasks: 0.40, prof: 0.60 };
 
 // ─── CREW — from Trabajo Semanal ─────────────────────────────────────────────
 const CREW = [
-  { initials:"HM", name:"Hilario Migar",   role:"Buceador", username:"hilario_migar" },
-  { initials:"JL", name:"Jairo Lorenzo",   role:"Buceador", username:"jairo_lorenzo" },
-  { initials:"CE", name:"Charles Ebersole",role:"Buceador", username:"charles_ebersole" },
-  { initials:"RV", name:"Rodolfo Viquez",  role:"Capitán",  username:"rodolfo_viquez" },
-  { initials:"RBM",name:"Rodolfo Banard",  role:"Capitán",  username:"rodolfo_banard" },
-  { initials:"RBC",name:"Romelio Bekar",   role:"Capitán",  username:"romelio_bekar" },
-  { initials:"JV", name:"Joel Valdés",     role:"Capitán",   username:"joel_valdes" },
-  { initials:"LA", name:"Luis A.",         role:"Colaborador",username:"luis_a" },
-  { initials:"EV", name:"Eduardo Valdés",  role:"Supervisor",username:"supervisor" },
+  { initials:"RBC",name:"Romelio Bekar",   role:"Lead",     username:"romelio_bekar" },
+  { initials:"CE", name:"Charles Ebersole",role:"Lead",     username:"charles_ebersole" },
+  { initials:"LA", name:"Luis Alvarado",   role:"Lead",     username:"luis_alvarado" },
+  { initials:"RV", name:"Rodolfo Viquez",  role:"Lead",     username:"rodolfo_viquez" },
+  { initials:"RBM",name:"Rodolfo Banard",  role:"Lead",     username:"rodolfo_banard" },
+  { initials:"HM", name:"Hilario Migar",   role:"Support",  username:"hilario_migar" },
+  { initials:"JL", name:"Jairo Lorenzo",   role:"Support",  username:"jairo_lorenzo" },
+  { initials:"YL", name:"Yeison Lorenzo",  role:"Support",  username:"yeison_lorenzo" },
+  { initials:"HC", name:"Henry Crump",     role:"Pasante",  username:"henry_crump" },
+  { initials:"CK", name:"Caleb Kim",       role:"Pasante",  username:"caleb_kim" },
+  { initials:"KG", name:"Kaiden Griffin",  role:"Pasante",  username:"kaiden_griffin" },
+  { initials:"JV", name:"Joel Valdés",     role:"Lead",     username:"joel_valdes" },
+  { initials:"EV", name:"Eduardo Valdés",  role:"Lead",     username:"eduardo_valdes" },
 ];
 
 
@@ -161,6 +165,7 @@ const TASK_SCHEMA = {
   planificacion:{ icon:"📋", label:"Planificación",    labelEn:"Planning",       unit:"horas",    unitEn:"hours",   inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false },
   seleccion:   { icon:"🔍",  label:"Selec. Semilla",   labelEn:"Seed select.",   unit:"canastas", unitEn:"baskets", inputType:"number",  needsCondition:true,  needsPhoto:false, needsVoice:true,  yesno:false },
   mantenimiento:{ icon:"🛠️", label:"Mantenimiento",   labelEn:"Maintenance",    unit:"sistemas", unitEn:"systems", inputType:"number",  needsCondition:true,  needsPhoto:false, needsVoice:false, yesno:false },
+  dipping:      { icon:"🧪",  label:"Dipping AMPEP",  labelEn:"AMPEP Dipping",  unit:"%",        unitEn:"%",       inputType:"number",  needsCondition:false, needsPhoto:false, needsVoice:false, yesno:false, needsNotes:true },
 };
 
 const CONDICION_EMOJIS = [
@@ -173,6 +178,12 @@ const CONDICION_EMOJIS = [
 ];
 
 
+// Bump this string whenever systems.js changes — forces all devices to reload from bundle
+const SYSTEMS_DATA_VERSION = '2026-05-19-b';
+
+// How many days between required peso readings. Change this one number to adjust the cadence.
+const READING_CADENCE_DAYS = 2;
+
 export {
   DEFAULT_REGIONS, DEFAULT_TIPOS, DEFAULT_MATERIALES, DEFAULT_SEMILLAS,
   REGION_SUPERVISORS, TASK_CADENCES,
@@ -180,4 +191,5 @@ export {
   CREW, EVAL_SPLIT, CURRENT_QUARTER, ROLE_KPIS,
   COMPORTAMIENTOS_LIST, GALLUP_12, TOTAL_PTS,
   PRICE_PER_KG_WET, TASK_SCHEMA, CONDICION_EMOJIS,
+  SYSTEMS_DATA_VERSION, READING_CADENCE_DAYS,
 };

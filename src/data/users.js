@@ -11,14 +11,20 @@ const USERS = [
   { username:"supervisor",       password:"AGPanama1", role:"director",  name:"Supervisor (test)",initials:"EV",  assignedSystems: null }, // audit account
 
   // ── Level 1 — Vaqueros (real crew) ───────────────────────────────────────────
-  { username:"hilario_migar",    password:"1234", role:"vaquero",     name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
-  { username:"jairo_lorenzo",    password:"1234", role:"vaquero",     name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
-  { username:"charles_ebersole", password:"1234", role:"vaquero",     name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
-  { username:"rodolfo_viquez",   password:"1234", role:"capitan",     name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
-  { username:"rodolfo_banard",   password:"1234", role:"capitan",     name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
-  { username:"romelio_bekar",    password:"1234", role:"vaquero",     name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
-  { username:"joel_valdes",      password:"1234", role:"capitan",     name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
-  { username:"luis_alvarado",    password:"1234", role:"vaquero",     name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
+  { username:"hilario_migar",    password:"1234", role:"vaquero",  name:"Hilario Migar",    initials:"HM",  assignedSystems: null },
+  { username:"jairo_lorenzo",    password:"1234", role:"vaquero",  name:"Jairo Lorenzo",    initials:"JL",  assignedSystems: null },
+  { username:"yeison_lorenzo",   password:"1234", role:"vaquero",  name:"Yeison Lorenzo",   initials:"YL",  assignedSystems: null },
+  { username:"charles_ebersole", password:"1234", role:"capitan",  name:"Charles Ebersole", initials:"CE",  assignedSystems: null },
+  { username:"rodolfo_viquez",   password:"1234", role:"capitan",  name:"Rodolfo Viquez",   initials:"RV",  assignedSystems: null },
+  { username:"rodolfo_banard",   password:"1234", role:"capitan",  name:"Rodolfo Banard",   initials:"RBM", assignedSystems: null },
+  { username:"romelio_bekar",    password:"1234", role:"capitan",  name:"Romelio Bekar",    initials:"RBC", assignedSystems: null },
+  { username:"joel_valdes",      password:"1234", role:"capitan",  name:"Joel Valdés",      initials:"JV",  assignedSystems: null },
+  { username:"luis_alvarado",    password:"1234", role:"capitan",  name:"Luis Alvarado",    initials:"LA",  assignedSystems: null },
+
+  // ── Pasantes ─────────────────────────────────────────────────────────────────
+  { username:"henry_crump",     password:"1234", role:"vaquero",  name:"Henry Crump",     initials:"HC", assignedSystems: null },
+  { username:"caleb_kim",       password:"1234", role:"vaquero",  name:"Caleb Kim",       initials:"CK", assignedSystems: null },
+  { username:"kaiden_griffin",  password:"1234", role:"vaquero",  name:"Kaiden Griffin",  initials:"KG", assignedSystems: null },
 
   // ── Audit / test accounts ─────────────────────────────────────────────────────
   { username:"test_vaquero",     password:"1234", role:"vaquero",     name:"Test Vaquero",     initials:"HM",  assignedSystems: null }, // sees HM's tasks
