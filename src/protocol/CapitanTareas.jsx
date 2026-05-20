@@ -93,6 +93,21 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [declineComment, setDeclineComment]       = useState('');     // mandatory comment when TDC < 0
   const [pendingReadingOnDecline, setPendingReadingOnDecline] = useState(null); // reading awaiting comment
   const [showFormChart, setShowFormChart]         = useState(false);  // expand chart inside reading form
+  const [dippingModal, setDippingModal]           = useState(null);   // task open in dipping form
+  const [dippingForm, setDippingForm]             = useState({ concentration:'', notes:'', done:true });
+
+  const today2 = new Date().toISOString().split('T')[0];
+
+  const markDone = (task, extra = {}) => {
+    if (setAssignedTasks) setAssignedTasks(prev => prev.map(t =>
+      t.id === task.id ? { ...t, confirmed: true, actual: today2, ...extra } : t
+    ));
+  };
+  const undoTask = (task) => {
+    if (setAssignedTasks) setAssignedTasks(prev => prev.map(t =>
+      t.id === task.id ? { ...t, confirmed: false, actual: null } : t
+    ));
+  };
 
   const [form, setForm] = useState({
     peso:'', sueltos:'', ph:'', temp:'', salinidad:'',
@@ -643,42 +658,56 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
 
       {/* Assigned tasks from plan */}
       {(() => {
-        const today2 = new Date().toISOString().split('T')[0];
         const activeSysIds = new Set((systems || []).map(s => s.id));
-        const myTasks = (assignedTasks || []).filter(t => t.assignedTo === user?.initials && activeSysIds.has(t.sistema));
+        // null sistema = task not tied to a specific system (e.g. parámetros region-wide) — always include
+        const myTasks = (assignedTasks || []).filter(t =>
+          t.assignedTo === user?.initials && (t.sistema == null || activeSysIds.has(t.sistema))
+        );
         if (!myTasks.length) return null;
         const overdue  = myTasks.filter(t => t.date < today2 && !t.confirmed);
         const todayT   = myTasks.filter(t => t.date === today2 && !t.confirmed);
         const upcoming = myTasks.filter(t => t.date > today2 && !t.confirmed);
         const archived = myTasks.filter(t => t.confirmed);
-        const TIPO_LABELS = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos' };
-        const TIPO_COLORS = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8' };
-        const markDone = (task) => {
-          if (setAssignedTasks) setAssignedTasks(prev => prev.map(t => t.id === task.id ? { ...t, confirmed: true, actual: today2 } : t));
-        };
-        const TaskRow = ({ t, highlight }) => (
-          <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
-            background: highlight==='overdue' ? 'rgba(248,113,113,.06)' : highlight==='today' ? 'rgba(13,148,136,.06)' : 'rgba(255,255,255,.02)',
-            border: `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
-            borderRadius:'10px', marginBottom:'6px' }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background: TIPO_COLORS[t.taskType] || '#64748b' }}/>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:'13px', fontWeight:'600', color:'#e2e8f0' }}>
-                {t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
+        const TIPO_LABELS = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos', dipping:'Dipping AMPEP', parametros:'Parámetros' };
+        const TIPO_COLORS = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8', dipping:'#a855f7', parametros:'#0ea5e9' };
+
+        const TaskRow = ({ t, highlight }) => {
+          const isDipping = t.taskType === 'dipping';
+          return (
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
+              background: highlight==='overdue' ? 'rgba(248,113,113,.06)' : highlight==='today' ? 'rgba(13,148,136,.06)' : 'rgba(255,255,255,.02)',
+              border: `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
+              borderRadius:'10px', marginBottom:'6px' }}>
+              <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background: TIPO_COLORS[t.taskType] || '#64748b' }}/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:'13px', fontWeight:'600', color:'#e2e8f0' }}>
+                  {t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
+                </div>
+                <div style={{ fontSize:'11px', color: highlight==='overdue' ? '#f87171' : '#64748b' }}>
+                  {highlight==='overdue' ? `⚠ PENDIENTE — vencida ${t.date}` : t.date}
+                  {t.objetivo ? ` · ${t.objetivo}%` : ''}
+                  {t.supportCrew?.length > 0 ? ` · +${t.supportCrew.join(',')}` : ''}
+                </div>
+                {t.notas ? <div style={{ fontSize:'10px', color:'#475569', fontStyle:'italic', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.notas}</div> : null}
               </div>
-              <div style={{ fontSize:'11px', color: highlight==='overdue' ? '#f87171' : '#64748b' }}>
-                {highlight==='overdue' ? `⚠ PENDIENTE — vencida ${t.date}` : t.date}
-                {t.objetivo ? ` · ${t.objetivo}` : ''}
-                {t.supportCrew?.length > 0 ? ` · +${t.supportCrew.join(',')}` : ''}
-              </div>
-              {t.notas ? <div style={{ fontSize:'10px', color:'#475569', fontStyle:'italic', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.notas}</div> : null}
+              <button
+                onClick={() => {
+                  if (isDipping) {
+                    setDippingForm({ concentration: t.objetivo ? String(t.objetivo) : '', notes:'', done:true });
+                    setDippingModal(t);
+                  } else {
+                    markDone(t);
+                  }
+                }}
+                style={{ fontSize:'11px', padding:'4px 10px', borderRadius:'7px', border:'none',
+                  background: isDipping ? '#a855f7' : '#0d9488',
+                  color:'#fff', fontWeight:'700', cursor:'pointer', flexShrink:0 }}>
+                {isDipping ? '🧪' : '✓'}
+              </button>
             </div>
-            <button onClick={() => markDone(t)} style={{ fontSize:'11px', padding:'4px 10px',
-              borderRadius:'7px', border:'none', background:'#0d9488', color:'#fff', fontWeight:'700', cursor:'pointer', flexShrink:0 }}>
-              ✓
-            </button>
-          </div>
-        );
+          );
+        };
+
         return (
           <div style={{ marginBottom:'18px' }}>
             <div style={{ fontSize:'11px', color:'#64748b', fontWeight:'700', textTransform:'uppercase', letterSpacing:'.6px', marginBottom:'8px' }}>
@@ -696,13 +725,20 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                 {showArchivedTasks && archived.map(t => (
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px 12px',
                     background:'rgba(74,222,128,.03)', border:'0.5px solid rgba(74,222,128,.08)',
-                    borderRadius:'10px', marginTop:'4px', opacity:0.7 }}>
+                    borderRadius:'10px', marginTop:'4px' }}>
                     <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:'#4ade80' }}/>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:'12px', fontWeight:'600', color:'#94a3b8' }}>{t.sistema} — {TIPO_LABELS[t.taskType] || t.taskType}</div>
-                      <div style={{ fontSize:'10px', color:'#475569' }}>{t.actual || t.date} · completada</div>
+                      <div style={{ fontSize:'12px', fontWeight:'600', color:'#94a3b8' }}>
+                        {t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
+                        {t.taskType === 'dipping' && t.actual ? <span style={{color:'#a855f7', marginLeft:6}}>{t.actual}%</span> : null}
+                      </div>
+                      <div style={{ fontSize:'10px', color:'#475569' }}>{t.date} · completada</div>
                     </div>
-                    <span style={{ fontSize:'10px', padding:'2px 8px', borderRadius:6, background:'rgba(74,222,128,.12)', color:'#4ade80', fontWeight:700 }}>✓</span>
+                    <button onClick={() => undoTask(t)}
+                      style={{ fontSize:'10px', padding:'3px 8px', borderRadius:6, border:'0.5px solid rgba(148,163,184,.2)',
+                        background:'transparent', color:'#64748b', cursor:'pointer', flexShrink:0 }}>
+                      ↩
+                    </button>
                   </div>
                 ))}
               </>
@@ -710,6 +746,96 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           </div>
         );
       })()}
+
+      {/* Dipping modal */}
+      {dippingModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:300,
+          display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={() => setDippingModal(null)}>
+          <div style={{ width:'100%', maxWidth:480, background:'#0f1724',
+            borderRadius:'20px 20px 0 0', padding:'20px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'rgba(148,163,184,.2)', margin:'0 auto 16px' }}/>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
+              <span style={{ fontSize:24 }}>🧪</span>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#e2e8f0' }}>Dipping AMPEP</div>
+                <div style={{ fontSize:12, color:'#64748b' }}>
+                  {dippingModal.sistema || 'Sin sistema'}{dippingModal.supportCrew?.length > 0 ? ` · +${dippingModal.supportCrew.join(', ')}` : ''}
+                </div>
+              </div>
+            </div>
+
+            {/* Resultado */}
+            <div style={{ fontSize:12, color:'#94a3b8', fontWeight:600, marginBottom:8 }}>Resultado</div>
+            <div style={{ display:'flex', gap:10, marginBottom:18 }}>
+              {[{ val:true, label:'✓ Completado', bg:'rgba(13,148,136,.15)', border:'#0d9488', color:'#2dd4bf' },
+                { val:false, label:'✗ No completado', bg:'rgba(239,68,68,.12)', border:'#ef4444', color:'#f87171' }]
+                .map(opt => (
+                <button key={String(opt.val)} onClick={() => setDippingForm(p => ({ ...p, done: opt.val }))}
+                  style={{ flex:1, padding:'12px 8px', borderRadius:10,
+                    border: `${dippingForm.done === opt.val ? '2px' : '0.5px'} solid ${dippingForm.done === opt.val ? opt.border : 'rgba(148,163,184,.15)'}`,
+                    background: dippingForm.done === opt.val ? opt.bg : 'rgba(255,255,255,.02)',
+                    color: dippingForm.done === opt.val ? opt.color : '#475569',
+                    fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Concentración */}
+            <div style={{ fontSize:12, color:'#94a3b8', fontWeight:600, marginBottom:6 }}>
+              Concentración AMPEP (%) <span style={{ color:'#ef4444' }}>*</span>
+              {dippingModal.objetivo && <span style={{ color:'#64748b', fontWeight:400, marginLeft:6 }}>objetivo: {dippingModal.objetivo}%</span>}
+            </div>
+            <input
+              type="number" inputMode="decimal" step="0.1"
+              value={dippingForm.concentration}
+              onChange={e => setDippingForm(p => ({ ...p, concentration: e.target.value }))}
+              placeholder={dippingModal.objetivo ? String(dippingModal.objetivo) : 'ej. 1.5'}
+              style={{ width:'100%', boxSizing:'border-box', height:'52px', fontSize:'20px', fontWeight:600,
+                background:'rgba(255,255,255,.06)', border:`0.5px solid ${dippingForm.concentration ? '#a855f7' : 'rgba(239,68,68,.4)'}`,
+                borderRadius:10, color:'#e2e8f0', padding:'0 16px', textAlign:'center', outline:'none', marginBottom:14 }}
+            />
+
+            {/* Notas */}
+            <div style={{ fontSize:12, color:'#94a3b8', fontWeight:600, marginBottom:6 }}>
+              Observaciones <span style={{ color:'#475569', fontWeight:400 }}>(opcional)</span>
+            </div>
+            <textarea
+              value={dippingForm.notes}
+              onChange={e => setDippingForm(p => ({ ...p, notes: e.target.value }))}
+              placeholder="Condición del alga antes/después, tiempo de inmersión, observaciones..."
+              style={{ width:'100%', boxSizing:'border-box', minHeight:80, fontSize:14,
+                background:'rgba(255,255,255,.06)', border:'0.5px solid rgba(148,163,184,.12)',
+                borderRadius:10, color:'#e2e8f0', padding:12, outline:'none', resize:'vertical',
+                fontFamily:'inherit', marginBottom:16 }}
+            />
+
+            <button
+              disabled={!dippingForm.concentration}
+              onClick={() => {
+                markDone(dippingModal, {
+                  actual: dippingForm.concentration,
+                  notas: dippingForm.notes || dippingModal.notas || '',
+                  dippingDone: dippingForm.done,
+                });
+                setDippingModal(null);
+              }}
+              style={{ width:'100%', height:52, borderRadius:12, border:'none', fontSize:16, fontWeight:700,
+                cursor: dippingForm.concentration ? 'pointer' : 'default',
+                background: dippingForm.concentration ? '#a855f7' : 'rgba(255,255,255,.06)',
+                color: dippingForm.concentration ? '#fff' : '#475569' }}>
+              Guardar dipping
+            </button>
+            <button onClick={() => setDippingModal(null)}
+              style={{ width:'100%', height:40, marginTop:8, borderRadius:12, border:'none',
+                background:'transparent', color:'#475569', fontSize:14, cursor:'pointer' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter pills */}
       <div style={{ display:'flex', gap:6, marginBottom:12 }}>
