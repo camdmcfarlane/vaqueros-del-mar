@@ -5620,7 +5620,8 @@ export default function App() {
       if (tasksRes.data?.length) {
         setAssignedTasks(prev => {
           const localById = Object.fromEntries(prev.map(t => [t.id, t]));
-          return tasksRes.data.map(r => {
+          const remoteIds = new Set(tasksRes.data.map(r => r.id));
+          const fromRemote = tasksRes.data.map(r => {
             const local = localById[r.id];
             return {
               id: r.id, assignedTo: r.assigned_to, day: r.day,
@@ -5636,6 +5637,21 @@ export default function App() {
               comentarioFecha:   r.comentario_fecha   || null,
             };
           });
+          // Keep local-only tasks (seed tasks not yet pushed to Supabase) and push them now
+          const localOnly = prev.filter(t => !remoteIds.has(t.id));
+          localOnly.forEach(t => {
+            pushItem('assigned_tasks', 'upsert', {
+              id: t.id, assigned_to: t.assignedTo,
+              day: t.day, task_type: t.taskType,
+              sistema: t.sistema || null, objetivo: t.objetivo || null,
+              date: t.date, actual: t.actual || null,
+              condicion: t.condicion || null, confirmed: t.confirmed || false,
+              notas: t.notas || "",
+              support_crew: Array.isArray(t.supportCrew) ? t.supportCrew.join(',') : (t.supportCrew || null),
+              updated_at: new Date().toISOString(),
+            });
+          });
+          return [...fromRemote, ...localOnly];
         });
       }
 
@@ -5943,6 +5959,7 @@ export default function App() {
               condiciones: r.condiciones ?? null,
               notas:       r.notas       ?? "",
               cosechada:   r.cosechada   ?? null,
+              sembrado:    r.sembrado    ?? null,
               buoys:       r.buoys       ?? null,
               logged_by:   r.logged_by   ?? null,
             });
