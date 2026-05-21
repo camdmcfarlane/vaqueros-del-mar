@@ -5810,7 +5810,7 @@ export default function App() {
         sb.current.from('assigned_tasks').select('*').order('id'),
         sb.current.from('announcements').select('*').order('created_at', { ascending: false }),
         sb.current.from('weekly_incidents').select('*'),
-        sb.current.from('lecturas').select('*').order('fecha'),
+        sb.current.from('lecturas').select('*').gte('fecha', (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })()).order('fecha'),
       ]);
       // Systems table — query separately so failures don't break other pulls
       let sysRes = { data: null, error: null };
