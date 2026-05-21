@@ -82,6 +82,17 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     ? Math.round((activeSystems.length - pending.length) / activeSystems.length * 100)
     : 0;
 
+  // Long Line systems with the same ID prefix (e.g. P80-1…P80-10) where ≥3 are pending → batch card
+  const batchGroups = (() => {
+    const byPrefix = {};
+    (queue || []).filter(s => s.tipo === 'Long Line').forEach(s => {
+      const pfx = s.id.replace(/-\d+$/, '');
+      if (pfx !== s.id) { if (!byPrefix[pfx]) byPrefix[pfx] = []; byPrefix[pfx].push(s); }
+    });
+    return Object.entries(byPrefix).filter(([, g]) => g.length >= 3).map(([prefix, systems]) => ({ prefix, systems }));
+  })();
+  const batchGroupSysIds = new Set(batchGroups.flatMap(g => g.systems.map(s => s.id)));
+
   const [activeSystem, setActiveSystem]           = useState(null);
   const [showChart, setShowChart]                 = useState(null);
   const [saving, setSaving]                       = useState(false);
@@ -95,6 +106,10 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [showFormChart, setShowFormChart]         = useState(false);  // expand chart inside reading form
   const [dippingModal, setDippingModal]           = useState(null);   // task open in dipping form
   const [dippingForm, setDippingForm]             = useState({ concentration:'', notes:'', done:true });
+  const [autoFillSource, setAutoFillSource]       = useState(null);   // sibling system that params were copied from
+  const [activeBatch, setActiveBatch]             = useState(null);   // { prefix, systems[] } for LL batch form
+  const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'' });
+  const [batchSaving, setBatchSaving]             = useState(false);
 
   const today2 = new Date().toISOString().split('T')[0];
 
@@ -124,8 +139,26 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   }
 
   function openForm(sys) {
+    // Auto-fill water params from the most recent reading of any sibling system (same prefix group)
+    const prefix = sys.id.replace(/-\d+$/, '');
+    let autoParams = { ph:'', temp:'', salinidad:'' };
+    let fillSource = null;
+    if (prefix !== sys.id) {
+      const sibR = [...(readings || [])]
+        .filter(r => r.sistema !== sys.id && r.sistema.startsWith(prefix + '-') && (r.ph || r.temp || r.salinidad))
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      if (sibR) {
+        autoParams = {
+          ph:        sibR.ph        ? String(sibR.ph)        : '',
+          temp:      sibR.temp      ? String(sibR.temp)      : '',
+          salinidad: sibR.salinidad ? String(sibR.salinidad) : '',
+        };
+        fillSource = sibR.sistema;
+      }
+    }
     setActiveSystem(sys);
-    setForm({ peso:'', sueltos:'', ph:'', temp:'', salinidad:'',
+    setAutoFillSource(fillSource);
+    setForm({ peso:'', sueltos:'', ...autoParams,
       condicion: null, cosechada:'', sembrado:'', notas:'', buoys: Array(10).fill('') });
     setError('');
     setShowFormChart(false);
@@ -145,6 +178,38 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     setPendingReadingOnDecline(null);
     setDeclineComment('');
     setSaving(false);
+  }
+
+  function saveBatchReading() {
+    if (!activeBatch || !batchForm.condicion) return;
+    if (activeBatch.systems.some(s => !batchForm.weights[s.id])) return;
+    setBatchSaving(true);
+    activeBatch.systems.forEach(sys => {
+      const reading = {
+        id: `${sys.id}_${today}_${user?.initials || 'anon'}`,
+        sistema: sys.id, fecha: today, tipo: 'peso',
+        peso: parseFloat(batchForm.weights[sys.id]),
+        sueltos: null,
+        ph: parseFloat(batchForm.ph) || null,
+        temp: parseFloat(batchForm.temp) || null,
+        salinidad: parseFloat(batchForm.salinidad) || null,
+        condiciones: batchForm.condicion,
+        cosechada: null, sembrado: null,
+        notas: batchForm.notas || null, buoys: null,
+        logged_by: user?.initials || null,
+      };
+      if (onReadingSaved) onReadingSaved(reading);
+      setSessionDone(p => new Set([...p, sys.id]));
+      if (setAssignedTasks) {
+        setAssignedTasks(prev => prev.map(t =>
+          t.sistema === sys.id && t.date === today && !t.confirmed
+            ? { ...t, confirmed: true, confirmedBy: user?.initials } : t
+        ));
+      }
+    });
+    setActiveBatch(null);
+    setBatchForm({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'' });
+    setBatchSaving(false);
   }
 
   function saveReading() {
@@ -355,6 +420,96 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     );
   }
 
+  // ── Batch reading form (Long Line family ≥3 systems) ─────────────────────
+  if (activeBatch) {
+    const { prefix, systems } = activeBatch;
+    const canSaveBatch = batchForm.condicion && systems.every(s => batchForm.weights[s.id]);
+    return (
+      <div style={s.page}>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+          <button onClick={() => setActiveBatch(null)}
+            style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,.06)',
+              border:'none', color:'#e2e8f0', fontSize:20, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center' }}>←</button>
+          <div>
+            <div style={{ fontSize:18, fontWeight:600 }}>Grupo {prefix}</div>
+            <div style={{ fontSize:12, color:'#94a3b8' }}>{systems.length} líneas · Long Line</div>
+          </div>
+        </div>
+
+        <div style={s.section}>
+          <div style={{ fontSize:14, color:'#94a3b8', marginBottom:10, fontWeight:500 }}>Peso por línea (g)</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
+            {systems.map(sys => {
+              const last = lastReading(readings, sys.id);
+              return (
+                <div key={sys.id}>
+                  <div style={{ fontSize:11, color:'#94a3b8', marginBottom:3,
+                    display:'flex', justifyContent:'space-between' }}>
+                    <span style={{ fontWeight:600 }}>{sys.id}</span>
+                    {last?.peso && <span style={{ color:'#475569' }}>ant: {last.peso.toLocaleString()}g</span>}
+                  </div>
+                  <input
+                    type="number" inputMode="numeric"
+                    value={batchForm.weights[sys.id] || ''}
+                    onChange={e => setBatchForm(p => ({ ...p, weights: { ...p.weights, [sys.id]: e.target.value } }))}
+                    style={{ ...s.inputSmall, border:`0.5px solid ${batchForm.weights[sys.id] ? '#0d9488' : 'rgba(255,255,255,.08)'}` }}
+                    placeholder="0"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={s.section}>
+          <div style={{ fontSize:14, color:'#94a3b8', marginBottom:10, fontWeight:500 }}>
+            Parámetros del agua <span style={{ fontSize:11, color:'#475569', fontWeight:400 }}>(compartidos)</span>
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            {[
+              { key:'temp',      label:'Temp °C',    placeholder:'26' },
+              { key:'ph',        label:'pH',          placeholder:'8.1' },
+              { key:'salinidad', label:'Salinidad ‰', placeholder:'35' },
+            ].map(p => (
+              <div key={p.key} style={{ flex:1 }}>
+                <label style={{ fontSize:11, color:'#94a3b8', display:'block', marginBottom:4 }}>{p.label}</label>
+                <input type="number" inputMode="decimal" step="0.1"
+                  value={batchForm[p.key]}
+                  onChange={e => setBatchForm(pr => ({ ...pr, [p.key]: e.target.value }))}
+                  style={s.inputSmall} placeholder={p.placeholder} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <ConditionAssessment
+          selected={batchForm.condicion}
+          onSelect={c => setBatchForm(p => ({ ...p, condicion: c }))}
+          cosechada=""
+          onCosechadaChange={() => {}}
+        />
+
+        <div style={{ marginBottom:14 }}>
+          <input type="text" value={batchForm.notas}
+            onChange={e => setBatchForm(p => ({ ...p, notas: e.target.value }))}
+            placeholder="Notas (opcional)..."
+            style={{ width:'100%', boxSizing:'border-box', height:52, fontSize:14,
+              background:'rgba(255,255,255,.06)', border:'0.5px solid rgba(255,255,255,.08)',
+              borderRadius:10, color:'#e2e8f0', padding:'0 16px', outline:'none' }} />
+        </div>
+
+        <button onClick={saveBatchReading} disabled={!canSaveBatch || batchSaving}
+          style={{ width:'100%', height:60, borderRadius:12, border:'none',
+            fontSize:17, fontWeight:600, cursor: canSaveBatch && !batchSaving ? 'pointer' : 'default',
+            background: canSaveBatch && !batchSaving ? '#0d9488' : 'rgba(255,255,255,.06)',
+            color: canSaveBatch && !batchSaving ? '#fff' : '#94a3b8' }}>
+          {batchSaving ? 'Guardando...' : `✓ Guardar ${systems.length} lecturas`}
+        </button>
+      </div>
+    );
+  }
+
   // ── Reading form ──────────────────────────────────────────────────────────
   if (activeSystem) {
     const sys = activeSystem;
@@ -552,6 +707,11 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
         <div style={s.section}>
           <div style={{ fontSize:'14px', color:'#94a3b8', marginBottom:'10px', fontWeight:'500' }}>
             Parámetros del agua
+            {autoFillSource && (
+              <span style={{ fontSize:10, color:'#0d9488', marginLeft:8, fontWeight:400 }}>
+                ↩ copiado de {autoFillSource}
+              </span>
+            )}
           </div>
           <div style={{ display:'flex', gap:'10px' }}>
             {[
@@ -864,7 +1024,44 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           : queueFilter === 'alertas' ? activeSystems.filter(s => alertSysIds.has(s.id))
           : activeSystems.filter(s => !sessionDone.has(s.id));
 
-        return visible.map(sys => {
+        return (
+          <>
+            {/* Batch group cards for Long Line families */}
+            {batchGroups.map(({ prefix, systems }) => {
+              const pendingSystems = systems.filter(s => !sessionDone.has(s.id));
+              if (!pendingSystems.length) return null;
+              return (
+                <div key={prefix}
+                  onClick={() => setActiveBatch({ prefix, systems: pendingSystems })}
+                  style={{ borderRadius:12, marginBottom:10, cursor:'pointer',
+                    background:'rgba(255,255,255,.03)', border:'0.5px solid rgba(56,189,248,.2)',
+                    padding:'14px 16px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:42, height:42, borderRadius:10, background:'#0c4a6e',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:13, fontWeight:700, color:'#38bdf8', flexShrink:0 }}>
+                      {prefix}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:15, fontWeight:600, color:'#e2e8f0' }}>
+                        Grupo {prefix}
+                        <span style={{ fontSize:11, marginLeft:8, padding:'1px 7px', borderRadius:8,
+                          background:'rgba(56,189,248,.12)', color:'#38bdf8' }}>
+                          {pendingSystems.length} líneas
+                        </span>
+                      </div>
+                      <div style={{ fontSize:12, color:'#94a3b8', marginTop:2 }}>
+                        Long Line · un formulario · {pendingSystems.length} lecturas
+                      </div>
+                    </div>
+                    <span style={{ fontSize:18, color:'#38bdf8' }}>→</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Individual system cards — exclude systems already in a batch group */}
+            {visible.filter(sys => !batchGroupSysIds.has(sys.id)).map(sys => {
           const last = lastReading(readings, sys.id);
           const d = last ? daysSince(last.fecha) : null;
           const isAlert = alertSysIds.has(sys.id);
@@ -942,7 +1139,9 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
               </div>
             </div>
           );
-        });
+        })}
+          </>
+        );
       })()}
 
       {pending.length === 0 && activeSystems.length > 0 && (
