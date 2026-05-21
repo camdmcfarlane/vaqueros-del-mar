@@ -4869,6 +4869,39 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
   const roleColors = { ceo:"#f59e0b", consultant:"#a78bfa", supervisor:"#0d9488", vaquero:"#4ade80", researcher:"#818cf8" };
   const roleLabels = { ceo:"CEO", consultant:"Consultor", supervisor:"Supervisor", vaquero:"Vaquero", researcher:"Investigador" };
   const canTest = ["ceo","consultant","supervisor"].includes(user.role);
+  const canExport = ["admin","consultor","director"].includes(user.role);
+
+  const today = new Date().toISOString().slice(0,10);
+  const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString().slice(0,10);
+  const [exportFrom, setExportFrom] = useState(thirtyDaysAgo);
+  const [exportTo,   setExportTo]   = useState(today);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError,   setExportError]   = useState("");
+
+  async function handleExport() {
+    setExportLoading(true);
+    setExportError("");
+    try {
+      const { data, error } = await sbStatic
+        .from('lecturas')
+        .select('sistema,fecha,tipo,peso,sueltos,ph,temp,salinidad,condiciones,notas,cosechada,sembrado,logged_by')
+        .gte('fecha', exportFrom)
+        .lte('fecha', exportTo)
+        .order('fecha')
+        .order('sistema');
+      if (error) throw error;
+      if (!data?.length) { setExportError(lang==="es"?"Sin datos en ese rango.":"No data in that range."); setExportLoading(false); return; }
+      const cols = ['sistema','fecha','tipo','peso','sueltos','ph','temp','salinidad','condiciones','notas','cosechada','sembrado','logged_by'];
+      const escape = v => { if (v==null) return ''; const s=String(v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`:s; };
+      const csv = [cols.join(','), ...data.map(r=>cols.map(c=>escape(r[c])).join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `lecturas_${exportFrom}_${exportTo}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } catch(e) { setExportError(e.message||"Error"); }
+    setExportLoading(false);
+  }
 
   if (showSyncTest) return (
     <div style={{padding:"0 0 100px"}}>
@@ -4903,6 +4936,33 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
           style={{width:"100%",padding:13,borderRadius:12,border:"1px solid rgba(13,148,136,.15)",background:"rgba(13,148,136,.04)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
           🔬 {lang==="es"?"Test de sincronización":"Sync Test"}
         </button>
+      )}
+      {canExport && (
+        <div style={S.card}>
+          <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>
+            📥 {lang==="es"?"Exportar Lecturas":"Export Readings"}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Desde":"From"}</div>
+              <input type="date" value={exportFrom} onChange={e=>setExportFrom(e.target.value)}
+                style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Hasta":"To"}</div>
+              <input type="date" value={exportTo} onChange={e=>setExportTo(e.target.value)}
+                style={{...S.input,colorScheme:"dark",fontSize:12}}/>
+            </div>
+          </div>
+          {exportError && <div style={{fontSize:11,color:"#f87171",marginBottom:8}}>{exportError}</div>}
+          <button onClick={handleExport} disabled={exportLoading||!exportFrom||!exportTo}
+            style={{width:"100%",padding:11,borderRadius:10,border:"1px solid rgba(13,148,136,.3)",background:exportLoading?"rgba(13,148,136,.04)":"rgba(13,148,136,.1)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:exportLoading?"wait":"pointer",opacity:(!exportFrom||!exportTo)?.5:1}}>
+            {exportLoading?(lang==="es"?"Descargando…":"Downloading…"):(lang==="es"?"⬇ Descargar CSV":"⬇ Download CSV")}
+          </button>
+          <div style={{fontSize:10,color:"#475569",marginTop:6}}>
+            {lang==="es"?"Incluye: sistema, fecha, tipo, peso, parámetros, cosecha/siembra, registrado por":"Includes: system, date, type, weight, parameters, harvest/seed, logged by"}
+          </div>
+        </div>
       )}
       <button onClick={onLogout} style={{width:"100%",padding:13,borderRadius:12,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.04)",color:"#f87171",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:4}}>
         <Icon name="logout" size={16} color="#f87171"/>{lang==="es"?"Cerrar Sesión":"Sign Out"}
