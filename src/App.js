@@ -4891,14 +4891,51 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
         .order('sistema');
       if (error) throw error;
       if (!data?.length) { setExportError(lang==="es"?"Sin datos en ese rango.":"No data in that range."); setExportLoading(false); return; }
-      const cols = ['sistema','fecha','tipo','peso','sueltos','ph','temp','salinidad','condiciones','notas','cosechada','sembrado','logged_by'];
-      const escape = v => { if (v==null) return ''; const s=String(v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`:s; };
-      const csv = [cols.join(','), ...data.map(r=>cols.map(c=>escape(r[c])).join(','))].join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = `lecturas_${exportFrom}_${exportTo}.csv`; a.click();
-      URL.revokeObjectURL(url);
+
+      // Load SheetJS if not already loaded
+      if (!window.XLSX) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+      const XLSX = window.XLSX;
+
+      const headers = ['Sistema','Fecha','Tipo','Peso (g)','Sueltos (g)','pH','Temp (°C)','Salinidad (PSU)','Condiciones','Notas','Cosechada (g)','Sembrado (g)','Registrado por'];
+      const numCols = new Set([3,4,5,6,7,10,11]); // 0-indexed columns that are numeric
+
+      const rows = data.map(r => [
+        r.sistema ?? '', r.fecha ?? '', r.tipo ?? '',
+        r.peso ?? null, r.sueltos ?? null,
+        r.ph ?? null, r.temp ?? null, r.salinidad ?? null,
+        r.condiciones ?? '', r.notas ?? '',
+        r.cosechada ?? null, r.sembrado ?? null,
+        r.logged_by ?? '',
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+      // Apply comma number format to numeric cells
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let r = 1; r <= range.e.r; r++) {
+        numCols.forEach(c => {
+          const addr = XLSX.utils.encode_cell({ r, c });
+          if (ws[addr] && ws[addr].t === 'n') ws[addr].z = '#,##0.00';
+        });
+      }
+
+      // Column widths
+      ws['!cols'] = [
+        {wch:10},{wch:12},{wch:12},{wch:11},{wch:11},
+        {wch:8},{wch:11},{wch:14},{wch:14},{wch:32},
+        {wch:13},{wch:13},{wch:15},
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Lecturas');
+      XLSX.writeFile(wb, `lecturas_${exportFrom}_${exportTo}.xlsx`);
     } catch(e) { setExportError(e.message||"Error"); }
     setExportLoading(false);
   }
@@ -4957,7 +4994,7 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
           {exportError && <div style={{fontSize:11,color:"#f87171",marginBottom:8}}>{exportError}</div>}
           <button onClick={handleExport} disabled={exportLoading||!exportFrom||!exportTo}
             style={{width:"100%",padding:11,borderRadius:10,border:"1px solid rgba(13,148,136,.3)",background:exportLoading?"rgba(13,148,136,.04)":"rgba(13,148,136,.1)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:exportLoading?"wait":"pointer",opacity:(!exportFrom||!exportTo)?.5:1}}>
-            {exportLoading?(lang==="es"?"Descargando…":"Downloading…"):(lang==="es"?"⬇ Descargar CSV":"⬇ Download CSV")}
+            {exportLoading?(lang==="es"?"Descargando…":"Downloading…"):(lang==="es"?"⬇ Descargar Excel":"⬇ Download Excel")}
           </button>
           <div style={{fontSize:10,color:"#475569",marginTop:6}}>
             {lang==="es"?"Incluye: sistema, fecha, tipo, peso, parámetros, cosecha/siembra, registrado por":"Includes: system, date, type, weight, parameters, harvest/seed, logged by"}
