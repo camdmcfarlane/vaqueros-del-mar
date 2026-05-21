@@ -108,7 +108,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [dippingForm, setDippingForm]             = useState({ concentration:'', notes:'', done:true });
   const [autoFillSource, setAutoFillSource]       = useState(null);   // sibling system that params were copied from
   const [activeBatch, setActiveBatch]             = useState(null);   // { prefix, systems[] } for LL batch form
-  const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'' });
+  const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'', cosechadaLines:{} });
   const [batchSaving, setBatchSaving]             = useState(false);
 
   const today2 = new Date().toISOString().split('T')[0];
@@ -126,7 +126,10 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
 
   const [form, setForm] = useState({
     peso:'', sueltos:'', ph:'', temp:'', salinidad:'',
-    condicion: null, cosechada:'', sembrado:'', notas:'', buoys: Array(10).fill(''),
+    condicion: null,
+    cosechada_sueltos:'', cosechada_infectada:'',
+    reseed_to:'', reseed_kg:'', seed_source:'', salio_de_finca: null,
+    sembrado:'', notas:'', buoys: Array(10).fill(''),
   });
 
   function updateForm(key, val) { setForm(p => ({ ...p, [key]: val })); }
@@ -159,7 +162,10 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     setActiveSystem(sys);
     setAutoFillSource(fillSource);
     setForm({ peso:'', sueltos:'', ...autoParams,
-      condicion: null, cosechada:'', sembrado:'', notas:'', buoys: Array(10).fill('') });
+      condicion: null,
+      cosechada_sueltos:'', cosechada_infectada:'',
+      reseed_to:'', reseed_kg:'', seed_source:'', salio_de_finca: null,
+      sembrado:'', notas:'', buoys: Array(10).fill('') });
     setError('');
     setShowFormChart(false);
   }
@@ -182,19 +188,27 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
 
   function saveBatchReading() {
     if (!activeBatch || !batchForm.condicion) return;
-    if (activeBatch.systems.some(s => !batchForm.weights[s.id])) return;
+    if (activeBatch.systems.some(s => !batchForm.cosechadaLines[s.id] && !batchForm.weights[s.id])) return;
     setBatchSaving(true);
     activeBatch.systems.forEach(sys => {
+      const isCosechada = !!batchForm.cosechadaLines[sys.id];
+      const last = lastReading(readings, sys.id);
+      const cosechadaInfectada = isCosechada ? (last?.peso || null) : null;
       const reading = {
         id: `${sys.id}_${today}_${user?.initials || 'anon'}`,
         sistema: sys.id, fecha: today, tipo: 'peso',
-        peso: parseFloat(batchForm.weights[sys.id]),
+        peso: isCosechada ? 0 : parseFloat(batchForm.weights[sys.id]),
         sueltos: null,
         ph: parseFloat(batchForm.ph) || null,
         temp: parseFloat(batchForm.temp) || null,
         salinidad: parseFloat(batchForm.salinidad) || null,
         condiciones: batchForm.condicion,
-        cosechada: null, sembrado: null,
+        cosechada_sueltos: null,
+        cosechada_infectada: cosechadaInfectada,
+        cosechada: cosechadaInfectada, // backward compat
+        reseed_to: null, reseed_kg: null, seed_source: null,
+        salio_de_finca: isCosechada ? true : null,
+        sembrado: null,
         notas: batchForm.notas || null, buoys: null,
         logged_by: user?.initials || null,
       };
@@ -208,7 +222,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       }
     });
     setActiveBatch(null);
-    setBatchForm({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'' });
+    setBatchForm({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'', cosechadaLines:{} });
     setBatchSaving(false);
   }
 
@@ -218,7 +232,14 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     setError('');
 
     const last = lastReading(readings, activeSystem.id);
-    const tdc = calcTDC(parseFloat(form.peso), last?.peso, last ? daysSince(last.fecha) : null, last?.cosechada, parseFloat(form.sembrado) || 0);
+    // Backward-compat: use split fields if present on prior reading, else fall back to cosechada
+    const lastCosechada = last
+      ? (last.cosechada_sueltos != null || last.cosechada_infectada != null
+          ? (last.cosechada_sueltos || 0) + (last.cosechada_infectada || 0)
+          : (last.cosechada || 0))
+      : 0;
+    const totalCosechada = (parseFloat(form.cosechada_sueltos) || 0) + (parseFloat(form.cosechada_infectada) || 0);
+    const tdc = calcTDC(parseFloat(form.peso), last?.peso, last ? daysSince(last.fecha) : null, lastCosechada, parseFloat(form.sembrado) || 0);
     const reading = {
       id: `${activeSystem.id}_${today}_${user?.initials || 'anon'}`,
       sistema: activeSystem.id,
@@ -230,7 +251,17 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       temp: parseFloat(form.temp) || null,
       salinidad: parseFloat(form.salinidad) || null,
       condiciones: form.condicion,
-      cosechada: parseFloat(form.cosechada) || null,
+      cosechada_sueltos: parseFloat(form.cosechada_sueltos) || null,
+      cosechada_infectada: parseFloat(form.cosechada_infectada) || null,
+      cosechada: totalCosechada || null, // backward compat for TDC reads
+      reseed_to: form.reseed_to || null,
+      reseed_kg: parseFloat(form.reseed_kg) || null,
+      seed_source: form.seed_source || null,
+      salio_de_finca: (() => {
+        if (!(parseFloat(form.cosechada_sueltos) > 0)) return null;
+        if (form.reseed_to) return false; // went to named system — stays on farm
+        return form.salio_de_finca; // user-specified yes/no
+      })(),
       sembrado: parseFloat(form.sembrado) || null,
       notas: form.notas || null,
       buoys: activeSystem.tipo === 'Long Line'
@@ -423,7 +454,8 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   // ── Batch reading form (Long Line family ≥3 systems) ─────────────────────
   if (activeBatch) {
     const { prefix, systems } = activeBatch;
-    const canSaveBatch = batchForm.condicion && systems.every(s => batchForm.weights[s.id]);
+    const canSaveBatch = batchForm.condicion &&
+      systems.every(s => batchForm.cosechadaLines[s.id] || batchForm.weights[s.id]);
     return (
       <div style={s.page}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
@@ -438,24 +470,65 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
         </div>
 
         <div style={s.section}>
-          <div style={{ fontSize:14, color:'#94a3b8', marginBottom:10, fontWeight:500 }}>Peso por línea (g)</div>
+          <div style={{ fontSize:14, color:'#94a3b8', marginBottom:10, fontWeight:500 }}>
+            Peso por línea (g)
+            <span style={{ fontSize:10, color:'#475569', marginLeft:8, fontWeight:400 }}>
+              — toca Cosechar si se removió la línea completa
+            </span>
+          </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
-            {systems.map(sys => {
-              const last = lastReading(readings, sys.id);
+            {systems.map(bSys => {
+              const last = lastReading(readings, bSys.id);
+              const isCosechada = !!batchForm.cosechadaLines[bSys.id];
               return (
-                <div key={sys.id}>
+                <div key={bSys.id}>
                   <div style={{ fontSize:11, color:'#94a3b8', marginBottom:3,
-                    display:'flex', justifyContent:'space-between' }}>
-                    <span style={{ fontWeight:600 }}>{sys.id}</span>
-                    {last?.peso && <span style={{ color:'#475569' }}>ant: {last.peso.toLocaleString()}g</span>}
+                    display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontWeight:600, color: isCosechada ? '#ef4444' : '#94a3b8' }}>
+                      {bSys.id}
+                    </span>
+                    {last?.peso && !isCosechada && (
+                      <span style={{ color:'#475569' }}>ant: {last.peso.toLocaleString()}g</span>
+                    )}
+                    {isCosechada && (
+                      <span style={{ color:'#ef4444', fontSize:10 }}>
+                        cosechada {last?.peso ? `(${last.peso.toLocaleString()}g)` : ''}
+                      </span>
+                    )}
                   </div>
-                  <input
-                    type="number" inputMode="numeric"
-                    value={batchForm.weights[sys.id] || ''}
-                    onChange={e => setBatchForm(p => ({ ...p, weights: { ...p.weights, [sys.id]: e.target.value } }))}
-                    style={{ ...s.inputSmall, border:`0.5px solid ${batchForm.weights[sys.id] ? '#0d9488' : 'rgba(255,255,255,.08)'}` }}
-                    placeholder="0"
-                  />
+                  {isCosechada ? (
+                    <button
+                      onClick={() => setBatchForm(p => {
+                        const cl = { ...p.cosechadaLines }; delete cl[bSys.id];
+                        return { ...p, cosechadaLines: cl };
+                      })}
+                      style={{ width:'100%', height:44, borderRadius:8, border:'0.5px solid rgba(239,68,68,.4)',
+                        background:'rgba(239,68,68,.12)', color:'#f87171', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                      ↩ Restaurar
+                    </button>
+                  ) : (
+                    <div style={{ display:'flex', gap:4 }}>
+                      <input
+                        type="number" inputMode="numeric"
+                        value={batchForm.weights[bSys.id] || ''}
+                        onChange={e => setBatchForm(p => ({ ...p, weights: { ...p.weights, [bSys.id]: e.target.value } }))}
+                        style={{ ...s.inputSmall, flex:1, height:44, fontSize:15,
+                          border:`0.5px solid ${batchForm.weights[bSys.id] ? '#0d9488' : 'rgba(255,255,255,.08)'}` }}
+                        placeholder="0"
+                      />
+                      <button
+                        onClick={() => setBatchForm(p => ({
+                          ...p,
+                          cosechadaLines: { ...p.cosechadaLines, [bSys.id]: true },
+                          weights: { ...p.weights, [bSys.id]: '' },
+                        }))}
+                        style={{ height:44, padding:'0 8px', borderRadius:8,
+                          border:'0.5px solid rgba(239,68,68,.3)', background:'rgba(239,68,68,.08)',
+                          color:'#ef4444', fontSize:10, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+                        Cosechar
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -516,7 +589,12 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     const isLongLine = sys.tipo === 'Long Line';
     const last = lastReading(readings, sys.id);
     const dias = last ? daysSince(last.fecha) : null;
-    const tdc = calcTDC(parseFloat(form.peso), last?.peso, dias, last?.cosechada, parseFloat(form.sembrado) || 0);
+    const lastCosechadaForm = last
+      ? (last.cosechada_sueltos != null || last.cosechada_infectada != null
+          ? (last.cosechada_sueltos || 0) + (last.cosechada_infectada || 0)
+          : (last.cosechada || 0))
+      : 0;
+    const tdc = calcTDC(parseFloat(form.peso), last?.peso, dias, lastCosechadaForm, parseFloat(form.sembrado) || 0);
     const canSave = form.peso && form.condicion && !saving;
 
     return (
@@ -731,39 +809,134 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           </div>
         </div>
 
-        {/* Cosecha / Siembra */}
+        {/* Material removido */}
         <div style={s.section}>
-          <div style={{ fontSize:'14px', color:'#94a3b8', marginBottom:'10px', fontWeight:'500' }}>
-            Cosecha / Siembra <span style={{ fontSize:'11px', color:'#475569' }}>(opcional — afecta TDC)</span>
+          <div style={{ fontSize:'14px', color:'#94a3b8', marginBottom:'12px', fontWeight:'500' }}>
+            Material removido <span style={{ fontSize:'11px', color:'#475569' }}>(afecta TDC)</span>
           </div>
-          <div style={{ display:'flex', gap:'12px' }}>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
-                Cosechado (g) — removido
-              </label>
-              <input type="number" inputMode="numeric" value={form.cosechada}
-                onChange={e => updateForm('cosechada', e.target.value)}
-                style={{ ...s.inputSmall, border:`0.5px solid ${form.cosechada ? 'rgba(251,146,60,.5)' : 'rgba(255,255,255,0.08)'}` }}
-                placeholder="0" />
-            </div>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
-                Sembrado (g) — agregado
-              </label>
-              <input type="number" inputMode="numeric" value={form.sembrado}
-                onChange={e => updateForm('sembrado', e.target.value)}
-                style={{ ...s.inputSmall, border:`0.5px solid ${form.sembrado ? 'rgba(74,222,128,.5)' : 'rgba(255,255,255,0.08)'}` }}
-                placeholder="0" />
+
+          {/* Sueltos — basket systems only */}
+          {!isLongLine && (
+            <>
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+                  Sueltos removidos (g)
+                </label>
+                <input type="number" inputMode="numeric" value={form.cosechada_sueltos}
+                  onChange={e => updateForm('cosechada_sueltos', e.target.value)}
+                  style={{ ...s.inputSmall, border:`0.5px solid ${form.cosechada_sueltos ? 'rgba(251,146,60,.5)' : 'rgba(255,255,255,0.08)'}` }}
+                  placeholder="0" />
+              </div>
+
+              {parseFloat(form.cosechada_sueltos) > 0 && (
+                <>
+                  <div style={{ marginBottom:8 }}>
+                    <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+                      Destino de los sueltos
+                    </label>
+                    <select value={form.reseed_to}
+                      onChange={e => { updateForm('reseed_to', e.target.value); updateForm('salio_de_finca', null); }}
+                      style={{ ...s.inputSmall, appearance:'none' }}>
+                      <option value="">— Sin destino especificado —</option>
+                      {(systems || []).filter(sx => sx.id !== sys.id && sx.estado === 'Activo')
+                        .map(sx => <option key={sx.id} value={sx.id}>{sx.id} · {sx.region}</option>)}
+                      <option value="__nueva__">+ Nueva sistema</option>
+                    </select>
+                  </div>
+
+                  {form.reseed_to && (
+                    <div style={{ marginBottom:8 }}>
+                      <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+                        Cantidad reseeded a {form.reseed_to === '__nueva__' ? 'nueva sistema' : form.reseed_to} (g)
+                      </label>
+                      <input type="number" inputMode="numeric" value={form.reseed_kg}
+                        onChange={e => updateForm('reseed_kg', e.target.value)}
+                        style={{ ...s.inputSmall, border:`0.5px solid ${form.reseed_kg ? 'rgba(74,222,128,.5)' : 'rgba(255,255,255,0.08)'}` }}
+                        placeholder={form.cosechada_sueltos} />
+                    </div>
+                  )}
+
+                  {!form.reseed_to && (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10,
+                      padding:'10px 12px', borderRadius:8,
+                      background:'rgba(251,146,60,.06)', border:'0.5px solid rgba(251,146,60,.2)' }}>
+                      <span style={{ fontSize:12, color:'#94a3b8', flex:1 }}>¿Salió de la finca?</span>
+                      {[{ val:true, label:'Sí' }, { val:false, label:'No' }].map(o => (
+                        <button key={String(o.val)}
+                          onClick={() => updateForm('salio_de_finca', o.val)}
+                          style={{ padding:'5px 14px', borderRadius:7, border:'none',
+                            background: form.salio_de_finca === o.val
+                              ? (o.val ? 'rgba(251,146,60,.35)' : 'rgba(13,148,136,.3)')
+                              : 'rgba(255,255,255,.06)',
+                            color: form.salio_de_finca === o.val
+                              ? (o.val ? '#fb923c' : '#2dd4bf')
+                              : '#64748b',
+                            fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* Infectada / cosechada total */}
+          <div>
+            <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+              {isLongLine ? 'Cosechada (g) — línea completa removida' : 'Infectada removida (g)'}
+            </label>
+            <input type="number" inputMode="numeric" value={form.cosechada_infectada}
+              onChange={e => updateForm('cosechada_infectada', e.target.value)}
+              style={{ ...s.inputSmall, border:`0.5px solid ${form.cosechada_infectada ? 'rgba(239,68,68,.5)' : 'rgba(255,255,255,0.08)'}` }}
+              placeholder="0" />
+            <div style={{ fontSize:'10px', color:'#475569', marginTop:3 }}>
+              {isLongLine
+                ? 'Usa el peso anterior si removiste la línea completa'
+                : 'No se asume 100% — solo lo realmente removido'}
             </div>
           </div>
+        </div>
+
+        {/* Material agregado */}
+        <div style={s.section}>
+          <div style={{ fontSize:'14px', color:'#94a3b8', marginBottom:'12px', fontWeight:'500' }}>
+            Material agregado <span style={{ fontSize:'11px', color:'#475569' }}>(afecta TDC)</span>
+          </div>
+          <div style={{ marginBottom: parseFloat(form.sembrado) > 0 ? 10 : 0 }}>
+            <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+              Sembrado (g)
+            </label>
+            <input type="number" inputMode="numeric" value={form.sembrado}
+              onChange={e => updateForm('sembrado', e.target.value)}
+              style={{ ...s.inputSmall, border:`0.5px solid ${form.sembrado ? 'rgba(74,222,128,.5)' : 'rgba(255,255,255,0.08)'}` }}
+              placeholder="0" />
+          </div>
+
+          {parseFloat(form.sembrado) > 0 && (
+            <div>
+              <label style={{ fontSize:'11px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+                Fuente del material
+              </label>
+              <select value={form.seed_source}
+                onChange={e => updateForm('seed_source', e.target.value)}
+                style={{ ...s.inputSmall, appearance:'none' }}>
+                <option value="">— Sin especificar —</option>
+                <option value="external">Externo (comprado / donado)</option>
+                {(systems || []).filter(sx => sx.id !== sys.id && sx.estado === 'Activo')
+                  .map(sx => <option key={sx.id} value={sx.id}>{sx.id} · {sx.region}</option>)}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Condición */}
         <ConditionAssessment
           selected={form.condicion}
           onSelect={c => updateForm('condicion', c)}
-          cosechada={form.cosechada}
-          onCosechadaChange={v => updateForm('cosechada', v)}
+          cosechada={form.cosechada_infectada}
+          onCosechadaChange={v => updateForm('cosechada_infectada', v)}
         />
 
         {/* Notas */}
