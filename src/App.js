@@ -2075,8 +2075,57 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             {lang==="es"?"Estado del equipo":"Team status"}
           </div>
           {CREW.filter(c=>c.role!=="Supervisor").map(c=>{
-            const mine=assignedTasks.filter(t=>t.assignedTo===c.initials);
-            const d=mine.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
+            const isDirector = c.initials === "EV";
+
+            // Director card: aggregate across the full team (everyone except EV)
+            if (isDirector) {
+              const teamTasks = assignedTasks.filter(t=>t.assignedTo !== "EV");
+              const teamDone  = teamTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
+              // Also credit pesos/parametros tasks where a matching lectura exists
+              const teamDoneAdj = teamTasks.filter(t=>{
+                if (t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)) return true;
+                if (t.taskType==="pesos"||t.taskType==="parametros") {
+                  return readings.some(r=>r.logged_by===t.assignedTo && r.fecha>=t.date);
+                }
+                return false;
+              }).length;
+              const total = teamTasks.length;
+              const p = total ? Math.round((teamDoneAdj/total)*100) : 0;
+              return (
+                <div key={c.initials} style={{...S.card,cursor:"pointer",borderColor:"rgba(13,148,136,.2)"}}
+                  onClick={()=>onViewPerson ? onViewPerson(c.initials) : setDashTab("equipo")}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9}}>
+                      <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
+                      </div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
+                        <div style={{fontSize:10,color:"#0d9488",fontWeight:600}}>{lang==="es"?"Director · equipo completo":"Director · full team"}</div>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:15,fontWeight:800,color:p===100?"#4ade80":p>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{p}%</div>
+                      <div style={{fontSize:10,color:"#475569"}}>{teamDoneAdj}/{total}</div>
+                    </div>
+                  </div>
+                  {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
+                  <div style={{fontSize:9,color:"#334155",marginTop:5,textAlign:"right"}}>
+                    {lang==="es"?"Ver detalle →":"View detail →"}
+                  </div>
+                </div>
+              );
+            }
+
+            // Everyone else: assigned tasks + credit pesos/parametros if a matching lectura exists
+            const mine = assignedTasks.filter(t=>t.assignedTo===c.initials);
+            const d = mine.filter(t=>{
+              if (t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)) return true;
+              if (t.taskType==="pesos"||t.taskType==="parametros") {
+                return readings.some(r=>r.logged_by===c.initials && r.fecha>=t.date);
+              }
+              return false;
+            }).length;
             const p=mine.length?Math.round((d/mine.length)*100):0;
             return (
               <div key={c.initials} style={{...S.card,cursor:"pointer"}}
@@ -2380,6 +2429,34 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const [form, setForm] = useState(emptyForm);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
+  const [extraCrew, setExtraCrew] = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
+  const [addingCrewFor, setAddingCrewFor] = useState(false);
+  const [newCrewForm, setNewCrewForm] = useState({ name:'', initials:'', role:'Buceador' });
+  const [newCrewSaving, setNewCrewSaving] = useState(false);
+  const allCrewPlan = [...CREW, ...extraCrew.filter(ec=>!CREW.find(c=>c.initials===ec.initials))];
+
+  async function saveNewCrewPlan() {
+    if (!newCrewForm.name || !newCrewForm.initials) return;
+    setNewCrewSaving(true);
+    try {
+      const username = newCrewForm.name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+      const inits = newCrewForm.initials.toUpperCase();
+      await sbStatic.from('usuarios').insert([{
+        username, password_plain: '1234', role: 'vaquero',
+        name: newCrewForm.name, initials: inits,
+        created_by: user?.initials, active: true,
+      }]);
+      const newMember = { initials: inits, name: newCrewForm.name, role: newCrewForm.role, username };
+      const updated = [...extraCrew, newMember];
+      setExtraCrew(updated);
+      try { localStorage.setItem('aq_extra_crew', JSON.stringify(updated)); } catch {}
+      F("assignedTo", inits);
+      setAddingCrewFor(false);
+      setNewCrewForm({ name:'', initials:'', role:'Buceador' });
+    } catch(e) { console.error('saveNewCrewPlan failed', e); }
+    setNewCrewSaving(false);
+  }
+
   const dayTasks = assignedTasks.filter(t=>t.day===selectedDay);
 
   const handleSaveTask = () => {
@@ -2475,14 +2552,40 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowForm(false)}>
           <div style={{width:"100%",maxWidth:480,background:"#0f1724",borderRadius:"20px 20px 0 0",padding:"20px 20px 36px",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
             <div style={{width:36,height:4,borderRadius:2,background:"rgba(148,163,184,.2)",margin:"0 auto 16px"}}/>
-            <h3 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:"0 0 16px"}}>{editTask?(lang==="es"?"Editar Tarea":"Edit Task"):(lang==="es"?"Asignar Tarea":"Assign Task")}</h3>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <h3 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:0}}>{editTask?(lang==="es"?"Editar Tarea":"Edit Task"):(lang==="es"?"Asignar Tarea":"Assign Task")}</h3>
+              <button onClick={()=>{setShowForm(false);setEditTask(null);setForm({...emptyForm,day:selectedDay});setAddingCrewFor(false);}} style={{background:"none",border:"none",color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer",padding:"4px 8px",borderRadius:6}}>✕ {lang==="es"?"Cancelar":"Cancel"}</button>
+            </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
               <div>
                 <label style={lStyle}>{lang==="es"?"Persona":"Person"}</label>
-                <select value={form.assignedTo} onChange={e=>F("assignedTo",e.target.value)} style={{...iStyle,appearance:"none"}}>
-                  {CREW.filter(c=>c.role!=="Supervisor").map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                <select value={addingCrewFor?'__new__':form.assignedTo}
+                  onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor(true);setNewCrewForm({name:'',initials:'',role:'Buceador'});}else{F("assignedTo",e.target.value);setAddingCrewFor(false);}}}
+                  style={{...iStyle,appearance:"none"}}>
+                  {allCrewPlan.map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  <option value="__new__">+ Nuevo</option>
                 </select>
+                {addingCrewFor && (
+                  <div style={{marginTop:8,background:"rgba(139,92,246,.06)",border:"1px solid rgba(139,92,246,.2)",borderRadius:8,padding:10}}>
+                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:8}}>{lang==="es"?"Nuevo integrante":"New hire"}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 70px",gap:6,marginBottom:6}}>
+                      <input placeholder={lang==="es"?"Nombre completo":"Full name"} value={newCrewForm.name} onChange={e=>setNewCrewForm(p=>({...p,name:e.target.value}))} style={{...iStyle,fontSize:11}}/>
+                      <input placeholder="Iniciales" maxLength={4} value={newCrewForm.initials} onChange={e=>setNewCrewForm(p=>({...p,initials:e.target.value.toUpperCase()}))} style={{...iStyle,fontSize:11}}/>
+                    </div>
+                    <select value={newCrewForm.role} onChange={e=>setNewCrewForm(p=>({...p,role:e.target.value}))} style={{...iStyle,appearance:"none",fontSize:11,marginBottom:6}}>
+                      <option value="Buceador">Buceador</option>
+                      <option value="Capitán">Capitán</option>
+                    </select>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={saveNewCrewPlan} disabled={!newCrewForm.name||!newCrewForm.initials||newCrewSaving}
+                        style={{fontSize:10,padding:"3px 10px",borderRadius:6,border:"none",background:"#8b5cf6",color:"#fff",fontWeight:700,cursor:"pointer",opacity:(!newCrewForm.name||!newCrewForm.initials||newCrewSaving)?.5:1}}>
+                        {newCrewSaving?(lang==="es"?"Guardando…":"Saving…"):(lang==="es"?"Guardar":"Save")}
+                      </button>
+                      <button onClick={()=>{setAddingCrewFor(false);setNewCrewForm({name:'',initials:'',role:'Buceador'});}} style={{fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid rgba(100,116,139,.3)",background:"none",color:"#64748b",cursor:"pointer"}}>{lang==="es"?"Cancelar":"Cancel"}</button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label style={lStyle}>{lang==="es"?"Día":"Day"}</label>
@@ -3357,6 +3460,9 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [extraCrew, setExtraCrew]               = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
   const [addingHire, setAddingHire]             = useState(false);
   const [hireForm, setHireForm]                 = useState({name:'', initials:'', role:'Buceador'});
+  const [addingCrewFor, setAddingCrewFor]       = useState(null); // 'capitan' | 'buceador' | null
+  const [newCrewForm, setNewCrewForm]           = useState({ name:'', initials:'', role:'Buceador' });
+  const [newCrewSaving, setNewCrewSaving]       = useState(false);
   const [readingForm, setReadingForm] = useState({
     fecha:       new Date().toISOString().slice(0,10),
     tipo:        "peso",
@@ -3674,6 +3780,28 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,notas:""};
   const [form, setForm] = useState(EMPTY);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  async function saveNewCrew() {
+    if (!newCrewForm.name || !newCrewForm.initials) return;
+    setNewCrewSaving(true);
+    try {
+      const username = newCrewForm.name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+      const inits = newCrewForm.initials.toUpperCase();
+      await sbStatic.from('usuarios').insert([{
+        username, password_plain: '1234', role: 'vaquero',
+        name: newCrewForm.name, initials: inits,
+        created_by: user?.initials, active: true,
+      }]);
+      const newMember = { initials: inits, name: newCrewForm.name, role: newCrewForm.role, username };
+      const updated = [...extraCrew, newMember];
+      setExtraCrew(updated);
+      try { localStorage.setItem('aq_extra_crew', JSON.stringify(updated)); } catch {}
+      F(addingCrewFor, inits);
+      setAddingCrewFor(null);
+      setNewCrewForm({ name:'', initials:'', role:'Buceador' });
+    } catch(e) { console.error('saveNewCrew failed', e); }
+    setNewCrewSaving(false);
+  }
 
   const filtered         = systems.filter(s=>(filterRegion==="all"||s.region===filterRegion));
   const activeFiltered   = filtered.filter(s=>s.estado==="Activo");
@@ -4467,7 +4595,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               <AddableSelect value={form.region} onChange={v=>F("region",v)} options={regions}
                 onAddOption={v=>setRegions(prev=>[...prev,v])} lang={lang}/>
             </div>
-            <div><label style={S.label}>{lang==="es"?"Polígono #":"Polygon #"}</label><input type="number" min="1" value={form.poligono} onChange={e=>F("poligono",parseInt(e.target.value)||1)} style={S.input}/></div>
+            <div><label style={S.label}>{lang==="es"?"Polígono #":"Polygon #"}</label><select value={form.poligono} onChange={e=>F("poligono",parseInt(e.target.value))} style={{...S.input,appearance:"none"}}>{[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}</select></div>
           </div>
         </div>,
           <div style={S.card}>
@@ -4477,7 +4605,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               <AddableSelect value={form.tipo} onChange={v=>F("tipo",v)} options={tipos}
                 onAddOption={v=>setTipos(prev=>[...prev,v])} lang={lang}/>
             </div>
-            <div><label style={S.label}>{lang==="es"?"Módulos":"Modules"}</label><input type="number" value={form.modulos} onChange={e=>F("modulos",parseInt(e.target.value)||0)} style={S.input}/></div>
+            <div><label style={S.label}>{lang==="es"?"Módulos":"Modules"}</label><select value={form.modulos} onChange={e=>F("modulos",parseInt(e.target.value))} style={{...S.input,appearance:"none"}}>{Array.from({length:16},(_,i)=><option key={i} value={i}>{i}</option>)}</select></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><label style={S.label}>{lang==="es"?"Profundidad":"Depth"}</label><input value={form.profundidad} onChange={e=>F("profundidad",e.target.value)} placeholder="30cm" style={S.input}/></div>
@@ -4490,9 +4618,47 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         </div>,
           <div key="crew" style={S.card}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div><label style={S.label}>Capitán</label><select value={form.capitan} onChange={e=>F("capitan",e.target.value)} style={{...S.input,appearance:"none"}}><option value="">–</option>{CREW.filter(c=>c.role==="Capitán").map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}</select></div>
-              <div><label style={S.label}>Buceador</label><select value={form.buceador} onChange={e=>F("buceador",e.target.value)} style={{...S.input,appearance:"none"}}><option value="">–</option>{CREW.filter(c=>c.role==="Buceador").map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}</select></div>
+              <div>
+                <label style={S.label}>Capitán</label>
+                <select value={addingCrewFor==='capitan'?'__new__':form.capitan}
+                  onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('capitan');setNewCrewForm({name:'',initials:'',role:'Capitán'});}else{F("capitan",e.target.value);setAddingCrewFor(null);}}}
+                  style={{...S.input,appearance:"none"}}>
+                  <option value="">–</option>
+                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  <option value="__new__">+ Nuevo</option>
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Buceador</label>
+                <select value={addingCrewFor==='buceador'?'__new__':form.buceador}
+                  onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('buceador');setNewCrewForm({name:'',initials:'',role:'Buceador'});}else{F("buceador",e.target.value);setAddingCrewFor(null);}}}
+                  style={{...S.input,appearance:"none"}}>
+                  <option value="">–</option>
+                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  <option value="__new__">+ Nuevo</option>
+                </select>
+              </div>
             </div>
+            {addingCrewFor && (
+              <div style={{marginTop:10,background:"rgba(139,92,246,.06)",border:"1px solid rgba(139,92,246,.2)",borderRadius:8,padding:10}}>
+                <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:8}}>{lang==="es"?"Nuevo integrante":"New hire"}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:6,marginBottom:6}}>
+                  <input placeholder={lang==="es"?"Nombre completo":"Full name"} value={newCrewForm.name} onChange={e=>setNewCrewForm(p=>({...p,name:e.target.value}))} style={{...S.input,fontSize:12}}/>
+                  <input placeholder="Iniciales" maxLength={4} value={newCrewForm.initials} onChange={e=>setNewCrewForm(p=>({...p,initials:e.target.value.toUpperCase()}))} style={{...S.input,fontSize:12}}/>
+                </div>
+                <select value={newCrewForm.role} onChange={e=>setNewCrewForm(p=>({...p,role:e.target.value}))} style={{...S.input,appearance:"none",fontSize:12,marginBottom:6}}>
+                  <option value="Buceador">Buceador</option>
+                  <option value="Capitán">Capitán</option>
+                </select>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={saveNewCrew} disabled={!newCrewForm.name||!newCrewForm.initials||newCrewSaving}
+                    style={{fontSize:10,padding:"3px 10px",borderRadius:6,border:"none",background:"#8b5cf6",color:"#fff",fontWeight:700,cursor:"pointer",opacity:(!newCrewForm.name||!newCrewForm.initials||newCrewSaving)?.5:1}}>
+                    {newCrewSaving?(lang==="es"?"Guardando…":"Saving…"):(lang==="es"?"Guardar":"Save")}
+                  </button>
+                  <button onClick={()=>{setAddingCrewFor(null);setNewCrewForm({name:'',initials:'',role:'Buceador'});}} style={{fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid rgba(100,116,139,.3)",background:"none",color:"#64748b",cursor:"pointer"}}>{lang==="es"?"Cancelar":"Cancel"}</button>
+                </div>
+              </div>
+            )}
           </div>,
           <div style={S.card}>
           <div style={{marginBottom:10}}><label style={S.label}>{lang==="es"?"Familia / Propietario":"Family / Owner"}</label><input value={form.familia} onChange={e=>F("familia",e.target.value)} style={S.input}/></div>
@@ -5306,6 +5472,7 @@ function BottomNav({ tab, setTab, role, lang }) {
     director: [
       { id:"tareas",   icon:"task",     label: "Tareas" },
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
+      { id:"plan",     icon:"calendar", label: "Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
