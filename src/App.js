@@ -4864,12 +4864,18 @@ function MapaTab({ systems, lang }) {
   );
 }
 
-function ProfileTab({ user, lang, setLang, onLogout }) {
+function ProfileTab({ user, lang, setLang, onLogout,
+  regions=DEFAULT_REGIONS, setRegions=()=>{},
+  tipos=DEFAULT_TIPOS,   setTipos=()=>{},
+  materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
+  semillas=DEFAULT_SEMILLAS,     setSemillas=()=>{},
+}) {
   const [showSyncTest, setShowSyncTest] = useState(false);
   const roleColors = { ceo:"#f59e0b", consultant:"#a78bfa", supervisor:"#0d9488", vaquero:"#4ade80", researcher:"#818cf8" };
   const roleLabels = { ceo:"CEO", consultant:"Consultor", supervisor:"Supervisor", vaquero:"Vaquero", researcher:"Investigador" };
   const canTest = ["ceo","consultant","supervisor"].includes(user.role);
   const canExport = ["admin","consultor","director"].includes(user.role);
+  const canManageCatalog = ["admin","consultor","director"].includes(user.role);
 
   const today = new Date().toISOString().slice(0,10);
   const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString().slice(0,10);
@@ -4998,6 +5004,48 @@ function ProfileTab({ user, lang, setLang, onLogout }) {
           </button>
           <div style={{fontSize:10,color:"#475569",marginTop:6}}>
             {lang==="es"?"Incluye: sistema, fecha, tipo, peso, parámetros, cosecha/siembra, registrado por":"Includes: system, date, type, weight, parameters, harvest/seed, logged by"}
+          </div>
+        </div>
+      )}
+      {canManageCatalog && (
+        <div style={S.card}>
+          <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:12,textTransform:"uppercase",letterSpacing:.6}}>
+            ⚙️ {lang==="es"?"Opciones del catálogo":"Catalog options"}
+          </div>
+          {[
+            { label:lang==="es"?"Regiones":"Regions",    list:regions,    setList:setRegions,    defaults:DEFAULT_REGIONS    },
+            { label:lang==="es"?"Tipos":"Types",          list:tipos,      setList:setTipos,      defaults:DEFAULT_TIPOS      },
+            { label:lang==="es"?"Materiales":"Materials", list:materiales, setList:setMateriales, defaults:DEFAULT_MATERIALES },
+            { label:lang==="es"?"Semillas":"Seeds",       list:semillas,   setList:setSemillas,   defaults:DEFAULT_SEMILLAS   },
+          ].map(cat => (
+            <div key={cat.label} style={{marginBottom:12}}>
+              <div style={{fontSize:11,color:"#94a3b8",fontWeight:600,marginBottom:6}}>{cat.label}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {cat.list.map(item => {
+                  const isDefault = cat.defaults.includes(item);
+                  return (
+                    <div key={item} style={{display:"flex",alignItems:"center",gap:4,
+                      padding:"4px 10px",borderRadius:20,
+                      background:isDefault?"rgba(255,255,255,.04)":"rgba(13,148,136,.1)",
+                      border:`0.5px solid ${isDefault?"rgba(148,163,184,.1)":"rgba(13,148,136,.3)"}`}}>
+                      <span style={{fontSize:12,color:isDefault?"#64748b":"#2dd4bf"}}>{item}</span>
+                      {!isDefault && (
+                        <button onClick={() => cat.setList(prev => prev.filter(v => v !== item))}
+                          style={{width:14,height:14,borderRadius:"50%",border:"none",
+                            background:"rgba(239,68,68,.3)",color:"#f87171",
+                            fontSize:9,lineHeight:1,cursor:"pointer",
+                            display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div style={{fontSize:10,color:"#475569",marginTop:2}}>
+            {lang==="es"?"Para agregar: Sistemas → Nueva Sistema → campo de opción":"To add: Systems → New System → option field"}
           </div>
         </div>
       )}
@@ -6492,7 +6540,7 @@ export default function App() {
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
-        {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+        {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
 
         {/* Level 3 — Admin + Consultor */}
         {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
@@ -6500,7 +6548,7 @@ export default function App() {
         {isL3 && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
-        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
       </div>
 
       <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>

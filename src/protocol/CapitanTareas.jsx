@@ -106,10 +106,16 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [showFormChart, setShowFormChart]         = useState(false);  // expand chart inside reading form
   const [dippingModal, setDippingModal]           = useState(null);   // task open in dipping form
   const [dippingForm, setDippingForm]             = useState({ concentration:'', notes:'', done:true });
-  const [autoFillSource, setAutoFillSource]       = useState(null);   // sibling system that params were copied from
-  const [activeBatch, setActiveBatch]             = useState(null);   // { prefix, systems[] } for LL batch form
+  const [autoFillSource, setAutoFillSource]       = useState(null);
+  const [activeBatch, setActiveBatch]             = useState(null);
   const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'', cosechadaLines:{} });
   const [batchSaving, setBatchSaving]             = useState(false);
+  const [editingReading, setEditingReading]       = useState(null);   // reading open for inline edit
+  const [editForm, setEditForm]                   = useState({ peso:'', condicion:null });
+  const [editSaving, setEditSaving]               = useState(false);
+  const [localEdits, setLocalEdits]               = useState({});     // optimistic edit overrides keyed by reading id
+
+  const canEdit = ['admin','consultor','director'].includes(user?.role);
 
   const today2 = new Date().toISOString().split('T')[0];
 
@@ -184,6 +190,20 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     setPendingReadingOnDecline(null);
     setDeclineComment('');
     setSaving(false);
+  }
+
+  function saveReadingEdit() {
+    if (!editingReading || !editForm.peso) return;
+    setEditSaving(true);
+    const edited = {
+      ...editingReading,
+      peso: parseFloat(editForm.peso),
+      condiciones: editForm.condicion || editingReading.condiciones,
+    };
+    if (onReadingSaved) onReadingSaved(edited);
+    setLocalEdits(p => ({ ...p, [edited.id]: edited }));
+    setEditingReading(null);
+    setEditSaving(false);
   }
 
   function saveBatchReading() {
@@ -436,16 +456,91 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           </div>}
         </div>
         <div style={s.section}>
-          <div style={{ fontSize:11, color:'#64748b', fontWeight:700, marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Todas las lecturas</div>
-          {[...sysR].reverse().map(r => (
-            <div key={r.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-              padding:'7px 0', borderBottom:'0.5px solid rgba(255,255,255,.04)' }}>
-              <span style={{ fontSize:13, color:'#94a3b8' }}>{r.fecha}</span>
-              <span style={{ fontSize:13, fontWeight:600, color:'#e2e8f0' }}>{r.peso.toLocaleString()}g</span>
-              <span style={{ fontSize:11, color:'#475569' }}>{r.logged_by || '—'}</span>
-              {r.condiciones && <span style={{ fontSize:11, color:'#64748b' }}>{r.condiciones}</span>}
-            </div>
-          ))}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <div style={{ fontSize:11, color:'#64748b', fontWeight:700, textTransform:'uppercase', letterSpacing:.5 }}>Todas las lecturas</div>
+            {canEdit && <div style={{ fontSize:10, color:'#475569' }}>✏ toca para editar</div>}
+          </div>
+          {[...sysR].reverse().map(r => {
+            const displayR = localEdits[r.id] || r;
+            const isEditing = editingReading?.id === r.id;
+            return (
+              <div key={r.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,.04)' }}>
+                {/* Row */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 0' }}>
+                  <span style={{ fontSize:12, color:'#94a3b8', minWidth:54 }}>{displayR.fecha}</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:'#e2e8f0', flex:1 }}>
+                    {(displayR.peso || 0).toLocaleString()}g
+                  </span>
+                  <span style={{ fontSize:11, color:'#475569' }}>{displayR.logged_by || '—'}</span>
+                  {displayR.condiciones && (
+                    <span style={{ fontSize:11, color:'#64748b' }}>{displayR.condiciones}</span>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={() => {
+                        if (isEditing) { setEditingReading(null); return; }
+                        setEditingReading(r);
+                        setEditForm({ peso: String(displayR.peso || ''), condicion: displayR.condiciones || null });
+                      }}
+                      style={{ fontSize:11, padding:'2px 8px', borderRadius:6,
+                        border:`0.5px solid ${isEditing ? '#0d9488' : 'rgba(148,163,184,.18)'}`,
+                        background: isEditing ? 'rgba(13,148,136,.15)' : 'transparent',
+                        color: isEditing ? '#0d9488' : '#475569', cursor:'pointer', flexShrink:0 }}>
+                      {isEditing ? '✕' : '✏'}
+                    </button>
+                  )}
+                </div>
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div style={{ paddingBottom:12 }}>
+                    <div style={{ marginBottom:8 }}>
+                      <label style={{ fontSize:10, color:'#94a3b8', display:'block', marginBottom:3 }}>Peso (g)</label>
+                      <input type="number" inputMode="numeric" value={editForm.peso}
+                        onChange={e => setEditForm(p => ({ ...p, peso: e.target.value }))}
+                        style={{ ...s.inputSmall, height:40, fontSize:16 }} autoFocus />
+                    </div>
+                    <div style={{ fontSize:10, color:'#94a3b8', marginBottom:5 }}>Condición</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5, marginBottom:8 }}>
+                      {[
+                        { emoji:'🌿', label:'Saludable',  value:'saludable'   },
+                        { emoji:'🧊', label:'Ice-Ice',    value:'ice-ice'     },
+                        { emoji:'🌾', label:'Epífitas',   value:'epifitas'    },
+                        { emoji:'🦠', label:'Contam.',    value:'contaminado' },
+                        { emoji:'🌊', label:'Turbio',     value:'turbid'      },
+                        { emoji:'⚠️', label:'Problema',   value:'problema'    },
+                      ].map(c => (
+                        <button key={c.value}
+                          onClick={() => setEditForm(p => ({ ...p, condicion: c.value }))}
+                          style={{ padding:'5px 2px', borderRadius:7, border:'none',
+                            background: editForm.condicion === c.value
+                              ? 'rgba(13,148,136,.25)' : 'rgba(255,255,255,.04)',
+                            color: editForm.condicion === c.value ? '#2dd4bf' : '#64748b',
+                            fontSize:10, cursor:'pointer' }}>
+                          {c.emoji} {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button onClick={saveReadingEdit} disabled={!editForm.peso || editSaving}
+                        style={{ flex:1, height:34, borderRadius:8, border:'none',
+                          background: editForm.peso ? '#0d9488' : 'rgba(255,255,255,.06)',
+                          color: editForm.peso ? '#fff' : '#475569',
+                          fontSize:12, fontWeight:700,
+                          cursor: editForm.peso && !editSaving ? 'pointer' : 'default' }}>
+                        {editSaving ? '...' : lang==='es' ? 'Guardar' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingReading(null)}
+                        style={{ height:34, padding:'0 12px', borderRadius:8,
+                          border:'0.5px solid rgba(148,163,184,.15)',
+                          background:'transparent', color:'#64748b', fontSize:12, cursor:'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
