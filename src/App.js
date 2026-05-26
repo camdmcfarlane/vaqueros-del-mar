@@ -5911,8 +5911,23 @@ function RRHHTab({ evaluations, setEvaluations, profScores, setProfScores, assig
   );
 }
 
+// ─── DEVICE DETECTION ────────────────────────────────────────────────────────
+function useDeviceType() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const h = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  const isIPad = /iPad/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIPad || width >= 768) return 'tablet';
+  return 'mobile';
+}
+
 // ─── BOTTOM NAV — role-aware ──────────────────────────────────────────────────
 function BottomNav({ tab, setTab, role, lang }) {
+  const deviceType = useDeviceType();
   const navConfig = {
     vaquero: [
       { id:"vigilancia",icon:"wave",    label: "Vigilancia" },
@@ -5951,19 +5966,56 @@ function BottomNav({ tab, setTab, role, lang }) {
     ],
   };
   const tabs = navConfig[role] || navConfig.default;
+  const isTablet = deviceType === 'tablet';
 
+  // ── Tablet: left sidebar ──────────────────────────────────────────────────
+  if (isTablet) {
+    return (
+      <nav style={{position:"fixed",left:0,top:0,bottom:0,width:82,
+        background:"rgba(2,8,24,.98)",borderRight:"1px solid rgba(148,163,184,.08)",
+        display:"flex",flexDirection:"column",alignItems:"stretch",
+        paddingTop:32,paddingBottom:16,gap:2,
+        backdropFilter:"blur(20px)",zIndex:100,overflowY:"auto"}}>
+        {/* Logo mark */}
+        <div style={{textAlign:"center",marginBottom:20,paddingBottom:16,borderBottom:"1px solid rgba(148,163,184,.07)"}}>
+          <span style={{fontSize:20}}>🌊</span>
+        </div>
+        {tabs.map(item=>(
+          <button key={item.id} onClick={()=>setTab(item.id)}
+            role="tab" aria-selected={tab===item.id} aria-label={item.label}
+            style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5,
+              padding:"13px 4px",background:"none",border:"none",cursor:"pointer",
+              borderLeft:`3px solid ${tab===item.id?"#0d9488":"transparent"}`,
+              background:tab===item.id?"rgba(13,148,136,.08)":"transparent",
+              transition:"all .15s"}}>
+            <Icon name={item.icon} size={26} color={tab===item.id?"#0d9488":"#475569"}/>
+            <span style={{fontSize:10,color:tab===item.id?"#0d9488":"#64748b",
+              fontWeight:tab===item.id?700:400,textAlign:"center",lineHeight:1.2,
+              maxWidth:72,wordBreak:"break-word"}}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </nav>
+    );
+  }
+
+  // ── Mobile: bottom nav ────────────────────────────────────────────────────
   return (
-    <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(2,8,24,.96)",borderTop:"1px solid rgba(148,163,184,.07)",display:"flex",justifyContent:"space-around",padding:"8px 0 max(8px,env(safe-area-inset-bottom))",backdropFilter:"blur(20px)",zIndex:100}}>
+    <nav style={{position:"fixed",bottom:0,left:0,right:0,
+      background:"rgba(2,8,24,.96)",borderTop:"1px solid rgba(148,163,184,.07)",
+      display:"flex",justifyContent:"space-around",
+      padding:"6px 0 max(10px,env(safe-area-inset-bottom))",
+      backdropFilter:"blur(20px)",zIndex:100}}>
       {tabs.map(item=>(
-        <button
-          key={item.id}
-          onClick={()=>setTab(item.id)}
-          role="tab"
-          aria-selected={tab===item.id}
-          aria-label={item.label}
-          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
-          <Icon name={item.icon} size={20} color={tab===item.id?"#0d9488":"#475569"}/>
-          <span style={{fontSize:9,color:tab===item.id?"#0d9488":"#475569",fontWeight:tab===item.id?700:400}}>{item.label}</span>
+        <button key={item.id} onClick={()=>setTab(item.id)}
+          role="tab" aria-selected={tab===item.id} aria-label={item.label}
+          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+            gap:4,background:"none",border:"none",cursor:"pointer",padding:"6px 0",
+            minWidth:44,minHeight:44}}>
+          <Icon name={item.icon} size={24} color={tab===item.id?"#0d9488":"#475569"}/>
+          <span style={{fontSize:10,color:tab===item.id?"#0d9488":"#475569",
+            fontWeight:tab===item.id?700:400}}>{item.label}</span>
         </button>
       ))}
     </nav>
@@ -5982,6 +6034,9 @@ export default function App() {
       return u;
     } catch { return null; }
   })();
+
+  const deviceType = useDeviceType();
+  const isTablet   = deviceType === 'tablet';
 
   const [lang, setLang]               = useState(localStorage.getItem('vdm_lang') || "es");
   const [user, setUser]               = useState(savedUser);
@@ -6706,7 +6761,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, profile: user }}>
-    <div className="vdm-root" style={{minHeight:"100vh",background:"#021c1e",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative"}}>
+    <div className="vdm-root" style={{minHeight:"100vh",background:"#021c1e",fontFamily:"'Nunito','Segoe UI',sans-serif",color:"#e2e8f0",maxWidth:"100%",margin:"0 auto",position:"relative",marginLeft:isTablet?82:0}}>
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
