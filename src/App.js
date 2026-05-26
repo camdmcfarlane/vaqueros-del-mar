@@ -1814,8 +1814,12 @@ function buildLivePruebas(readings, systems) {
   return result.length ? result.slice(-12) : null;
 }
 
-function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson, chartPruebas }) {
+function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcements, setAnnouncements, user, onNavigate, onViewPerson, chartPruebas, regions=[], setRegions=()=>{} }) {
   const [tab, setDashTab] = useState("resumen");
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [regionEditMode,  setRegionEditMode]  = useState(false);
+  const [regionEditDraft, setRegionEditDraft] = useState("");
+  const [regionNewDraft,  setRegionNewDraft]  = useState("");
   const active = systems.filter(s=>s.estado==="Activo");
   const done   = assignedTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
   const pending = assignedTasks.filter(t=>t.actual===null&&!(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
@@ -1860,10 +1864,10 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
 
   const isConsultor = user?.role === "consultor";
   const dashTabs = [
-    { id:"resumen",  label:lang==="es"?"Resumen":"Summary" },
-    { id:"biomasa",  label:lang==="es"?"Biomasa":"Biomass" },
-    { id:"equipo",   label:lang==="es"?"Equipo":"Crew" },
-    { id:"tareas",   label:lang==="es"?"Tareas":"Tasks" },
+    { id:"resumen",   label:lang==="es"?"Resumen":"Summary" },
+    { id:"biomasa",   label:lang==="es"?"Biomasa":"Biomass" },
+    { id:"equipo",    label:lang==="es"?"Equipo":"Crew" },
+    { id:"regiones",  label:lang==="es"?"Regiones":"Regions" },
     ...(isConsultor ? [{ id:"ops", label:"Ops" }] : []),
   ];
 
@@ -2072,88 +2076,6 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             );
           })()}
 
-          {/* Team task status */}
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"4px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
-            {lang==="es"?"Estado del equipo":"Team status"}
-          </div>
-          {CREW.filter(c=>c.role!=="Supervisor").map(c=>{
-            const isDirector = c.initials === "EV";
-
-            // Director card: aggregate across the full team (everyone except EV)
-            if (isDirector) {
-              const teamTasks = assignedTasks.filter(t=>t.assignedTo !== "EV");
-              const teamDone  = teamTasks.filter(t=>t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)).length;
-              // Also credit pesos/parametros tasks where a matching lectura exists
-              const teamDoneAdj = teamTasks.filter(t=>{
-                if (t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)) return true;
-                if (t.taskType==="pesos"||t.taskType==="parametros") {
-                  return readings.some(r=>r.logged_by===t.assignedTo && r.fecha>=t.date);
-                }
-                return false;
-              }).length;
-              const total = teamTasks.length;
-              const p = total ? Math.round((teamDoneAdj/total)*100) : 0;
-              return (
-                <div key={c.initials} style={{...S.card,cursor:"pointer",borderColor:"rgba(13,148,136,.2)"}}
-                  onClick={()=>onViewPerson ? onViewPerson(c.initials) : setDashTab("equipo")}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                    <div style={{display:"flex",alignItems:"center",gap:9}}>
-                      <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
-                      </div>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
-                        <div style={{fontSize:10,color:"#0d9488",fontWeight:600}}>{lang==="es"?"Director · equipo completo":"Director · full team"}</div>
-                      </div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:15,fontWeight:800,color:p===100?"#4ade80":p>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{p}%</div>
-                      <div style={{fontSize:10,color:"#475569"}}>{teamDoneAdj}/{total}</div>
-                    </div>
-                  </div>
-                  {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
-                  <div style={{fontSize:9,color:"#334155",marginTop:5,textAlign:"right"}}>
-                    {lang==="es"?"Ver detalle →":"View detail →"}
-                  </div>
-                </div>
-              );
-            }
-
-            // Everyone else: assigned tasks + credit pesos/parametros if a matching lectura exists
-            const mine = assignedTasks.filter(t=>t.assignedTo===c.initials);
-            const d = mine.filter(t=>{
-              if (t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null)) return true;
-              if (t.taskType==="pesos"||t.taskType==="parametros") {
-                return readings.some(r=>r.logged_by===c.initials && r.fecha>=t.date);
-              }
-              return false;
-            }).length;
-            const p=mine.length?Math.round((d/mine.length)*100):0;
-            return (
-              <div key={c.initials} style={{...S.card,cursor:"pointer"}}
-                onClick={()=>onViewPerson ? onViewPerson(c.initials) : setDashTab("equipo")}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                  <div style={{display:"flex",alignItems:"center",gap:9}}>
-                    <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
-                    </div>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
-                      <div style={{fontSize:10,color:"#64748b"}}>{c.role}</div>
-                    </div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:15,fontWeight:800,color:p===100?"#4ade80":p>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{p}%</div>
-                    <div style={{fontSize:10,color:"#475569"}}>{d}/{mine.length}</div>
-                  </div>
-                </div>
-                {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
-                <div style={{fontSize:9,color:"#334155",marginTop:5,textAlign:"right"}}>
-                  {lang==="es"?"Ver detalle →":"View detail →"}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -2238,9 +2160,79 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         </div>
       )}
 
-      {/* ═══ TAB 3: EQUIPO VS BIOMASA ═══ */}
+      {/* ═══ TAB 3: EQUIPO ═══ */}
       {tab==="equipo" && (
         <div>
+          {/* Team task status */}
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 10px",textTransform:"uppercase",letterSpacing:1}}>
+            {lang==="es"?"Estado del equipo":"Team status"}
+          </div>
+          {CREW.filter(c=>c.role!=="Supervisor").map(c=>{
+            const isDirector = c.initials==="EV";
+            if(isDirector){
+              const teamTasks=assignedTasks.filter(t=>t.assignedTo!=="EV");
+              const teamDoneAdj=teamTasks.filter(t=>{
+                if(t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null))return true;
+                if(t.taskType==="pesos"||t.taskType==="parametros")return readings.some(r=>r.logged_by===t.assignedTo&&r.fecha>=t.date);
+                return false;
+              }).length;
+              const total=teamTasks.length;
+              const p=total?Math.round((teamDoneAdj/total)*100):0;
+              return(
+                <div key={c.initials} style={{...S.card,cursor:"pointer",borderColor:"rgba(13,148,136,.2)",marginBottom:8}}
+                  onClick={()=>onViewPerson?onViewPerson(c.initials):null}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9}}>
+                      <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
+                      </div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
+                        <div style={{fontSize:10,color:"#0d9488",fontWeight:600}}>{lang==="es"?"Director · equipo completo":"Director · full team"}</div>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:15,fontWeight:800,color:p===100?"#4ade80":p>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{p}%</div>
+                      <div style={{fontSize:10,color:"#475569"}}>{teamDoneAdj}/{total}</div>
+                    </div>
+                  </div>
+                  {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
+                </div>
+              );
+            }
+            const mine=assignedTasks.filter(t=>t.assignedTo===c.initials);
+            const d=mine.filter(t=>{
+              if(t.actual!==null||(TASK_SCHEMA[t.taskType]?.yesno&&t.condicion!==null))return true;
+              if(t.taskType==="pesos"||t.taskType==="parametros")return readings.some(r=>r.logged_by===c.initials&&r.fecha>=t.date);
+              return false;
+            }).length;
+            const p=mine.length?Math.round((d/mine.length)*100):0;
+            return(
+              <div key={c.initials} style={{...S.card,cursor:"pointer",marginBottom:8}}
+                onClick={()=>onViewPerson?onViewPerson(c.initials):null}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                  <div style={{display:"flex",alignItems:"center",gap:9}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:"rgba(13,148,136,.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <span style={{fontSize:10,fontWeight:800,color:"#0d9488"}}>{c.initials}</span>
+                    </div>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{c.name}</div>
+                      <div style={{fontSize:10,color:"#64748b"}}>{c.role}</div>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:15,fontWeight:800,color:p===100?"#4ade80":p>=70?"#fb923c":"#f87171",fontFamily:"monospace"}}>{p}%</div>
+                    <div style={{fontSize:10,color:"#475569"}}>{d}/{mine.length}</div>
+                  </div>
+                </div>
+                {S.scoreBar(p/100,p===100?"#4ade80":p>=70?"#fb923c":"#f87171")}
+              </div>
+            );
+          })}
+
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"16px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
+            {lang==="es"?"Crecimiento por buceador":"Growth by diver"}
+          </div>
           <p style={{color:"#64748b",fontSize:12,margin:"0 0 14px",lineHeight:1.5}}>
             {lang==="es"
               ?"Crecimiento promedio por buceador en sus sistemas asignados. Diferencias señalan necesidad de coaching."
@@ -2338,82 +2330,242 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         </div>
       )}
 
-      {/* ═══ TAB 4: TAREAS ═══ */}
-      {tab==="tareas" && (
-        <div>
-          <p style={{color:"#64748b",fontSize:12,margin:"0 0 14px",lineHeight:1.5}}>
-            {lang==="es"
-              ?"Cosecha: cada 45 días · Limpieza: cada 3 días · Vigilancia: diaria. Basado en último peso registrado."
-              :"Harvest: every 45 days · Cleaning: every 3 days · Surveillance: daily. Based on last recorded weight."}
-          </p>
+      {/* ═══ TAB 4: REGIONES ═══ */}
+      {tab==="regiones" && (()=>{
+        const ago30 = new Date(Date.now()-30*24*60*60*1000).toISOString().slice(0,10);
 
-          {/* Due soon callouts */}
-          {dueHarvest.length>0&&(
-            <div style={{...S.card,borderColor:"rgba(74,222,128,.25)",marginBottom:10}}>
-              <div style={{fontSize:11,color:"#4ade80",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>
-                🌿 {lang==="es"?"Cosecha próxima (≤7 días)":"Harvest soon (≤7 days)"}
-              </div>
-              {dueHarvest.map(s=><div key={s.id} style={{fontSize:13,color:"#e2e8f0",padding:"4px 0",borderBottom:"1px solid rgba(148,163,184,.06)"}}>{s.id} · {s.pueblo} — <span style={{color:"#4ade80",fontWeight:700}}>{s.daysToHarvest}d</span></div>)}
+        const regionStats = [...new Set(systems.map(s=>s.region).filter(Boolean))].map(rName=>{
+          const rSysAll    = systems.filter(s=>s.region===rName);
+          const rSysActive = systemMetrics.filter(s=>s.region===rName);
+          const totalBiomass = rSysActive.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+          const rates = rSysActive.map(s=>s.rate).filter(r=>r!==null);
+          const avgTDC = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
+          const sysIds = new Set(rSysAll.map(s=>s.id));
+          const harvested30d = readings.filter(r=>sysIds.has(r.sistema)&&r.fecha>=ago30&&(r.cosechada_infectada||r.cosechada)).reduce((sum,r)=>sum+(r.cosechada_infectada||r.cosechada||0),0);
+          const seeded30d    = readings.filter(r=>sysIds.has(r.sistema)&&r.fecha>=ago30&&r.sembrado).reduce((sum,r)=>sum+(r.sembrado||0),0);
+          const projection30d = rSysActive.reduce((sum,s)=>{
+            if(!s.latest?.peso) return sum;
+            return sum+(s.rate!==null ? s.latest.peso*Math.exp((s.rate/100)*30) : s.latest.peso);
+          },0);
+          const harvestDays = rSysActive.map(s=>s.daysToHarvest).filter(d=>d!==null);
+          const nextHarvest = harvestDays.length ? Math.min(...harvestDays) : null;
+          const capEntry = Object.entries(CAPITAN_REGIONS).find(([,cfg])=>cfg.regions&&cfg.regions.some(r=>r.toLowerCase()===rName.toLowerCase()));
+          const capitan = capEntry?.[0]||null;
+          const onTargetCount = rSysActive.filter(s=>s.rate!==null&&s.rate>=2.5).length;
+          const seedYieldRatio = seeded30d>0&&harvested30d>0 ? (harvested30d/seeded30d) : null;
+          const paramR = readings.filter(r=>sysIds.has(r.sistema)&&r.tipo==="parametros"&&r.fecha>=ago30);
+          const phVals=paramR.map(r=>r.ph).filter(Boolean);
+          const tempVals=paramR.map(r=>r.temp).filter(Boolean);
+          const salVals=paramR.map(r=>r.salinidad).filter(Boolean);
+          const trendColor = avgTDC===null?"#475569":avgTDC>=2.5?"#4ade80":avgTDC>=1?"#fb923c":"#f87171";
+          const trendArrow = avgTDC===null?"—":avgTDC>=2.5?"▲":avgTDC>=1?"→":"▼";
+          return { name:rName, systems:rSysAll, activeSystems:rSysActive, totalBiomass, avgTDC, harvested30d, seeded30d, projection30d, nextHarvest, capitan, onTargetCount, seedYieldRatio, trendColor, trendArrow,
+            avgPh:phVals.length?(phVals.reduce((a,b)=>a+b,0)/phVals.length).toFixed(1):null,
+            avgTemp:tempVals.length?(tempVals.reduce((a,b)=>a+b,0)/tempVals.length).toFixed(1):null,
+            avgSal:salVals.length?(salVals.reduce((a,b)=>a+b,0)/salVals.length).toFixed(0):null,
+          };
+        }).sort((a,b)=>(b.avgTDC||(-999))-(a.avgTDC||(-999)));
+
+        const farmBiomass  = regionStats.reduce((s,r)=>s+r.totalBiomass,0);
+        const farmRates    = regionStats.map(r=>r.avgTDC).filter(r=>r!==null);
+        const farmAvgTDC   = farmRates.length ? farmRates.reduce((a,b)=>a+b,0)/farmRates.length : null;
+        const farmProj30d  = regionStats.reduce((s,r)=>s+r.projection30d,0);
+        const maxBiomass   = Math.max(...regionStats.map(r=>r.totalBiomass),1);
+
+        return (
+          <div>
+            {/* Farm-wide header */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:18}}>
+              {[
+                {label:lang==="es"?"Biomasa total":"Total biomass", value:`${(farmBiomass/1000).toFixed(1)}kg`, color:"#0d9488"},
+                {label:"TDC promedio", value:farmAvgTDC!==null?`${farmAvgTDC>=0?"+":""}${farmAvgTDC.toFixed(2)}%`:"—", color:farmAvgTDC===null?"#475569":farmAvgTDC>=2.5?"#4ade80":farmAvgTDC>=1?"#fb923c":"#f87171"},
+                {label:lang==="es"?"Proyección 30d":"Proj. 30d", value:`~${(farmProj30d/1000).toFixed(1)}kg`, color:"#a855f7"},
+              ].map(k=>(
+                <div key={k.label} style={{...S.card,padding:"10px 8px",textAlign:"center"}}>
+                  <div style={{fontSize:9,color:"#64748b",marginBottom:4,lineHeight:1.2}}>{k.label}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:k.color,fontFamily:"monospace"}}>{k.value}</div>
+                </div>
+              ))}
             </div>
-          )}
-          {dueCleaning.length>0&&(
-            <div style={{...S.card,borderColor:"rgba(251,146,60,.25)",marginBottom:10}}>
-              <div style={{fontSize:11,color:"#fb923c",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>
-                🧹 {lang==="es"?"Limpieza próxima (≤5 días)":"Cleaning soon (≤5 days)"}
-              </div>
-              {dueCleaning.map(s=><div key={s.id} style={{fontSize:13,color:"#e2e8f0",padding:"4px 0",borderBottom:"1px solid rgba(148,163,184,.06)"}}>{s.id} · {s.pueblo} — <span style={{color:"#fb923c",fontWeight:700}}>{s.daysToCleaning}d</span></div>)}
+
+            {/* Ranked list */}
+            {regionStats.map((r,i)=>{
+              const barPct = maxBiomass>0 ? Math.round((r.totalBiomass/maxBiomass)*100) : 0;
+              return (
+                <div key={r.name} style={{...S.card,marginBottom:8,cursor:"pointer"}}
+                  onClick={()=>setSelectedRegion(selectedRegion===r.name?null:r.name)}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:14,fontWeight:900,color:"#334155",width:22,textAlign:"center",flexShrink:0}}>#{i+1}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                        <span style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{r.name}</span>
+                        {r.capitan&&<span style={{fontSize:9,padding:"1px 6px",borderRadius:6,background:"rgba(251,146,60,.12)",color:"#fb923c",fontWeight:700}}>{r.capitan}</span>}
+                        <span style={{fontSize:9,color:"#475569",marginLeft:"auto"}}>{r.activeSystems.length}/{r.systems.length} activos</span>
+                      </div>
+                      <div style={{height:5,borderRadius:3,background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${barPct}%`,background:r.trendColor,borderRadius:3}}/>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0,minWidth:60}}>
+                      <div style={{fontSize:15,fontWeight:800,color:r.trendColor,fontFamily:"monospace"}}>
+                        {r.avgTDC!==null?`${r.avgTDC>=0?"+":""}${r.avgTDC.toFixed(2)}%`:"—"}
+                      </div>
+                      <div style={{fontSize:10,color:"#64748b"}}>{(r.totalBiomass/1000).toFixed(1)}kg</div>
+                    </div>
+                    <div style={{fontSize:16,color:r.trendColor,flexShrink:0,width:18,textAlign:"center"}}>{r.trendArrow}</div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Add region */}
+            <div style={{display:"flex",gap:6,marginTop:12}}>
+              <input value={regionNewDraft} onChange={e=>setRegionNewDraft(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"&&regionNewDraft.trim()){setRegions(p=>[...new Set([...p,regionNewDraft.trim()])]);setRegionNewDraft(""); try{sbStatic.from('regions').upsert([{name:regionNewDraft.trim()}],{onConflict:'name'})}catch{}}}}
+                placeholder={lang==="es"?"Nueva región…":"New region…"}
+                style={{...S.input,flex:1,fontSize:12,padding:"6px 10px"}}/>
+              <button disabled={!regionNewDraft.trim()}
+                onClick={()=>{if(!regionNewDraft.trim())return;setRegions(p=>[...new Set([...p,regionNewDraft.trim()])]);setRegionNewDraft("");try{sbStatic.from('regions').upsert([{name:regionNewDraft.trim()}],{onConflict:'name'})}catch{}}}
+                style={{padding:"6px 14px",borderRadius:9,border:"none",background:regionNewDraft.trim()?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(13,148,136,.1)",color:regionNewDraft.trim()?"#fff":"#334155",fontWeight:700,fontSize:12,cursor:regionNewDraft.trim()?"pointer":"not-allowed"}}>
+                +
+              </button>
             </div>
-          )}
-
-          {/* All systems cycle status */}
-
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"4px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
-            {lang==="es"?"Todos los sistemas":"All systems"}
           </div>
-          {[...systemMetrics].sort((a,b)=>(a.daysToHarvest||99)-(b.daysToHarvest||99)).map(s=>{
-            const harvestPct = s.daysToHarvest!==null ? Math.min(100, ((HARVEST_CYCLE-(s.daysToHarvest||0))/HARVEST_CYCLE)*100) : 0;
-            const cleanPct   = s.daysToCleaning!==null ? Math.min(100, ((CLEAN_CYCLE-(s.daysToCleaning||0))/CLEAN_CYCLE)*100) : 0;
-            return (
-              <div key={s.id} style={{...S.card,cursor:"pointer"}} onClick={()=>onNavigate && onNavigate("sistema", s.id)}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div>
-                    <span style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</span>
-                    <span style={{fontSize:11,color:"#64748b",marginLeft:8}}>{s.pueblo}</span>
-                  </div>
-                  <span style={{fontSize:10,color:"#475569"}}>
-                    {s.lastWeighed!==null?`${lang==="es"?"pesado":"weighed"} ${s.lastWeighed}d ${lang==="es"?"atrás":"ago"}`:(lang==="es"?"sin datos":"no data")}
-                  </span>
-                </div>
-                <div style={{marginBottom:6}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
-                    <span style={{color:"#4ade80"}}>{lang==="es"?"Cosecha":"Harvest"} ({HARVEST_CYCLE}d)</span>
-                    <span style={{color:s.daysToHarvest<=7?"#4ade80":"#64748b",fontWeight:600}}>
-                      {s.daysToHarvest!==null?(s.daysToHarvest<=0?(lang==="es"?"¡Ahora!":"Now!"):`${s.daysToHarvest}d`):"—"}
-                    </span>
-                  </div>
-                  <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${harvestPct}%`,background:harvestPct>=90?"#4ade80":"#0d9488",borderRadius:3}}/>
-                  </div>
-                </div>
-                <div>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
-                    <span style={{color:"#fb923c"}}>{lang==="es"?"Limpieza":"Cleaning"} ({CLEAN_CYCLE}d)</span>
-                    <span style={{color:s.daysToCleaning<=5?"#fb923c":"#64748b",fontWeight:600}}>
-                      {s.daysToCleaning!==null?(s.daysToCleaning<=0?(lang==="es"?"¡Ahora!":"Now!"):`${s.daysToCleaning}d`):"—"}
-                    </span>
-                  </div>
-                  <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${cleanPct}%`,background:cleanPct>=90?"#fb923c":"#334155",borderRadius:3}}/>
-                  </div>
-                </div>
-                <div style={{fontSize:9,color:"#334155",marginTop:6,textAlign:"right"}}>
-                  {lang==="es"?"Ver sistema →":"View system →"}
-                </div>
+        );
+      })()}
+
+      {/* Region detail bottom sheet */}
+      {selectedRegion && (()=>{
+        const ago30 = new Date(Date.now()-30*24*60*60*1000).toISOString().slice(0,10);
+        const rSysAll    = systems.filter(s=>s.region===selectedRegion);
+        const rSysActive = systemMetrics.filter(s=>s.region===selectedRegion);
+        const totalBiomass = rSysActive.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+        const rates = rSysActive.map(s=>s.rate).filter(r=>r!==null);
+        const avgTDC = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
+        const sysIds = new Set(rSysAll.map(s=>s.id));
+        const harvested30d = readings.filter(r=>sysIds.has(r.sistema)&&r.fecha>=ago30&&(r.cosechada_infectada||r.cosechada)).reduce((sum,r)=>sum+(r.cosechada_infectada||r.cosechada||0),0);
+        const seeded30d    = readings.filter(r=>sysIds.has(r.sistema)&&r.fecha>=ago30&&r.sembrado).reduce((sum,r)=>sum+(r.sembrado||0),0);
+        const projection30d = rSysActive.reduce((sum,s)=>sum+(s.latest?.peso?(s.rate!==null?s.latest.peso*Math.exp((s.rate/100)*30):s.latest.peso):0),0);
+        const harvestDays = rSysActive.map(s=>s.daysToHarvest).filter(d=>d!==null);
+        const nextHarvest = harvestDays.length ? Math.min(...harvestDays) : null;
+        const onTargetCount = rSysActive.filter(s=>s.rate!==null&&s.rate>=2.5).length;
+        const seedYieldRatio = seeded30d>0&&harvested30d>0 ? (harvested30d/seeded30d) : null;
+        const paramR = readings.filter(r=>sysIds.has(r.sistema)&&r.tipo==="parametros"&&r.fecha>=ago30);
+        const phVals=paramR.map(r=>r.ph).filter(Boolean);
+        const tempVals=paramR.map(r=>r.temp).filter(Boolean);
+        const salVals=paramR.map(r=>r.salinidad).filter(Boolean);
+        const avgPh=phVals.length?(phVals.reduce((a,b)=>a+b,0)/phVals.length).toFixed(1):null;
+        const avgTemp=tempVals.length?(tempVals.reduce((a,b)=>a+b,0)/tempVals.length).toFixed(1):null;
+        const avgSal=salVals.length?(salVals.reduce((a,b)=>a+b,0)/salVals.length).toFixed(0):null;
+        const trendColor = avgTDC===null?"#475569":avgTDC>=2.5?"#4ade80":avgTDC>=1?"#fb923c":"#f87171";
+        const canEdit = ["admin","consultor","director"].includes(user?.role);
+
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+            onClick={()=>{setSelectedRegion(null);setRegionEditMode(false);}}>
+            <div style={{width:"100%",maxWidth:520,background:"#0f1724",borderRadius:"20px 20px 0 0",padding:"20px 20px 48px",maxHeight:"88vh",overflowY:"auto"}}
+              onClick={e=>e.stopPropagation()}>
+              <div style={{width:36,height:4,borderRadius:2,background:"rgba(148,163,184,.2)",margin:"0 auto 16px"}}/>
+
+              {/* Header */}
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+                {regionEditMode ? (
+                  <>
+                    <input autoFocus value={regionEditDraft} onChange={e=>setRegionEditDraft(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&regionEditDraft.trim()){const old=selectedRegion;setRegions(p=>p.map(r=>r===old?regionEditDraft.trim():r));try{sbStatic.from('regions').upsert([{name:regionEditDraft.trim()}],{onConflict:'name'});sbStatic.from('regions').delete().eq('name',old);}catch{}setSelectedRegion(regionEditDraft.trim());setRegionEditMode(false);}}}
+                      style={{...S.input,flex:1,fontSize:18,fontWeight:800,padding:"6px 10px"}}/>
+                    <button onClick={()=>{const old=selectedRegion;if(!regionEditDraft.trim())return;setRegions(p=>p.map(r=>r===old?regionEditDraft.trim():r));try{sbStatic.from('regions').upsert([{name:regionEditDraft.trim()}],{onConflict:'name'});sbStatic.from('regions').delete().eq('name',old);}catch{}setSelectedRegion(regionEditDraft.trim());setRegionEditMode(false);}}
+                      style={{padding:"6px 12px",borderRadius:8,border:"none",background:"#0d9488",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>✓</button>
+                    <button onClick={()=>setRegionEditMode(false)}
+                      style={{padding:"6px 10px",borderRadius:8,border:"none",background:"rgba(255,255,255,.06)",color:"#94a3b8",fontWeight:700,fontSize:13,cursor:"pointer"}}>✕</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:20,fontWeight:800,color:"#e2e8f0"}}>{selectedRegion}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{rSysActive.length}/{rSysAll.length} sistemas activos</div>
+                    </div>
+                    {canEdit&&<button onClick={()=>{setRegionEditDraft(selectedRegion);setRegionEditMode(true);}}
+                      style={{padding:"6px 10px",borderRadius:8,border:"1px solid rgba(148,163,184,.12)",background:"transparent",color:"#94a3b8",fontSize:12,cursor:"pointer"}}>✏️</button>}
+                    {canEdit&&<button onClick={()=>{if(!window.confirm(lang==="es"?`¿Eliminar "${selectedRegion}"?`:`Delete "${selectedRegion}"?`))return;setRegions(p=>p.filter(r=>r!==selectedRegion));try{sbStatic.from('regions').delete().eq('name',selectedRegion);}catch{}setSelectedRegion(null);}}
+                      style={{padding:"6px 10px",borderRadius:8,border:"1px solid rgba(239,68,68,.2)",background:"rgba(239,68,68,.06)",color:"#f87171",fontSize:12,cursor:"pointer"}}>🗑</button>}
+                  </>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              {/* 2×2 metric grid */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                {[
+                  {label:lang==="es"?"Biomasa actual":"Current biomass", value:`${(totalBiomass/1000).toFixed(2)} kg`, color:"#0d9488"},
+                  {label:"TDC promedio", value:avgTDC!==null?`${avgTDC>=0?"+":""}${avgTDC.toFixed(2)}%/d`:"Sin datos", color:trendColor},
+                  {label:lang==="es"?"Cosechado (30d)":"Harvested (30d)", value:harvested30d>0?`${(harvested30d/1000).toFixed(2)} kg`:"—", color:"#4ade80"},
+                  {label:lang==="es"?"Proyección 30d":"Projection 30d", value:`~${(projection30d/1000).toFixed(1)} kg`, color:"#a855f7"},
+                ].map(m=>(
+                  <div key={m.label} style={{background:"rgba(255,255,255,.03)",borderRadius:12,padding:"12px 14px",border:"1px solid rgba(148,163,184,.07)"}}>
+                    <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>{m.label}</div>
+                    <div style={{fontSize:18,fontWeight:800,color:m.color,fontFamily:"monospace"}}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Secondary metrics */}
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+                {[
+                  {label:lang==="es"?"En objetivo":"On target", value:`${onTargetCount}/${rSysActive.length}`, color:"#4ade80"},
+                  nextHarvest!==null&&{label:lang==="es"?"Prox. cosecha":"Next harvest", value:`${nextHarvest}d`, color:nextHarvest<=7?"#4ade80":"#64748b"},
+                  seedYieldRatio&&{label:lang==="es"?"Rendimiento semilla":"Seed yield", value:`${seedYieldRatio.toFixed(1)}x`, color:"#f59e0b"},
+                  seeded30d>0&&{label:lang==="es"?"Sembrado (30d)":"Seeded (30d)", value:`${(seeded30d/1000).toFixed(1)}kg`, color:"#64748b"},
+                ].filter(Boolean).map(m=>(
+                  <div key={m.label} style={{padding:"5px 10px",borderRadius:8,background:"rgba(255,255,255,.04)",border:"1px solid rgba(148,163,184,.08)"}}>
+                    <span style={{fontSize:10,color:"#64748b"}}>{m.label}: </span>
+                    <span style={{fontSize:11,fontWeight:700,color:m.color}}>{m.value}</span>
+                  </div>
+                ))}
+                {(avgPh||avgTemp||avgSal)&&(
+                  <div style={{padding:"5px 10px",borderRadius:8,background:"rgba(14,165,233,.06)",border:"1px solid rgba(14,165,233,.12)"}}>
+                    <span style={{fontSize:10,color:"#64748b"}}>Agua (30d): </span>
+                    {avgPh&&<span style={{fontSize:11,color:"#0ea5e9",fontWeight:700}}>pH {avgPh} </span>}
+                    {avgTemp&&<span style={{fontSize:11,color:"#0ea5e9",fontWeight:700}}>{avgTemp}° </span>}
+                    {avgSal&&<span style={{fontSize:11,color:"#0ea5e9",fontWeight:700}}>{avgSal}‰</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* Systems list */}
+              <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>
+                {lang==="es"?"Sistemas":"Systems"}
+              </div>
+              {[...rSysActive].sort((a,b)=>(b.rate||(-999))-(a.rate||(-999))).map(s=>{
+                const col = growthColor(s.rate);
+                return (
+                  <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(148,163,184,.06)",cursor:"pointer"}}
+                    onClick={()=>{setSelectedRegion(null);onNavigate&&onNavigate("sistema",s.id);}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:col,flexShrink:0}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{s.id}</span>
+                      <span style={{fontSize:11,color:"#475569",marginLeft:6}}>{s.pueblo}</span>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:col,fontFamily:"monospace"}}>
+                        {s.rate!==null?`${s.rate>=0?"+":""}${s.rate.toFixed(2)}%`:"—"}
+                      </div>
+                      <div style={{fontSize:9,color:"#475569"}}>{s.latest?`${(s.latest.peso/1000).toFixed(2)}kg`:"sin datos"}</div>
+                    </div>
+                    <MiniSparkline data={s.allR} color={col} w={44} h={18}/>
+                  </div>
+                );
+              })}
+              {rSysAll.filter(s=>s.estado!=="Activo").map(s=>(
+                <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",opacity:.4}}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:"#334155",flexShrink:0}}/>
+                  <span style={{fontSize:12,color:"#475569"}}>{s.id}</span>
+                  <span style={{fontSize:10,color:"#334155",marginLeft:4}}>inactivo</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ═══ TAB 5: OPS MONITOR ═══ */}
       {tab==="ops" && (()=>{
@@ -6717,14 +6869,14 @@ export default function App() {
             : systems.filter(s => s.estado === "Activo");
           return <CapitanTareasComponent systems={supSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved}/>;
         })()}
-        {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
+        {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
         {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
 
         {/* Level 3 — Admin + Consultor */}
-        {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas}/></ProtectedRoute>}
+        {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
         {isL3 && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
