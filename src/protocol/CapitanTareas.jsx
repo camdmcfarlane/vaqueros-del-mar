@@ -106,6 +106,9 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [showFormChart, setShowFormChart]         = useState(false);  // expand chart inside reading form
   const [dippingModal, setDippingModal]           = useState(null);   // task open in dipping form
   const [dippingForm, setDippingForm]             = useState({ concentration:'', notes:'', done:true });
+  const [parametrosModal, setParametrosModal]     = useState(null);   // task open in parametros form
+  const [parametrosForm, setParametrosForm]       = useState({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
+  const [expandedSystems, setExpandedSystems]     = useState(new Set()); // system IDs with stacked tasks expanded
   const [autoFillSource, setAutoFillSource]       = useState(null);
   const [activeBatch, setActiveBatch]             = useState(null);
   const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'', cosechadaLines:{} });
@@ -128,6 +131,30 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     if (setAssignedTasks) setAssignedTasks(prev => prev.map(t =>
       t.id === task.id ? { ...t, confirmed: false, actual: null } : t
     ));
+  };
+
+  const saveParametros = () => {
+    const t = parametrosModal;
+    if (!t) return;
+    // Save a real parametros reading if the task is tied to a specific system
+    if (t.sistema && onReadingSaved) {
+      onReadingSaved({
+        id: `${t.sistema}_${today}_${user?.initials || 'anon'}_params`,
+        sistema: t.sistema,
+        fecha: today,
+        tipo: 'parametros',
+        peso: null,
+        ph:        parseFloat(parametrosForm.ph)        || null,
+        temp:      parseFloat(parametrosForm.temp)      || null,
+        salinidad: parseFloat(parametrosForm.salinidad) || null,
+        salt:      parseFloat(parametrosForm.salt)      || null,
+        notas:     parametrosForm.notas || null,
+        logged_by: user?.initials || null,
+      });
+    }
+    markDone(t, { actual: parametrosForm.ph || '1' });
+    setParametrosModal(null);
+    setParametrosForm({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
   };
 
   const [form, setForm] = useState({
@@ -176,10 +203,18 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     setShowFormChart(false);
   }
 
+  // Map reading tipo → which task types it satisfies
+  const READING_SATISFIES = {
+    peso:       ['pesos', 'cosecha', 'sembrar', 'limpieza', 'vigilancia'],
+    parametros: ['parametros'],
+  };
+
   function commitReading(reading, last) {
     if (setAssignedTasks) {
+      const satisfies = new Set(READING_SATISFIES[reading.tipo] || []);
       setAssignedTasks(prev => prev.map(t =>
         t.sistema === reading.sistema && t.date === today && !t.confirmed
+          && (satisfies.size === 0 || satisfies.has(t.taskType))
           ? { ...t, confirmed: true, confirmedAt: new Date().toISOString(), confirmedBy: user?.initials }
           : t
       ));
@@ -235,8 +270,10 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       if (onReadingSaved) onReadingSaved(reading);
       setSessionDone(p => new Set([...p, sys.id]));
       if (setAssignedTasks) {
+        const satisfies = new Set(READING_SATISFIES['peso'] || []);
         setAssignedTasks(prev => prev.map(t =>
           t.sistema === sys.id && t.date === today && !t.confirmed
+            && satisfies.has(t.taskType)
             ? { ...t, confirmed: true, confirmedBy: user?.initials } : t
         ));
       }
@@ -1099,17 +1136,18 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
         const TIPO_LABELS = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos', dipping:'Dipping AMPEP', parametros:'Parámetros' };
         const TIPO_COLORS = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8', dipping:'#a855f7', parametros:'#0ea5e9' };
 
-        const TaskRow = ({ t, highlight }) => {
-          const isDipping = t.taskType === 'dipping';
+        const TaskRow = ({ t, highlight, nested = false }) => {
+          const isDipping    = t.taskType === 'dipping';
+          const isParametros = t.taskType === 'parametros';
           return (
             <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
               background: highlight==='overdue' ? 'rgba(248,113,113,.06)' : highlight==='today' ? 'rgba(13,148,136,.06)' : 'rgba(255,255,255,.02)',
-              border: `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
-              borderRadius:'10px', marginBottom:'6px' }}>
+              border: nested ? 'none' : `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
+              borderRadius: nested ? 0 : '10px', marginBottom: nested ? 0 : '6px' }}>
               <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background: TIPO_COLORS[t.taskType] || '#64748b' }}/>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:'13px', fontWeight:'600', color:'#e2e8f0' }}>
-                  {t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
+                  {!nested && t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
                 </div>
                 <div style={{ fontSize:'11px', color: highlight==='overdue' ? '#f87171' : '#64748b' }}>
                   {highlight==='overdue' ? `⚠ PENDIENTE — vencida ${t.date}` : t.date}
@@ -1123,15 +1161,86 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                   if (isDipping) {
                     setDippingForm({ concentration: t.objetivo ? String(t.objetivo) : '', notes:'', done:true });
                     setDippingModal(t);
+                  } else if (isParametros) {
+                    setParametrosForm({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
+                    setParametrosModal(t);
                   } else {
                     markDone(t);
                   }
                 }}
                 style={{ fontSize:'11px', padding:'4px 10px', borderRadius:'7px', border:'none',
-                  background: isDipping ? '#a855f7' : '#0d9488',
+                  background: isDipping ? '#a855f7' : isParametros ? '#0ea5e9' : '#0d9488',
                   color:'#fff', fontWeight:'700', cursor:'pointer', flexShrink:0 }}>
-                {isDipping ? '🧪' : '✓'}
+                {isDipping ? '🧪' : isParametros ? '📊' : '✓'}
               </button>
+            </div>
+          );
+        };
+
+        // Group active (overdue + today) tasks by sistema for stacked display
+        const activeTasks = [...overdue, ...todayT];
+        const sysGroups = {};
+        const noSysTasks = [];
+        activeTasks.forEach(t => {
+          if (t.sistema) {
+            if (!sysGroups[t.sistema]) sysGroups[t.sistema] = [];
+            sysGroups[t.sistema].push(t);
+          } else {
+            noSysTasks.push(t);
+          }
+        });
+
+        const toggleSystem = (sysId) => setExpandedSystems(prev => {
+          const next = new Set(prev);
+          next.has(sysId) ? next.delete(sysId) : next.add(sysId);
+          return next;
+        });
+
+        const SystemGroup = ({ sysId, tasks }) => {
+          const isOpen   = expandedSystems.has(sysId);
+          const allDone  = tasks.every(t => t.confirmed);
+          const hasOverdue = tasks.some(t => t.date < today2 && !t.confirmed);
+          const pendingCount = tasks.filter(t => !t.confirmed).length;
+          const borderColor = allDone ? 'rgba(74,222,128,.25)' : hasOverdue ? 'rgba(248,113,113,.25)' : 'rgba(13,148,136,.2)';
+          return (
+            <div style={{ marginBottom:'6px' }}>
+              <div onClick={() => toggleSystem(sysId)}
+                style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
+                  background: hasOverdue ? 'rgba(248,113,113,.06)' : 'rgba(13,148,136,.06)',
+                  border: `0.5px solid ${borderColor}`, borderRadius: isOpen ? '10px 10px 0 0' : '10px',
+                  cursor:'pointer' }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0,
+                  background: allDone ? '#4ade80' : hasOverdue ? '#f87171' : '#0d9488' }}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:'13px', fontWeight:'700', color:'#e2e8f0' }}>{sysId}</div>
+                  <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:3 }}>
+                    {tasks.map(t => (
+                      <span key={t.id} style={{ fontSize:'10px', padding:'1px 7px', borderRadius:8,
+                        background: t.confirmed ? 'rgba(74,222,128,.1)' : `${TIPO_COLORS[t.taskType] || '#64748b'}20`,
+                        color: t.confirmed ? '#4ade80' : TIPO_COLORS[t.taskType] || '#64748b',
+                        fontWeight:600, textDecoration: t.confirmed ? 'line-through' : 'none' }}>
+                        {TIPO_LABELS[t.taskType] || t.taskType}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                  {!allDone && <span style={{ fontSize:'10px', color: hasOverdue ? '#f87171' : '#64748b',
+                    fontWeight:700 }}>{pendingCount}/{tasks.length}</span>}
+                  {allDone && <span style={{ fontSize:'12px', color:'#4ade80' }}>✓</span>}
+                  <span style={{ fontSize:'11px', color:'#475569' }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+              </div>
+              {isOpen && (
+                <div style={{ border:`0.5px solid ${borderColor}`, borderTop:'none',
+                  borderRadius:'0 0 10px 10px', overflow:'hidden' }}>
+                  {tasks.map((t, i) => (
+                    <div key={t.id} style={{ borderTop: i > 0 ? '0.5px solid rgba(255,255,255,.04)' : 'none' }}>
+                      <TaskRow t={t} highlight={t.date < today2 && !t.confirmed ? 'overdue' : 'today'} nested/>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         };
@@ -1141,8 +1250,14 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
             <div style={{ fontSize:'11px', color:'#64748b', fontWeight:'700', textTransform:'uppercase', letterSpacing:'.6px', marginBottom:'8px' }}>
               Tareas asignadas {overdue.length > 0 && <span style={{color:'#f87171'}}>· {overdue.length} pendiente{overdue.length>1?'s':''}</span>}
             </div>
-            {overdue.map(t => <TaskRow key={t.id} t={t} highlight="overdue"/>)}
-            {todayT.map(t => <TaskRow key={t.id} t={t} highlight="today"/>)}
+            {/* No-system tasks always flat */}
+            {noSysTasks.map(t => <TaskRow key={t.id} t={t} highlight={t.date < today2 ? 'overdue' : 'today'}/>)}
+            {/* System tasks: grouped if >1 task, flat if single */}
+            {Object.entries(sysGroups).map(([sysId, tasks]) =>
+              tasks.length > 1
+                ? <SystemGroup key={sysId} sysId={sysId} tasks={tasks}/>
+                : <TaskRow key={tasks[0].id} t={tasks[0]} highlight={tasks[0].date < today2 ? 'overdue' : 'today'}/>
+            )}
             {upcoming.map(t => <TaskRow key={t.id} t={t} highlight="upcoming"/>)}
             {archived.length > 0 && (
               <>
@@ -1257,6 +1372,82 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
               Guardar dipping
             </button>
             <button onClick={() => setDippingModal(null)}
+              style={{ width:'100%', height:40, marginTop:8, borderRadius:12, border:'none',
+                background:'transparent', color:'#475569', fontSize:14, cursor:'pointer' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Parametros modal */}
+      {parametrosModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:300,
+          display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={() => setParametrosModal(null)}>
+          <div style={{ width:'100%', maxWidth:480, background:'#0f1724',
+            borderRadius:'20px 20px 0 0', padding:'20px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'rgba(148,163,184,.2)', margin:'0 auto 16px' }}/>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
+              <span style={{ fontSize:24 }}>📊</span>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#e2e8f0' }}>Parámetros del agua</div>
+                <div style={{ fontSize:12, color:'#64748b' }}>
+                  {parametrosModal.sistema || 'Sin sistema'}{parametrosModal.supportCrew?.length > 0 ? ` · +${parametrosModal.supportCrew.join(', ')}` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+              {[
+                { key:'ph',        label:'pH',              placeholder:'ej. 8.1',   unit:'' },
+                { key:'temp',      label:'Temperatura',     placeholder:'ej. 28.5',  unit:'°C' },
+                { key:'salinidad', label:'Salinidad',       placeholder:'ej. 34',    unit:'‰' },
+                { key:'salt',      label:'Sal %',           placeholder:'ej. 3.5',   unit:'%' },
+              ].map(({ key, label, placeholder, unit }) => (
+                <div key={key}>
+                  <div style={{ fontSize:12, color:'#94a3b8', fontWeight:600, marginBottom:6 }}>
+                    {label}{unit ? <span style={{ color:'#475569', fontWeight:400 }}> ({unit})</span> : ''}
+                  </div>
+                  <input
+                    type="number" inputMode="decimal" step="0.1"
+                    value={parametrosForm[key]}
+                    onChange={e => setParametrosForm(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    style={{ width:'100%', boxSizing:'border-box', height:48, fontSize:18, fontWeight:600,
+                      background:'rgba(255,255,255,.06)',
+                      border:`0.5px solid ${parametrosForm[key] ? '#0ea5e9' : 'rgba(148,163,184,.15)'}`,
+                      borderRadius:10, color:'#e2e8f0', padding:'0 12px', textAlign:'center',
+                      outline:'none' }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize:12, color:'#94a3b8', fontWeight:600, marginBottom:6 }}>
+              Observaciones <span style={{ color:'#475569', fontWeight:400 }}>(opcional)</span>
+            </div>
+            <textarea
+              value={parametrosForm.notas}
+              onChange={e => setParametrosForm(p => ({ ...p, notas: e.target.value }))}
+              placeholder="Condiciones del agua, notas relevantes..."
+              style={{ width:'100%', boxSizing:'border-box', minHeight:70, fontSize:14,
+                background:'rgba(255,255,255,.06)', border:'0.5px solid rgba(148,163,184,.12)',
+                borderRadius:10, color:'#e2e8f0', padding:12, outline:'none', resize:'vertical',
+                fontFamily:'inherit', marginBottom:16 }}
+            />
+
+            <button
+              disabled={!parametrosForm.ph && !parametrosForm.temp && !parametrosForm.salinidad && !parametrosForm.salt}
+              onClick={saveParametros}
+              style={{ width:'100%', height:52, borderRadius:12, border:'none', fontSize:16, fontWeight:700,
+                cursor: (parametrosForm.ph || parametrosForm.temp || parametrosForm.salinidad || parametrosForm.salt) ? 'pointer' : 'default',
+                background: (parametrosForm.ph || parametrosForm.temp || parametrosForm.salinidad || parametrosForm.salt) ? '#0ea5e9' : 'rgba(255,255,255,.06)',
+                color: (parametrosForm.ph || parametrosForm.temp || parametrosForm.salinidad || parametrosForm.salt) ? '#fff' : '#475569' }}>
+              Guardar parámetros
+            </button>
+            <button onClick={() => setParametrosModal(null)}
               style={{ width:'100%', height:40, marginTop:8, borderRadius:12, border:'none',
                 background:'transparent', color:'#475569', fontSize:14, cursor:'pointer' }}>
               Cancelar

@@ -2371,7 +2371,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
             const harvestPct = s.daysToHarvest!==null ? Math.min(100, ((HARVEST_CYCLE-(s.daysToHarvest||0))/HARVEST_CYCLE)*100) : 0;
             const cleanPct   = s.daysToCleaning!==null ? Math.min(100, ((CLEAN_CYCLE-(s.daysToCleaning||0))/CLEAN_CYCLE)*100) : 0;
             return (
-              <div key={s.id} style={S.card}>
+              <div key={s.id} style={{...S.card,cursor:"pointer"}} onClick={()=>onNavigate && onNavigate("sistema", s.id)}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                   <div>
                     <span style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</span>
@@ -2403,6 +2403,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
                     <div style={{height:"100%",width:`${cleanPct}%`,background:cleanPct>=90?"#fb923c":"#334155",borderRadius:3}}/>
                   </div>
                 </div>
+                <div style={{fontSize:9,color:"#334155",marginTop:6,textAlign:"right"}}>
+                  {lang==="es"?"Ver sistema →":"View system →"}
+                </div>
               </div>
             );
           })}
@@ -2415,9 +2418,9 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
 
 
 function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
-  const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
   const todayDayIndex = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
-  const defaultDay = todayDayIndex === 0 ? days[0] : todayDayIndex <= 6 ? days[todayDayIndex-1] : days[0];
+  const defaultDay = todayDayIndex === 0 ? "Domingo" : days[todayDayIndex - 1];
   const [selectedDay, setDay] = useState(defaultDay);
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState(null);
@@ -2482,10 +2485,10 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
             const day = now.getDay();
             const monday = new Date(now);
             monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-            const saturday = new Date(monday);
-            saturday.setDate(monday.getDate() + 5);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
             const fmt = d => d.toLocaleDateString(lang==="es"?"es-PA":"en-US",{day:"numeric",month:"short"});
-            return `${lang==="es"?"Semana del":"Week of"} ${fmt(monday)} – ${fmt(saturday)}`;
+            return `${lang==="es"?"Semana del":"Week of"} ${fmt(monday)} – ${fmt(sunday)}`;
           })()}</p>
         </div>
         <button onClick={()=>{setEditTask(null);setForm({...emptyForm,day:selectedDay});setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
@@ -3437,7 +3440,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
   onChartUpload=null, addToast=()=>{}, deepLinkSystem=null, setDeepLinkSystem=()=>{}, navigateTo=()=>{} }) {
-  const canEdit = ["admin","consultor","director","capitan"].includes(user.role);
+  const canAddSystem        = ["admin","consultor","director","capitan"].includes(user.role);
+  const canEditSystemDetails = ["admin","consultor","director"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
   const [selected, setSelected] = useState(null);
 
@@ -3488,8 +3492,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
-  // Only admin/consultor/director can edit/delete readings
-  const canEditReadings = ["admin","consultor","director"].includes(user.role);
+  const canEditReadings = ["admin","consultor","director","capitan"].includes(user.role);
   const canUpload = ["admin","consultor","director"].includes(user.role) && onChartUpload;
   const [editingViaModal, setEditingViaModal] = useState(null);
   const [deletingViaModal, setDeletingViaModal] = useState(null);
@@ -4026,7 +4029,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               {lang==="es"?"Lecturas":"Readings"}
               <span style={{marginLeft:6,color:"#334155"}}>({readings.filter(r=>r.sistema===s.id).length})</span>
             </div>
-            {canEdit && (
+            {canEditReadings && (
               <button onClick={()=>setShowReadingForm(v=>!v)}
                 style={{padding:"4px 10px",borderRadius:8,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:11,cursor:"pointer"}}>
                 {showReadingForm?"✕ Cancelar":"+ Nueva Lectura"}
@@ -4035,7 +4038,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           </div>
 
           {/* New reading form */}
-          {showReadingForm && canEdit && (
+          {showReadingForm && canEditReadings && (
             <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.15)",borderRadius:10,padding:12,marginBottom:12}}>
               {/* Type toggle */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
@@ -4565,7 +4568,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           />
         )}
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
-        {canEdit&&(
+        {canEditSystemDetails&&(
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button onClick={()=>{setForm({...s});setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
             {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Archivar ${s.id}? El sistema quedará inactivo y desaparecerá de las vistas de capitanes.`:`Archive ${s.id}? The system will become inactive and disappear from captains' views.`)){setSystems(prev=>prev.map(x=>x.id===s.id?{...x,estado:"Archivado"}:x));setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
@@ -4704,7 +4707,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
           <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>Sistemas</h2>
           <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>{systems.filter(s=>s.estado==="Activo").length} {lang==="es"?"activos":"active"} · {archivedFiltered.length>0?`${archivedFiltered.length} archivados · `:""}{systems.length} total</p>
         </div>
-        {canEdit&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
+        {canAddSystem&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:12}}>
         {["all",...regions].map(r=>{ const c=r==="all"?"#94a3b8":regionColor[r]||"#94a3b8"; return <button key={r} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?c:"rgba(148,163,184,.12)"}`,background:filterRegion===r?`${c}18`:"transparent",color:filterRegion===r?c:"#64748b",fontWeight:600,fontSize:11,cursor:"pointer"}}>{r==="all"?(lang==="es"?"Todas":"All"):r}</button>; })}
@@ -4864,6 +4867,80 @@ function MapaTab({ systems, lang }) {
   );
 }
 
+function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales, setMateriales, semillas, setSemillas }) {
+  const [drafts, setDrafts] = useState({ regions:"", tipos:"", materiales:"", semillas:"" });
+  const D = (k,v) => setDrafts(p=>({...p,[k]:v}));
+
+  const addItem = async (key, setList) => {
+    const val = drafts[key].trim();
+    if (!val) return;
+    setList(prev => prev.includes(val) ? prev : [...prev, val]);
+    D(key, "");
+    if (key === "regions") {
+      try { await sbStatic.from('regions').upsert([{ name: val }], { onConflict: 'name' }); } catch(e) { console.warn('region upsert failed', e); }
+    }
+  };
+
+  const removeItem = async (key, setList, item) => {
+    const confirmMsg = lang==="es" ? `¿Eliminar "${item}"?` : `Remove "${item}"?`;
+    if (!window.confirm(confirmMsg)) return;
+    setList(prev => prev.filter(v => v !== item));
+    if (key === "regions") {
+      try { await sbStatic.from('regions').delete().eq('name', item); } catch(e) { console.warn('region delete failed', e); }
+    }
+  };
+
+  const cats = [
+    { key:"regions",    label:lang==="es"?"Sitios / Regiones":"Sites / Regions", list:regions,    setList:setRegions    },
+    { key:"semillas",   label:lang==="es"?"Tipos de Semilla":"Seed Types",        list:semillas,   setList:setSemillas   },
+    { key:"tipos",      label:lang==="es"?"Tipos de Sistema":"System Types",      list:tipos,      setList:setTipos      },
+    { key:"materiales", label:lang==="es"?"Materiales":"Materials",               list:materiales, setList:setMateriales },
+  ];
+
+  return (
+    <div style={S.card}>
+      <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:14,textTransform:"uppercase",letterSpacing:.6}}>
+        ⚙️ {lang==="es"?"Catálogo":"Catalog"}
+      </div>
+      {cats.map(cat => (
+        <div key={cat.key} style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:8}}>{cat.label}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+            {cat.list.map(item => (
+              <div key={item} style={{display:"flex",alignItems:"center",gap:4,
+                padding:"4px 10px",borderRadius:20,
+                background:"rgba(13,148,136,.08)",border:"1px solid rgba(13,148,136,.2)"}}>
+                <span style={{fontSize:12,color:"#94a3b8"}}>{item}</span>
+                <button onClick={() => removeItem(cat.key, cat.setList, item)}
+                  style={{width:14,height:14,borderRadius:"50%",border:"none",
+                    background:"rgba(239,68,68,.25)",color:"#f87171",
+                    fontSize:9,lineHeight:1,cursor:"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>✕</button>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <input
+              value={drafts[cat.key]}
+              onChange={e=>D(cat.key,e.target.value)}
+              onKeyDown={e=>{ if(e.key==="Enter") addItem(cat.key, cat.setList); }}
+              placeholder={lang==="es"?`Nuevo ${cat.label.split("/")[0].trim().toLowerCase()}…`:`New ${cat.label.split("/")[0].trim().toLowerCase()}…`}
+              style={{...S.input,flex:1,fontSize:12,padding:"6px 10px"}}
+            />
+            <button onClick={()=>addItem(cat.key, cat.setList)}
+              disabled={!drafts[cat.key].trim()}
+              style={{padding:"6px 14px",borderRadius:9,border:"none",
+                background:drafts[cat.key].trim()?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(13,148,136,.1)",
+                color:drafts[cat.key].trim()?"#fff":"#334155",fontWeight:700,fontSize:12,cursor:drafts[cat.key].trim()?"pointer":"not-allowed"}}>
+              +
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProfileTab({ user, lang, setLang, onLogout,
   regions=DEFAULT_REGIONS, setRegions=()=>{},
   tipos=DEFAULT_TIPOS,   setTipos=()=>{},
@@ -5008,46 +5085,13 @@ function ProfileTab({ user, lang, setLang, onLogout,
         </div>
       )}
       {canManageCatalog && (
-        <div style={S.card}>
-          <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:12,textTransform:"uppercase",letterSpacing:.6}}>
-            ⚙️ {lang==="es"?"Opciones del catálogo":"Catalog options"}
-          </div>
-          {[
-            { label:lang==="es"?"Regiones":"Regions",    list:regions,    setList:setRegions,    defaults:DEFAULT_REGIONS    },
-            { label:lang==="es"?"Tipos":"Types",          list:tipos,      setList:setTipos,      defaults:DEFAULT_TIPOS      },
-            { label:lang==="es"?"Materiales":"Materials", list:materiales, setList:setMateriales, defaults:DEFAULT_MATERIALES },
-            { label:lang==="es"?"Semillas":"Seeds",       list:semillas,   setList:setSemillas,   defaults:DEFAULT_SEMILLAS   },
-          ].map(cat => (
-            <div key={cat.label} style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:"#94a3b8",fontWeight:600,marginBottom:6}}>{cat.label}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {cat.list.map(item => {
-                  const isDefault = cat.defaults.includes(item);
-                  return (
-                    <div key={item} style={{display:"flex",alignItems:"center",gap:4,
-                      padding:"4px 10px",borderRadius:20,
-                      background:isDefault?"rgba(255,255,255,.04)":"rgba(13,148,136,.1)",
-                      border:`0.5px solid ${isDefault?"rgba(148,163,184,.1)":"rgba(13,148,136,.3)"}`}}>
-                      <span style={{fontSize:12,color:isDefault?"#64748b":"#2dd4bf"}}>{item}</span>
-                      {!isDefault && (
-                        <button onClick={() => cat.setList(prev => prev.filter(v => v !== item))}
-                          style={{width:14,height:14,borderRadius:"50%",border:"none",
-                            background:"rgba(239,68,68,.3)",color:"#f87171",
-                            fontSize:9,lineHeight:1,cursor:"pointer",
-                            display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-          <div style={{fontSize:10,color:"#475569",marginTop:2}}>
-            {lang==="es"?"Para agregar: Sistemas → Nueva Sistema → campo de opción":"To add: Systems → New System → option field"}
-          </div>
-        </div>
+        <CatalogManager
+          lang={lang}
+          regions={regions} setRegions={setRegions}
+          tipos={tipos} setTipos={setTipos}
+          materiales={materiales} setMateriales={setMateriales}
+          semillas={semillas} setSemillas={setSemillas}
+        />
       )}
       <button onClick={onLogout} style={{width:"100%",padding:13,borderRadius:12,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.04)",color:"#f87171",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:4}}>
         <Icon name="logout" size={16} color="#f87171"/>{lang==="es"?"Cerrar Sesión":"Sign Out"}
@@ -5918,10 +5962,9 @@ export default function App() {
           console.warn('[AquaOps] regions pull error:', regRes.error.message);
         } else if (regRes.data?.length) {
           const remoteRegions = regRes.data.map(r => r.name);
-          setRegions(prev => {
-            const merged = [...new Set([...remoteRegions, ...prev])];
-            try { localStorage.setItem('aq_cat_regions', JSON.stringify(merged)); } catch {}
-            return merged;
+          setRegions(() => {
+            try { localStorage.setItem('aq_cat_regions', JSON.stringify(remoteRegions)); } catch {}
+            return remoteRegions;
           });
           console.log(`[AquaOps] regions pulled: ${regRes.data.length} rows`);
         }
@@ -6181,7 +6224,7 @@ export default function App() {
   const syncAssignedTasks = (updater) => {
     setAssignedTasks(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Find what changed and push it
+      // Push upserts for new or changed tasks
       next.forEach(task => {
         const old = prev.find(t => t.id === task.id);
         if (!old || JSON.stringify(old) !== JSON.stringify(task)) {
@@ -6195,6 +6238,12 @@ export default function App() {
             support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
             updated_at: new Date().toISOString(),
           });
+        }
+      });
+      // Push deletes for tasks removed from state
+      prev.forEach(task => {
+        if (!next.find(t => t.id === task.id)) {
+          pushItem('assigned_tasks', 'delete', { id: task.id });
         }
       });
       return next;
@@ -6522,7 +6571,7 @@ export default function App() {
             : systems.filter(s => s.capitan === user.initials && s.estado === "Activo");
           return <CapitanTareasComponent systems={capSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved} assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} pendingCount={pendingCount} cadenceDays={READING_CADENCE_DAYS}/>;
         })()}
-        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><CapitanSistemas userInitials={user?.initials} systems={mySystems} readings={readings} /></ProtectedRoute>}
+        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
           </>);
