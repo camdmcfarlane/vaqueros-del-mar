@@ -180,12 +180,13 @@ function LoginScreen({ onLogin, lang, setLang }) {
 
   const handleLogin = async () => {
     setLogging(true); setErr("");
+    const unNorm = un.trim().toLowerCase();
     // Static accounts first — works offline
-    const staticU = USERS.find(u=>u.username===un && u.password===pw);
+    const staticU = USERS.find(u=>u.username===unNorm && u.password===pw);
     if(staticU){ setLogging(false); onLogin(staticU); return; }
     // Dynamic accounts — Supabase usuarios table
     try {
-      const { data } = await sbStatic.from('usuarios').select('*').eq('username',un).eq('active',true).maybeSingle();
+      const { data } = await sbStatic.from('usuarios').select('*').eq('username',unNorm).eq('active',true).maybeSingle();
       if(data && data.password_plain===pw){
         const u={ username:data.username, password:data.password_plain, role:data.role, name:data.name, initials:data.initials, assignedSystems:null };
         setLogging(false); onLogin(u); return;
@@ -255,13 +256,6 @@ function LoginScreen({ onLogin, lang, setLang }) {
           <button onClick={handleLogin} disabled={logging} style={{width:"100%",padding:14,borderRadius:11,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:800,fontSize:15,cursor:logging?"default":"pointer",marginTop:14,opacity:logging?0.7:1}}>
             {logging?(lang==="es"?"Verificando...":"Checking..."):(lang==="es"?"Entrar":"Sign In")}
           </button>
-          <div style={{marginTop:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,.03)",border:"1px solid rgba(148,163,184,.08)"}}>
-            <p style={{fontSize:10,color:"#475569",margin:"0 0 4px",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Cuentas de prueba · All passwords: AGPanama1</p>
-            <p style={{fontSize:10,color:"#334155",margin:0,lineHeight:1.6}}>
-              test_vaquero · test_supervisor · test_ceo<br/>
-              hilario_migar · eduardo_valdes · cameron_mcfarlane
-            </p>
-          </div>
         </div>
         <p style={{textAlign:"center",color:"#334155",fontSize:11,marginTop:12}}>
           {lang==="es"?"¿No tienes cuenta? ":"No account? "}
