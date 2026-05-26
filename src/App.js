@@ -1863,6 +1863,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
     { id:"biomasa",  label:lang==="es"?"Biomasa":"Biomass" },
     { id:"equipo",   label:lang==="es"?"Equipo":"Crew" },
     { id:"tareas",   label:lang==="es"?"Tareas":"Tasks" },
+    { id:"ops",      label:"Ops" },
   ];
 
   return (
@@ -1873,12 +1874,12 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
       </div>
 
       {/* Tab bar */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,marginBottom:16}}>
         {dashTabs.map(t=>(
           <button key={t.id} onClick={()=>setDashTab(t.id)}
-            style={{padding:"8px 4px",borderRadius:10,border:`1px solid ${tab===t.id?"#0d9488":"rgba(148,163,184,.12)"}`,
+            style={{padding:"7px 2px",borderRadius:10,border:`1px solid ${tab===t.id?"#0d9488":"rgba(148,163,184,.12)"}`,
               background:tab===t.id?"rgba(13,148,136,.12)":"transparent",
-              color:tab===t.id?"#0d9488":"#64748b",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+              color:tab===t.id?"#0d9488":"#64748b",fontWeight:700,fontSize:10,cursor:"pointer"}}>
             {t.label}
           </button>
         ))}
@@ -2364,6 +2365,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
           )}
 
           {/* All systems cycle status */}
+
           <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"4px 0 10px",textTransform:"uppercase",letterSpacing:1}}>
             {lang==="es"?"Todos los sistemas":"All systems"}
           </div>
@@ -2411,6 +2413,133 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
           })}
         </div>
       )}
+
+      {/* ═══ TAB 5: OPS MONITOR ═══ */}
+      {tab==="ops" && (()=>{
+        const today2 = new Date().toISOString().slice(0,10);
+        const todayTasks = assignedTasks.filter(t=>t.date===today2);
+        const workers = [...new Set(todayTasks.map(t=>t.assignedTo))].sort();
+        const totalConfirmed = todayTasks.filter(t=>t.confirmed).length;
+
+        // Last reading submitted per worker (proxy for last-active)
+        const lastReadingByWorker = {};
+        readings.forEach(r=>{
+          if(r.logged_by){
+            const prev = lastReadingByWorker[r.logged_by];
+            if(!prev || r.fecha > prev.fecha) lastReadingByWorker[r.logged_by] = r;
+          }
+        });
+
+        return (
+          <div>
+            {/* ── Task board header ── */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>
+                {lang==="es"?"Tablero de tareas":"Task Board"} · <span style={{color:"#64748b",fontWeight:400}}>{today2}</span>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,
+                color:totalConfirmed===todayTasks.length&&todayTasks.length>0?"#4ade80":"#fb923c",
+                background:totalConfirmed===todayTasks.length&&todayTasks.length>0?"rgba(74,222,128,.12)":"rgba(251,146,60,.12)",
+                border:`1px solid ${totalConfirmed===todayTasks.length&&todayTasks.length>0?"rgba(74,222,128,.2)":"rgba(251,146,60,.2)"}`,
+                borderRadius:20,padding:"3px 10px"}}>
+                {totalConfirmed}/{todayTasks.length} ✓
+              </div>
+            </div>
+
+            {todayTasks.length===0 ? (
+              <div style={{...S.card,color:"#64748b",fontSize:13,textAlign:"center",padding:20}}>
+                {lang==="es"?"No hay tareas asignadas para hoy":"No tasks assigned for today"}
+              </div>
+            ) : workers.map(initials=>{
+              const wTasks = todayTasks.filter(t=>t.assignedTo===initials);
+              const wDone  = wTasks.filter(t=>t.confirmed).length;
+              const crewMember = CREW.find(c=>c.initials===initials);
+              const lastR = lastReadingByWorker[initials];
+              const lastRDays = lastR ? Math.round((Date.now()-new Date(lastR.fecha+"T12:00:00").getTime())/86400000) : null;
+              const syncColor = lastRDays===null?"#475569":lastRDays===0?"#4ade80":lastRDays<=1?"#facc15":"#ef4444";
+              const syncLabel = lastRDays===null
+                ?(lang==="es"?"sin registros":"no readings")
+                :lastRDays===0
+                  ?(lang==="es"?"✓ activo hoy":"✓ active today")
+                  :`${lang==="es"?"último registro":"last reading"}: ${lastRDays}d`;
+
+              return (
+                <div key={initials} style={{...S.card,marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(13,148,136,.15)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:11,fontWeight:800,color:"#2dd4bf",flexShrink:0}}>
+                        {initials}
+                      </div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{crewMember?.name||initials}</div>
+                        <div style={{fontSize:10,color:syncColor}}>{syncLabel}</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:13,fontWeight:700,
+                      color:wDone===wTasks.length?"#4ade80":"#fb923c",
+                      background:wDone===wTasks.length?"rgba(74,222,128,.1)":"rgba(251,146,60,.1)",
+                      borderRadius:16,padding:"3px 10px"}}>
+                      {wDone}/{wTasks.length}
+                    </div>
+                  </div>
+                  {wTasks.map(t=>{
+                    const schema = TASK_SCHEMA[t.taskType]||{icon:"📋",label:t.taskType};
+                    return (
+                      <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",
+                        borderTop:"1px solid rgba(148,163,184,.07)"}}>
+                        <span style={{fontSize:14}}>{schema.icon}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <span style={{fontSize:12,color:"#94a3b8",fontWeight:600}}>{t.sistema||"—"}</span>
+                          <span style={{fontSize:11,color:"#475569",marginLeft:6}}>{lang==="es"?schema.label:schema.labelEn||schema.label}</span>
+                        </div>
+                        <div style={{fontSize:13,fontWeight:700,
+                          color:t.confirmed?"#4ade80":"#fb923c"}}>
+                          {t.confirmed?"✓":"⟳"}
+                        </div>
+                        {t.actual!=null&&<div style={{fontSize:10,color:"#64748b",marginLeft:4}}>{t.actual}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* ── Readings feed ── */}
+            <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"20px 0 8px",textTransform:"uppercase",letterSpacing:1}}>
+              {lang==="es"?"Últimas lecturas":"Recent readings"}
+            </div>
+            {[...readings]
+              .sort((a,b)=>b.fecha.localeCompare(a.fecha)||0)
+              .slice(0,25)
+              .map(r=>{
+                const isPeso = r.tipo==="peso";
+                const isParam = r.tipo==="parametros";
+                const icon = isParam?"📊":((r.cosechada_infectada||r.cosechada)&&r.peso===0)?"🌿":"⚖️";
+                const val  = isParam
+                  ?[r.ph&&`pH ${r.ph}`,r.temp&&`${r.temp}°`,r.salinidad&&`${r.salinidad}‰`].filter(Boolean).join(" · ")
+                  :r.peso!=null?`${r.peso}g`:"—";
+                return (
+                  <div key={r.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",
+                    borderBottom:"1px solid rgba(148,163,184,.05)",cursor:"pointer"}}
+                    onClick={()=>onNavigate&&onNavigate("sistema",r.sistema)}>
+                    <span style={{fontSize:14,flexShrink:0}}>{icon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{r.sistema}</span>
+                      <span style={{fontSize:11,color:"#475569",marginLeft:6}}>{val}</span>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontSize:10,color:"#64748b"}}>{r.fecha}</div>
+                      {r.logged_by&&<div style={{fontSize:9,color:"#475569"}}>{r.logged_by}</div>}
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -6234,6 +6363,8 @@ export default function App() {
             sistema: task.sistema, objetivo: task.objetivo,
             date: task.date, actual: task.actual,
             condicion: task.condicion, confirmed: task.confirmed,
+            confirmed_by: task.confirmedBy || null,
+            confirmed_at: task.confirmedAt || null,
             notas: task.notas || "",
             support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
             updated_at: new Date().toISOString(),
