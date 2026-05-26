@@ -1858,12 +1858,13 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
     return { ...c, mySystems, avgRate, totalKg };
   });
 
+  const isConsultor = user?.role === "consultor";
   const dashTabs = [
     { id:"resumen",  label:lang==="es"?"Resumen":"Summary" },
     { id:"biomasa",  label:lang==="es"?"Biomasa":"Biomass" },
     { id:"equipo",   label:lang==="es"?"Equipo":"Crew" },
     { id:"tareas",   label:lang==="es"?"Tareas":"Tasks" },
-    { id:"ops",      label:"Ops" },
+    ...(isConsultor ? [{ id:"ops", label:"Ops" }] : []),
   ];
 
   return (
@@ -1874,7 +1875,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
       </div>
 
       {/* Tab bar */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${dashTabs.length},1fr)`,gap:5,marginBottom:16}}>
         {dashTabs.map(t=>(
           <button key={t.id} onClick={()=>setDashTab(t.id)}
             style={{padding:"7px 2px",borderRadius:10,border:`1px solid ${tab===t.id?"#0d9488":"rgba(148,163,184,.12)"}`,
