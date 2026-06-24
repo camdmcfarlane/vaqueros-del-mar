@@ -5,8 +5,7 @@
 
 import React, { useState } from 'react';
 import ConditionAssessment from '../systems/ConditionAssessment';
-import GrowthChart from './GrowthChart';
-import { READING_CADENCE_DAYS } from '../data/constants';
+import { READING_CADENCE_DAYS, CREW } from '../data/constants';
 
 // Panama is UTC-5 year-round (no DST). Before 4am Panama time, stamp readings as yesterday.
 function getEffectiveDate() {
@@ -1123,11 +1122,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
 
       {/* Assigned tasks from plan */}
       {(() => {
-        const activeSysIds = new Set((systems || []).map(s => s.id));
-        // null sistema = task not tied to a specific system (e.g. parámetros region-wide) — always include
-        const myTasks = (assignedTasks || []).filter(t =>
-          t.assignedTo === user?.initials && (t.sistema == null || activeSysIds.has(t.sistema))
-        );
+        const myTasks = (assignedTasks || []).filter(t => t.assignedTo === user?.initials);
         if (!myTasks.length) return null;
         const overdue  = myTasks.filter(t => t.date < today2 && !t.confirmed);
         const todayT   = myTasks.filter(t => t.date === today2 && !t.confirmed);
@@ -1286,6 +1281,51 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                 ))}
               </>
             )}
+          </div>
+        );
+      })()}
+
+      {/* Support crew tasks — tasks where this user is listed as support, not lead */}
+      {(() => {
+        const supportTasks = (assignedTasks || []).filter(t =>
+          t.assignedTo !== user?.initials &&
+          (t.supportCrew || []).includes(user?.initials)
+        );
+        if (!supportTasks.length) return null;
+        const TIPO_LABELS_S = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos', dipping:'Dipping AMPEP', parametros:'Parámetros', reubicar:'Reubicar', desplegar:'Desplegar', construir:'Construir', motor:'Mant. Motor', seleccion:'Selec. Semilla', mantenimiento:'Mantenimiento', planificacion:'Planificación' };
+        const TIPO_COLORS_S = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8', dipping:'#a855f7', parametros:'#0ea5e9', reubicar:'#64748b', desplegar:'#64748b' };
+        return (
+          <div style={{ marginBottom:'18px' }}>
+            <div style={{ fontSize:'11px', color:'#64748b', fontWeight:'700', textTransform:'uppercase', letterSpacing:'.6px', marginBottom:'8px' }}>
+              Apoyando en
+            </div>
+            {supportTasks.map(t => {
+              const leadName = CREW.find(c => c.initials === t.assignedTo)?.name || t.assignedTo;
+              const today2 = getEffectiveDate();
+              const isOverdue = t.date < today2 && !t.confirmed;
+              return (
+                <div key={t.id} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
+                  background: isOverdue ? 'rgba(248,113,113,.04)' : 'rgba(255,255,255,.015)',
+                  border: `0.5px solid ${isOverdue ? 'rgba(248,113,113,.2)' : 'rgba(148,163,184,.1)'}`,
+                  borderRadius:'10px', marginBottom:'6px', opacity: t.confirmed ? 0.55 : 1 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+                    background: t.confirmed ? '#4ade80' : (TIPO_COLORS_S[t.taskType] || '#64748b'), opacity:0.7 }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:'13px', fontWeight:'600', color:'#94a3b8' }}>
+                      {t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS_S[t.taskType] || t.taskType}
+                    </div>
+                    <div style={{ fontSize:'11px', color:'#475569' }}>
+                      {isOverdue ? `⚠ pendiente ${t.date}` : t.date} · lead: {leadName}
+                      {t.notas ? ` · ${t.notas}` : ''}
+                    </div>
+                  </div>
+                  <span style={{ fontSize:'10px', padding:'3px 8px', borderRadius:6,
+                    background:'rgba(148,163,184,.08)', color:'#64748b', fontWeight:600, flexShrink:0 }}>
+                    {t.confirmed ? '✓' : 'apoyo'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         );
       })()}

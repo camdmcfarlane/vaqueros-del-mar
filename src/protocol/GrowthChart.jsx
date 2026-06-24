@@ -5,9 +5,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-function calcTDC(pesoNuevo, pesoAnterior, dias) {
-  if (!pesoNuevo || !pesoAnterior || !dias || dias <= 0) return null;
-  return (Math.log(pesoNuevo / pesoAnterior) / dias * 100).toFixed(2);
+function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0) {
+  const adjNow  = (pesoNuevo  || 0) - (sembradoNuevo    || 0);
+  const adjPrev = (pesoAnterior || 0) - (cosechadaAnterior || 0);
+  if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
+  return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
 }
 
 const COND_COLORS = {
@@ -27,21 +29,25 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
   async function loadReadings() {
     const { data } = await supabase
       .from('lecturas')
-      .select('fecha, peso')
+      .select('fecha, peso, cosechada, sembrado')
       .eq('sistema', system.id)
       .not('peso', 'is', null)
       .order('fecha', { ascending: true })
       .limit(10);
 
     const pts = (data || []).map((r) => ({
-      date: new Date(r.fecha).toLocaleDateString('es-PA', { month: 'short', day: 'numeric' }),
+      date: new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-PA', { month: 'short', day: 'numeric' }),
       peso: r.peso,
+      cosechada: r.cosechada || 0,
+      sembrado: r.sembrado || 0,
     }));
 
     // Add the just-saved reading
     pts.push({
       date: new Date().toLocaleDateString('es-PA', { month: 'short', day: 'numeric' }),
       peso: latestPeso,
+      cosechada: 0,
+      sembrado: 0,
     });
 
     setReadings(pts);
@@ -50,8 +56,13 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
   // Calculate TDC from last two points
   const prevReading = readings.length >= 2 ? readings[readings.length - 2] : null;
   const tdc = prevReading
-    ? calcTDC(latestPeso, prevReading.peso, 
-        Math.max(1, Math.round((Date.now() - new Date(system.lastDate).getTime()) / (1000 * 60 * 60 * 24))))
+    ? calcTDC(
+        latestPeso,
+        prevReading.peso,
+        Math.max(1, Math.round((Date.now() - new Date(system.lastDate + 'T12:00:00').getTime()) / (1000 * 60 * 60 * 24))),
+        prevReading.cosechada,
+        0
+      )
     : null;
 
   // SVG chart

@@ -28,7 +28,6 @@ import {
 } from "./data/seed";
 import { USERS } from "./data/users";
 import { T } from "./data/translations";
-import { getAlert, getLatestReading, calcGrowth, calcTaskScore, calcProfScore, calcTotalScore, calcBonusShare, calcHoras } from "./data/helpers";
 import { S, AUTH_ISTYLE, AUTH_LSTYLE } from "./styles";
 import SyncTest from "./components/SyncTest";
 import { useSyncHealth, SyncHealthDot } from "./components/SyncHealth";
@@ -62,14 +61,6 @@ const Icon = ({ name, size=20, color="currentColor" }) => {
 };
 
 
-// ─── SPARKLINE ───────────────────────────────────────────────────────────────
-function Sparkline({ data, color="#4ade80", height=40, width=100 }) {
-  if (!data || data.length < 2) return <div style={{height,width,opacity:.3,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>–</div>;
-  const min=Math.min(...data), max=Math.max(...data), range=max-min||1;
-  const pts=data.map((v,i)=>`${(i/(data.length-1))*width},${height-((v-min)/range)*(height-6)-3}`).join(" ");
-  const last=pts.split(" ").pop().split(",");
-  return <svg width={width} height={height} style={{overflow:"visible"}}><polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx={last[0]} cy={last[1]} r="3" fill={color}/></svg>;
-}
 
 // ─── VOICE NOTE RECORDER ─────────────────────────────────────────────────────
 function VoiceNoteButton({ voiceNote, onVoiceNote, lang }) {
@@ -127,20 +118,6 @@ function VoiceNoteButton({ voiceNote, onVoiceNote, lang }) {
   );
 }
 
-// ─── CONDITION PICKER ────────────────────────────────────────────────────────
-function CondicionPicker({ value, onChange, lang }) {
-  return (
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-      {CONDICION_EMOJIS.map(c=>(
-        <button key={c.value} onClick={()=>onChange(value===c.value?"":c.value)}
-          style={{padding:"10px 4px",borderRadius:12,border:`1.5px solid ${value===c.value?"#0d9488":"rgba(148,163,184,.1)"}`,background:value===c.value?"rgba(13,148,136,.12)":"rgba(255,255,255,.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-          <span style={{fontSize:24,lineHeight:1}}>{c.emoji}</span>
-          <span style={{fontSize:10,fontWeight:700,color:value===c.value?"#0d9488":"#64748b"}}>{lang==="es"?c.label:c.labelEn}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ─── AUTH SHELL ───────────────────────────────────────────────────────────────
 
@@ -2704,7 +2681,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const lStyle = S.label;
   const today = new Date().toISOString().slice(0,10);
 
-  const emptyForm = { assignedTo:"HM", taskType:"vigilancia", sistema:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
+  const emptyForm = { assignedTo:"LA", taskType:"vigilancia", sistema:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
   const [form, setForm] = useState(emptyForm);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
@@ -3217,187 +3194,16 @@ function hasBuceador(sys, initials) {
   return getBuceadores(sys).includes(initials);
 }
 
-// eslint-disable-next-line no-unused-vars
-function CapitanTareas({ assignedTasks, setAssignedTasks, systems, user, lang, announcements }) {
-  const myInitials = user.initials;
-  const regionInfo = CAPITAN_REGIONS[myInitials] || { regions:[], color:"#64748b", note:"" };
-  const [activeTask, setActiveTask] = useState(null);
-
-  // Tasks assigned directly to this captain
-  const myTasks = assignedTasks.filter(t => t.assignedTo === myInitials);
-
-  // Systems this captain is responsible for
-  const mySystems = systems.filter(s => s.capitan === myInitials && s.estado === "Activo");
-
-  const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const todayName = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][new Date().getDay()];
-
-  const done    = myTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
-  const pending = myTasks.filter(t => t.actual === null && !(TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
-  const pct     = myTasks.length ? Math.round((done / myTasks.length) * 100) : 0;
-
-  const handleComplete = (updatedTask) => {
-    setAssignedTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    setActiveTask(null);
-  };
-
-  const byDay = {};
-  days.forEach(d => { byDay[d] = myTasks.filter(t => t.day === d); });
-
-  return (
-    <div style={{padding:"16px 16px 100px"}}>
-
-      {/* Header */}
-      <div style={{marginBottom:14}}>
-        <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>
-          {lang==="es"?"Mis Tareas":"My Tasks"}
-        </h2>
-        <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>
-          {user.name} · Capitán
-        </p>
-      </div>
-
-      {/* Announcements */}
-      <AnunciosPanel announcements={announcements} setAnnouncements={()=>{}} user={user} lang={lang}/>
-
-      {/* Region responsibility banner */}
-      {regionInfo.regions.length > 0 && (
-        <div style={{...S.card, borderLeft:`3px solid ${regionInfo.color}`,
-          background:`${regionInfo.color}08`, marginBottom:14}}>
-          <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",
-            letterSpacing:.6,marginBottom:4}}>
-            {lang==="es"?"Tu zona de responsabilidad":"Your region"}
-          </div>
-          <div style={{fontSize:15,fontWeight:800,color:regionInfo.color,marginBottom:2}}>
-            {regionInfo.regions.join(" · ")}
-          </div>
-          <div style={{fontSize:11,color:"#64748b"}}>{regionInfo.note}</div>
-          <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>
-            {mySystems.length} {lang==="es"?"sistemas activos bajo tu cargo":"active systems under your charge"}
-          </div>
-        </div>
-      )}
-
-      {/* Weekly progress */}
-      <div style={{...S.card,background:"rgba(13,148,136,.07)",border:"1px solid rgba(13,148,136,.15)",marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:8}}>
-          <div>
-            <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>
-              {lang==="es"?"Mis tareas esta semana":"My tasks this week"}
-            </div>
-            <div style={{fontSize:32,fontWeight:900,color:"#0d9488",fontFamily:"monospace",lineHeight:1}}>
-              {pct}<span style={{fontSize:14,color:"#64748b"}}>%</span>
-            </div>
-          </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{done}/{myTasks.length}</div>
-            <div style={{fontSize:11,color:pending>0?"#fb923c":"#4ade80"}}>
-              {pending>0?`${pending} ${lang==="es"?"pendientes":"pending"}`:"✓ Todo listo"}
-            </div>
-          </div>
-        </div>
-        <div style={{height:7,borderRadius:4,background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${pct}%`,
-            background:"linear-gradient(90deg,#0d9488,#2dd4bf)",
-            borderRadius:4,transition:"width .5s ease"}}/>
-        </div>
-      </div>
-
-      {/* Tasks by day */}
-      {myTasks.length === 0 ? (
-        <div style={{...S.card,textAlign:"center",padding:32}}>
-          <span style={{fontSize:32}}>📋</span>
-          <p style={{color:"#475569",fontSize:13,margin:"10px 0 0"}}>
-            {lang==="es"
-              ?"Eduardo no ha asignado tareas para esta semana todavía."
-              :"Eduardo has not assigned tasks for this week yet."}
-          </p>
-        </div>
-      ) : (
-        days.map(d => {
-          const dayTasks = byDay[d] || [];
-          if (dayTasks.length === 0) return null;
-          const dayDone = dayTasks.filter(t =>
-            t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)
-          ).length;
-          const isToday = d === todayName;
-          return (
-            <div key={d} style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:13,fontWeight:800,color:isToday?"#0d9488":"#94a3b8"}}>{d}</span>
-                  {isToday && (
-                    <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,
-                      background:"rgba(13,148,136,.15)",color:"#0d9488",fontWeight:700}}>HOY</span>
-                  )}
-                </div>
-                <span style={{fontSize:11,color:dayDone===dayTasks.length?"#4ade80":"#64748b",fontWeight:600}}>
-                  {dayDone}/{dayTasks.length} ✓
-                </span>
-              </div>
-              {dayTasks.map(t => (
-                <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
-                  onComplete={setActiveTask} canEdit={true}/>
-              ))}
-            </div>
-          );
-        })
-      )}
-
-      {/* My systems summary */}
-      {mySystems.length > 0 && (
-        <div style={{marginTop:8}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 10px",
-            textTransform:"uppercase",letterSpacing:1}}>
-            {lang==="es"?"Mis sistemas":"My systems"}
-          </div>
-          {mySystems.map(s => (
-            <div key={s.id} style={{...S.card,
-              borderLeft:`3px solid ${regionInfo.color}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{s.id}</div>
-                  <div style={{fontSize:11,color:"#64748b"}}>{s.pueblo || s.region}</div>
-                  <div style={{display:"flex",gap:4,marginTop:3}}>
-                    {s.categoria && (
-                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
-                        background:s.categoria==="comercial"?"rgba(13,148,136,.15)":"rgba(74,222,128,.15)",
-                        color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>
-                        {s.categoria}
-                      </span>
-                    )}
-                    {s.buceador && (
-                      <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,
-                        background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>
-                        Buc: {s.buceador}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTask && (
-        <TaskCompleteModal task={activeTask} systems={systems} lang={lang}
-          onSave={handleComplete} onClose={()=>setActiveTask(null)}/>
-      )}
-    </div>
-  );
-}
-
 function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user, navigateTo=()=>{}, selectedPerson=null, setSelectedPerson=()=>{} }) {
 
-  const canManage = ["admin","consultor","director"].includes(user?.role);
+  const canManage = ["admin","consultor","director","supervisor"].includes(user?.role);
 
   // Dynamic users from Supabase usuarios table
   const [dynamicUsers, setDynamicUsers]   = useState([]);
   const [showAddForm, setShowAddForm]     = useState(false);
   const [addSaving, setAddSaving]         = useState(false);
   const [addError, setAddError]           = useState('');
-  const [addForm, setAddForm]             = useState({ name:'', initials:'', username:'', password:'1234' });
+  const [addForm, setAddForm]             = useState({ name:'', initials:'', username:'', password:'1234', role:'vaquero' });
   const [promotingId, setPromotingId]     = useState(null); // initials of person being promoted
   const [promoteRole, setPromoteRole]     = useState('');
 
@@ -3411,19 +3217,22 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   }
 
   function autoFill(name) {
+    const clean = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();
     const words = name.trim().split(/\s+/);
-    const initials = words.map(w=>w[0]||'').join('').toUpperCase().slice(0,4);
-    const username = name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-    setAddForm(p=>({ ...p, name, initials: p.initials||initials, username: p.username||username }));
+    const first = words[0] || '';
+    const last  = words[1] || '';
+    const initials = ((first[0]||'') + (last[0]||'')).toUpperCase();
+    const username = last ? `${clean(first)}_${clean(last)}` : clean(first);
+    setAddForm(p=>({ ...p, name, initials, username }));
   }
 
   async function createUser() {
-    const { name, initials, username, password } = addForm;
+    const { name, initials, username, password, role } = addForm;
     if (!name||!initials||!username||!password) { setAddError('Todos los campos son requeridos'); return; }
     setAddSaving(true); setAddError('');
     try {
       const { error } = await sbStatic.from('usuarios').insert([{
-        username, password_plain: password, role:'vaquero',
+        username, password_plain: password, role,
         name, initials: initials.toUpperCase(),
         created_by: user?.initials, active: true,
       }]);
@@ -3432,12 +3241,12 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
       try {
         const ec = JSON.parse(localStorage.getItem('aq_extra_crew')||'[]');
         if (!ec.find(c=>c.initials===initials.toUpperCase())) {
-          ec.push({ initials:initials.toUpperCase(), name, role:'Buceador', username });
+          ec.push({ initials:initials.toUpperCase(), name, role: role==='capitan'?'Capitán':'Buceador', username });
           localStorage.setItem('aq_extra_crew', JSON.stringify(ec));
         }
       } catch {}
       await loadDynamicUsers();
-      setAddForm({ name:'', initials:'', username:'', password:'1234' });
+      setAddForm({ name:'', initials:'', username:'', password:'1234', role:'vaquero' });
       setShowAddForm(false);
     } catch(e) { setAddError(e.message||'Error al crear usuario'); }
     setAddSaving(false);
@@ -3455,9 +3264,9 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   const staticInits = new Set(CREW.map(c=>c.initials));
   const allCrew = [...CREW, ...dynamicUsers.filter(u=>!staticInits.has(u.initials))];
 
-  const ROLE_BADGE = { admin:'rgba(245,158,11,.15)', consultor:'rgba(139,92,246,.15)', director:'rgba(13,148,136,.15)', capitan:'rgba(74,222,128,.15)', vaquero:'rgba(148,163,184,.1)' };
-  const ROLE_COLOR = { admin:'#f59e0b', consultor:'#a78bfa', director:'#0d9488', capitan:'#4ade80', vaquero:'#94a3b8' };
-  const ROLE_LABEL = { admin:'Admin', consultor:'Consultor', director:'Director', capitan:'Capitán', vaquero:'Vaquero' };
+  const ROLE_BADGE = { admin:'rgba(245,158,11,.15)', consultor:'rgba(139,92,246,.15)', director:'rgba(13,148,136,.15)', supervisor:'rgba(20,184,166,.15)', capitan:'rgba(74,222,128,.15)', vaquero:'rgba(148,163,184,.1)' };
+  const ROLE_COLOR = { admin:'#f59e0b', consultor:'#a78bfa', director:'#0d9488', supervisor:'#14b8a6', capitan:'#4ade80', vaquero:'#94a3b8' };
+  const ROLE_LABEL = { admin:'Admin', consultor:'Consultor', director:'Director', supervisor:'Supervisor', capitan:'Capitán', vaquero:'Vaquero' };
 
   const person = selectedPerson
     ? (CREW.find(c=>c.initials===selectedPerson) || dynamicUsers.find(u=>u.initials===selectedPerson) || null)
@@ -3512,7 +3321,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               </span>
               {promotingId===personDynamic.initials ? (
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {['vaquero','capitan','director'].filter(r=>r!==personDynamic.role).map(r=>(
+                  {['vaquero','capitan','director','supervisor'].filter(r=>r!==personDynamic.role).map(r=>(
                     <button key={r} onClick={()=>promoteUser(personDynamic.initials, r)}
                       style={{padding:"4px 12px",borderRadius:20,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:ROLE_BADGE[r],color:ROLE_COLOR[r]}}>
                       → {ROLE_LABEL[r]}
@@ -3569,7 +3378,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <h2 style={{color:"#e2e8f0",fontSize:16,fontWeight:800,margin:0}}>{lang==="es"?"Equipo":"Team"} <span style={{color:"#475569",fontWeight:400,fontSize:13}}>({allCrew.length})</span></h2>
         {canManage && (
-          <button onClick={()=>{ setShowAddForm(f=>!f); setAddError(''); setAddForm({name:'',initials:'',username:'',password:'1234'}); }}
+          <button onClick={()=>{ setShowAddForm(f=>!f); setAddError(''); setAddForm({name:'',initials:'',username:'',password:'1234',role:'vaquero'}); }}
             style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:"1px solid rgba(13,148,136,.5)",background:"rgba(13,148,136,.08)",color:"#0d9488",fontSize:12,fontWeight:700,cursor:"pointer"}}>
             <Icon name="plus" size={13}/> Nuevo
           </button>
@@ -3609,6 +3418,15 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               onChange={e=>setAddForm(p=>({...p,password:e.target.value}))}
               style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px"}}
             />
+            <select
+              value={addForm.role}
+              onChange={e=>setAddForm(p=>({...p,role:e.target.value}))}
+              style={{...AUTH_ISTYLE,fontSize:13,padding:"8px 12px",cursor:"pointer",width:"100%"}}>
+              <option value="vaquero">Buceador</option>
+              <option value="capitan">Capitán</option>
+              <option value="director">Director</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
             {addError && <div style={{fontSize:11,color:"#f87171"}}>{addError}</div>}
             <div style={{display:"flex",gap:8}}>
               <button onClick={createUser} disabled={addSaving}
@@ -3712,6 +3530,7 @@ function AddableSelect({ value, onChange, options, onAddOption, lang, label, pla
 
 function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   regions=DEFAULT_REGIONS, setRegions=()=>{},
+  retiredRegions=[],
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
@@ -4987,6 +4806,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:12}}>
         {["all",...regions].map(r=>{ const c=r==="all"?"#94a3b8":regionColor[r]||"#94a3b8"; return <button key={r} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?c:"rgba(148,163,184,.12)"}`,background:filterRegion===r?`${c}18`:"transparent",color:filterRegion===r?c:"#64748b",fontWeight:600,fontSize:11,cursor:"pointer"}}>{r==="all"?(lang==="es"?"Todas":"All"):r}</button>; })}
+        {retiredRegions.map(r=><button key={`retired-${r}`} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?"rgba(148,163,184,.35)":"rgba(148,163,184,.08)"}`,background:filterRegion===r?"rgba(148,163,184,.1)":"transparent",color:"#475569",fontWeight:600,fontSize:11,cursor:"pointer",textDecoration:"line-through",opacity:.65}}>{r}</button>)}
       </div>
 
       {/* ── TDC Excel Upload (supervisor/CEO/consultant only) ──────────────── */}
@@ -5111,40 +4931,10 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   );
 }
 
-function MapaTab({ systems, lang }) {
-  const withCoords = systems.filter(s=>s.coordenadas&&s.estado==="Activo");
-  const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
-  return (
-    <div style={{padding:"16px 16px 100px"}}>
-      <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:"0 0 14px"}}>Mapa</h2>
-      <div style={{...S.card,textAlign:"center",padding:32,borderColor:"rgba(13,148,136,.15)"}}>
-        <Icon name="map" size={40} color="#0d9488"/>
-        <h3 style={{color:"#e2e8f0",fontSize:16,fontWeight:700,margin:"12px 0 6px"}}>{lang==="es"?"Mapa interactivo próximamente":"Interactive map coming soon"}</h3>
-        <p style={{color:"#64748b",fontSize:12,lineHeight:1.6,margin:0}}>{lang==="es"?"Se construirá una vez confirmadas todas las coordenadas GPS.":"Will be built once all GPS coordinates are confirmed."}</p>
-      </div>
-      <div style={{...S.card,marginTop:4}}>
-        <div style={{fontSize:11,color:"#64748b",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>{lang==="es"?"Coordenadas confirmadas":"Confirmed coordinates"} {withCoords.length}/{systems.filter(s=>s.estado==="Activo").length}</div>
-        {DEFAULT_REGIONS.map(r=>{
-          const total=systems.filter(s=>s.region===r&&s.estado==="Activo").length;
-          const conf=systems.filter(s=>s.region===r&&s.estado==="Activo"&&s.coordenadas).length;
-          return (
-            <div key={r} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:12,color:"#e2e8f0",fontWeight:600}}>{r}</span>
-                <span style={{fontSize:11,color:"#64748b",fontFamily:"monospace"}}>{conf}/{total}</span>
-              </div>
-              <div style={{height:5,borderRadius:3,background:"#1e293b",overflow:"hidden"}}><div style={{height:"100%",width:`${total?conf/total*100:0}%`,background:regionColor[r],borderRadius:3}}/></div>
-            </div>
-          );
-        })}
-        <p style={{color:"#475569",fontSize:11,margin:"10px 0 0"}}>{lang==="es"?"Ingresa las coordenadas faltantes en la pestaña Sistemas.":"Enter missing coordinates in the Sistemas tab."}</p>
-      </div>
-    </div>
-  );
-}
 
-function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales, setMateriales, semillas, setSemillas }) {
+function CatalogManager({ lang, regions, setRegions, retiredRegions=[], setRetiredRegions=()=>{}, tipos, setTipos, materiales, setMateriales, semillas, setSemillas, canSeeRetired=false }) {
   const [drafts, setDrafts] = useState({ regions:"", tipos:"", materiales:"", semillas:"" });
+  const [retiredOpen, setRetiredOpen] = useState(false);
   const D = (k,v) => setDrafts(p=>({...p,[k]:v}));
 
   const addItem = async (key, setList) => {
@@ -5153,7 +4943,7 @@ function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales
     setList(prev => prev.includes(val) ? prev : [...prev, val]);
     D(key, "");
     if (key === "regions") {
-      try { await sbStatic.from('regions').upsert([{ name: val }], { onConflict: 'name' }); } catch(e) { console.warn('region upsert failed', e); }
+      try { await sbStatic.from('regions').upsert([{ name: val, active: true }], { onConflict: 'name' }); } catch(e) { console.warn('region upsert failed', e); }
     }
   };
 
@@ -5164,6 +4954,18 @@ function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales
     if (key === "regions") {
       try { await sbStatic.from('regions').delete().eq('name', item); } catch(e) { console.warn('region delete failed', e); }
     }
+  };
+
+  const retireRegion = async (name) => {
+    setRegions(prev => prev.filter(r => r !== name));
+    setRetiredRegions(prev => prev.includes(name) ? prev : [...prev, name]);
+    try { await sbStatic.from('regions').upsert([{ name, active: false }], { onConflict: 'name' }); } catch(e) { console.warn('region retire failed', e); }
+  };
+
+  const restoreRegion = async (name) => {
+    setRetiredRegions(prev => prev.filter(r => r !== name));
+    setRegions(prev => prev.includes(name) ? prev : [...prev, name].sort());
+    try { await sbStatic.from('regions').upsert([{ name, active: true }], { onConflict: 'name' }); } catch(e) { console.warn('region restore failed', e); }
   };
 
   const cats = [
@@ -5187,14 +4989,52 @@ function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales
                 padding:"4px 10px",borderRadius:20,
                 background:"rgba(13,148,136,.08)",border:"1px solid rgba(13,148,136,.2)"}}>
                 <span style={{fontSize:12,color:"#94a3b8"}}>{item}</span>
-                <button onClick={() => removeItem(cat.key, cat.setList, item)}
-                  style={{width:14,height:14,borderRadius:"50%",border:"none",
-                    background:"rgba(239,68,68,.25)",color:"#f87171",
-                    fontSize:9,lineHeight:1,cursor:"pointer",
-                    display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>✕</button>
+                {cat.key === "regions"
+                  ? <button onClick={() => retireRegion(item)}
+                      title="Retirar región"
+                      style={{width:14,height:14,borderRadius:"50%",border:"none",
+                        background:"rgba(251,146,60,.25)",color:"#fb923c",
+                        fontSize:9,lineHeight:1,cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>↓</button>
+                  : <button onClick={() => removeItem(cat.key, cat.setList, item)}
+                      style={{width:14,height:14,borderRadius:"50%",border:"none",
+                        background:"rgba(239,68,68,.25)",color:"#f87171",
+                        fontSize:9,lineHeight:1,cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>✕</button>
+                }
               </div>
             ))}
           </div>
+          {/* Retired regions — visible to admin/consultor only */}
+          {cat.key === "regions" && canSeeRetired && retiredRegions.length > 0 && (
+            <div style={{marginBottom:8}}>
+              <button onClick={()=>setRetiredOpen(o=>!o)}
+                style={{display:"flex",alignItems:"center",gap:6,width:"100%",
+                  background:"rgba(148,163,184,.04)",border:"0.5px solid rgba(148,163,184,.12)",
+                  borderRadius:8,padding:"5px 10px",cursor:"pointer",
+                  color:"#64748b",fontWeight:700,fontSize:11,marginBottom:4}}>
+                <span style={{flex:1,textAlign:"left"}}>🗂 Retiradas ({retiredRegions.length})</span>
+                <span>{retiredOpen?"▲":"▼"}</span>
+              </button>
+              {retiredOpen && (
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,paddingLeft:4}}>
+                  {retiredRegions.map(name => (
+                    <div key={name} style={{display:"flex",alignItems:"center",gap:4,
+                      padding:"4px 10px",borderRadius:20,opacity:0.6,
+                      background:"rgba(148,163,184,.06)",border:"1px solid rgba(148,163,184,.15)"}}>
+                      <span style={{fontSize:12,color:"#64748b"}}>{name}</span>
+                      <button onClick={() => restoreRegion(name)}
+                        title="Restaurar región"
+                        style={{width:14,height:14,borderRadius:"50%",border:"none",
+                          background:"rgba(74,222,128,.2)",color:"#4ade80",
+                          fontSize:9,lineHeight:1,cursor:"pointer",
+                          display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>↑</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{display:"flex",gap:6}}>
             <input
               value={drafts[cat.key]}
@@ -5219,6 +5059,7 @@ function CatalogManager({ lang, regions, setRegions, tipos, setTipos, materiales
 
 function ProfileTab({ user, lang, setLang, onLogout,
   regions=DEFAULT_REGIONS, setRegions=()=>{},
+  retiredRegions=[], setRetiredRegions=()=>{},
   tipos=DEFAULT_TIPOS,   setTipos=()=>{},
   materiales=DEFAULT_MATERIALES, setMateriales=()=>{},
   semillas=DEFAULT_SEMILLAS,     setSemillas=()=>{},
@@ -5364,9 +5205,11 @@ function ProfileTab({ user, lang, setLang, onLogout,
         <CatalogManager
           lang={lang}
           regions={regions} setRegions={setRegions}
+          retiredRegions={retiredRegions} setRetiredRegions={setRetiredRegions}
           tipos={tipos} setTipos={setTipos}
           materiales={materiales} setMateriales={setMateriales}
           semillas={semillas} setSemillas={setSemillas}
+          canSeeRetired={["admin","consultor"].includes(user.role)}
         />
       )}
       <button onClick={onLogout} style={{width:"100%",padding:13,borderRadius:12,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.04)",color:"#f87171",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:4}}>
@@ -5943,6 +5786,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
     ],
     supervisor: [
+      { id:"tareas",   icon:"task",     label: "Tareas" },
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
       { id:"plan",     icon:"calendar", label: "Plan" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
@@ -6002,7 +5846,7 @@ function BottomNav({ tab, setTab, role, lang }) {
 
   // ── Mobile: bottom nav ────────────────────────────────────────────────────
   return (
-    <nav style={{position:"fixed",bottom:0,left:0,right:0,
+    <nav className="vdm-bottom-nav" style={{position:"fixed",bottom:0,left:0,right:0,
       background:"rgba(2,8,24,.96)",borderTop:"1px solid rgba(148,163,184,.07)",
       display:"flex",justifyContent:"space-around",
       padding:"6px 0 max(10px,env(safe-area-inset-bottom))",
@@ -6145,8 +5989,11 @@ export default function App() {
   };
 
   // ── Editable catalog lists (Level 2+ can add new options) ───────────────────
-  const [regions,    setRegions]    = useState(() => {
-    try { const c = localStorage.getItem('aq_cat_regions');    return c ? JSON.parse(c) : DEFAULT_REGIONS; }    catch { return DEFAULT_REGIONS; }
+  const [regions,        setRegions]        = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_regions');         return c ? JSON.parse(c) : DEFAULT_REGIONS; }    catch { return DEFAULT_REGIONS; }
+  });
+  const [retiredRegions, setRetiredRegions] = useState(() => {
+    try { const c = localStorage.getItem('aq_cat_retired_regions'); return c ? JSON.parse(c) : []; }               catch { return []; }
   });
   const [tipos,      setTipos]      = useState(() => {
     try { const c = localStorage.getItem('aq_cat_tipos');      return c ? JSON.parse(c) : DEFAULT_TIPOS; }      catch { return DEFAULT_TIPOS; }
@@ -6158,10 +6005,11 @@ export default function App() {
     try { const c = localStorage.getItem('aq_cat_semillas');   return c ? JSON.parse(c) : DEFAULT_SEMILLAS; }   catch { return DEFAULT_SEMILLAS; }
   });
   // Persist catalogs whenever they change
-  useEffect(() => { try { localStorage.setItem('aq_cat_regions',    JSON.stringify(regions));    } catch {} }, [regions]);
-  useEffect(() => { try { localStorage.setItem('aq_cat_tipos',      JSON.stringify(tipos));      } catch {} }, [tipos]);
-  useEffect(() => { try { localStorage.setItem('aq_cat_materiales', JSON.stringify(materiales)); } catch {} }, [materiales]);
-  useEffect(() => { try { localStorage.setItem('aq_cat_semillas',   JSON.stringify(semillas));   } catch {} }, [semillas]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_regions',         JSON.stringify(regions));        } catch {} }, [regions]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_retired_regions', JSON.stringify(retiredRegions)); } catch {} }, [retiredRegions]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_tipos',           JSON.stringify(tipos));          } catch {} }, [tipos]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_materiales',      JSON.stringify(materiales));     } catch {} }, [materiales]);
+  useEffect(() => { try { localStorage.setItem('aq_cat_semillas',        JSON.stringify(semillas));       } catch {} }, [semillas]);
 
   // ── Sync state ──────────────────────────────────────────────────────────────
   const [online, setOnline]     = useState(navigator.onLine);
@@ -6251,6 +6099,36 @@ export default function App() {
 
   const [initialLoading, setInitialLoading] = useState(true);
 
+  // ── TABLE HEALTH CHECK — runs once on mount, logs missing/broken tables ──────
+  useEffect(() => {
+    const TABLES = [
+      { name: 'lecturas',         critical: true  },
+      { name: 'sistemas',         critical: true  },
+      { name: 'assigned_tasks',   critical: true  },
+      { name: 'usuarios',         critical: true  },
+      { name: 'announcements',    critical: false },
+      { name: 'weekly_incidents', critical: false },
+      { name: 'regions',          critical: false },
+      { name: 'sync_health',      critical: false },
+    ];
+    (async () => {
+      console.group('[AquaOps] Supabase table health check');
+      let allOk = true;
+      for (const t of TABLES) {
+        const { error } = await sbStatic.from(t.name).select('id').limit(1);
+        if (error) {
+          allOk = false;
+          const tag = t.critical ? '🔴 MISSING' : '🟡 WARN';
+          console.warn(`${tag} ${t.name}: ${error.message}`);
+        } else {
+          console.log(`✅ ${t.name}`);
+        }
+      }
+      if (allOk) console.log('All tables reachable.');
+      console.groupEnd();
+    })();
+  }, []);
+
   // Pull once Supabase client is ready AND user is logged in
   useEffect(() => {
     if (!sbReady) return;
@@ -6292,12 +6170,17 @@ export default function App() {
         if (regRes.error) {
           console.warn('[AquaOps] regions pull error:', regRes.error.message);
         } else if (regRes.data?.length) {
-          const remoteRegions = regRes.data.map(r => r.name);
+          const activeRegions  = regRes.data.filter(r => r.active !== false).map(r => r.name);
+          const retiredNames   = regRes.data.filter(r => r.active === false).map(r => r.name);
           setRegions(() => {
-            try { localStorage.setItem('aq_cat_regions', JSON.stringify(remoteRegions)); } catch {}
-            return remoteRegions;
+            try { localStorage.setItem('aq_cat_regions', JSON.stringify(activeRegions)); } catch {}
+            return activeRegions;
           });
-          console.log(`[AquaOps] regions pulled: ${regRes.data.length} rows`);
+          setRetiredRegions(() => {
+            try { localStorage.setItem('aq_cat_retired_regions', JSON.stringify(retiredNames)); } catch {}
+            return retiredNames;
+          });
+          console.log(`[AquaOps] regions pulled: ${activeRegions.length} active, ${retiredNames.length} retired`);
         }
       } catch (e) {
         console.warn('[AquaOps] regions pull exception:', e);
@@ -6691,10 +6574,12 @@ export default function App() {
         const old = prev.find(x => x.id === s.id);
         return !old || JSON.stringify(old) !== JSON.stringify(s);
       });
-      // Detect deleted systems (in prev but not in next)
-      const deleted = prev.filter(s => !next.find(x => x.id === s.id));
-      if (changed.length > 0 || deleted.length > 0) {
-        console.log(`[AquaOps] syncSystems: ${changed.length} changed, ${deleted.length} deleted`);
+      // NOTE: deletes are intentionally NOT pushed to Supabase here.
+      // Supabase is the authoritative source; systems added via Supabase or the
+      // app UI survive version bumps. Use the app's delete button (ReadingActions)
+      // for deliberate system removal — that pushes the delete directly.
+      if (changed.length > 0) {
+        console.log(`[AquaOps] syncSystems: ${changed.length} changed`);
         setTimeout(async () => {
           changed.forEach(s => {
             pushItem('sistemas', 'upsert', {
@@ -6720,9 +6605,6 @@ export default function App() {
               notas:             s.notas              || "",
             });
           });
-          deleted.forEach(s => {
-            pushItem('sistemas', 'delete', { id: s.id });
-          });
         }, 0);
       }
       try { localStorage.setItem('aq_systems_cache', JSON.stringify(next)); }
@@ -6745,8 +6627,13 @@ export default function App() {
 
   const isVaquero  = user?.role === "vaquero";
   const isCapitan  = user?.role === "capitan";
-  const isSup      = user?.role === "director";
+  const isSup      = user?.role === "director" || user?.role === "supervisor";
   const isL3       = user?.role === "admin" || user?.role === "consultor";
+
+  // admin/consultor see all systems including retired regions; all other roles see only non-retired
+  const visibleSystems = isL3
+    ? systems
+    : systems.filter(s => s.estado !== 'Retirado' && !retiredRegions.includes(s.region));
 
   const handleLogin = (u) => {
     localStorage.setItem('vdm_user', JSON.stringify(u));
@@ -6772,17 +6659,17 @@ export default function App() {
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
         @media(min-width:600px){
           .vdm-root{max-width:600px!important;margin:0 auto!important;}
-          .vdm-root nav{max-width:600px!important;left:50%!important;transform:translateX(-50%)!important;right:auto!important;}
+          .vdm-root .vdm-bottom-nav{max-width:600px!important;width:100%!important;left:50%!important;transform:translateX(-50%)!important;right:auto!important;}
         }
         @media(min-width:900px){
           .vdm-root{max-width:720px!important;}
-          .vdm-root nav{max-width:720px!important;}
+          .vdm-root .vdm-bottom-nav{max-width:720px!important;width:100%!important;}
         }
       `}</style>
 
       {/* Top bar */}
       <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(2,8,24,.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(148,163,184,.06)",padding:"11px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div onClick={()=>setTab(user.role==="vaquero"?"inicio":user.role==="capitan"?"tareas":user.role==="director"?"tareas":"dashboard")} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+        <div onClick={()=>setTab(user.role==="vaquero"?"inicio":user.role==="capitan"?"tareas":(user.role==="director"||user.role==="supervisor")?"tareas":"dashboard")} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
           <div style={{width:30,height:30,borderRadius:8,overflow:"hidden",background:"#ffffff",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <img src="data:image/jpeg;base64,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" alt="logo" style={{width:28,height:28,objectFit:"contain"}}/>
           </div>
@@ -6904,7 +6791,7 @@ export default function App() {
             : systems.filter(s => s.capitan === user.initials && s.estado === "Activo");
           return <CapitanTareasComponent systems={capSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved} assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} pendingCount={pendingCount} cadenceDays={READING_CADENCE_DAYS}/>;
         })()}
-        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
+        {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
           </>);
@@ -6916,21 +6803,21 @@ export default function App() {
           const supSystems = myRegions.length > 0
             ? systems.filter(s => myRegions.some(r => s.region === r) && s.estado === "Activo")
             : systems.filter(s => s.estado === "Activo");
-          return <CapitanTareasComponent systems={supSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved}/>;
+          return <CapitanTareasComponent systems={supSystems} readings={readings} user={user} lang={lang} onReadingSaved={handleReadingSaved} assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} pendingCount={pendingCount} cadenceDays={READING_CADENCE_DAYS}/>;
         })()}
-        {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
-        {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
-        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
+        {isSup && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={visibleSystems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
+        {isSup && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={visibleSystems} lang={lang} user={user}/>}
+        {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={visibleSystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
+        {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={visibleSystems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
 
         {/* Level 3 — Admin + Consultor */}
         {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
         {isL3 && tab==="plan"      && <PlanSemanal assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={systems} lang={lang} user={user}/>}
-        {isL3 && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
+        {isL3 && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={systems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
-        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} setRetiredRegions={setRetiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
       </div>
 
       <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>

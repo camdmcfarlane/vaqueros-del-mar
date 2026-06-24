@@ -187,12 +187,14 @@ const TASK_META = {
 
 function daysSince(dateStr) {
   if (!dateStr) return null;
-  return Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function calcTDC(pesoNuevo, pesoAnterior, dias) {
-  if (!pesoNuevo || !pesoAnterior || !dias || dias <= 0) return null;
-  return (Math.log(pesoNuevo / pesoAnterior) / dias * 100).toFixed(2);
+function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0) {
+  const adjNow  = (pesoNuevo  || 0) - (sembradoNuevo    || 0);
+  const adjPrev = (pesoAnterior || 0) - (cosechadaAnterior || 0);
+  if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
+  return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
 }
 
 export default function VigilanciaQueue() {
@@ -245,7 +247,7 @@ export default function VigilanciaQueue() {
       // Fetch last reading per system for TDC calc
       const { data: lastReadings } = await supabase
         .from('lecturas')
-        .select('sistema, fecha, peso')
+        .select('sistema, fecha, peso, cosechada')
         .order('fecha', { ascending: false });
 
       // Build system objects with task + last reading info
@@ -264,6 +266,7 @@ export default function VigilanciaQueue() {
           tasks: sysTasks,
           lastPeso: lastReading?.peso || null,
           lastDate: lastReading?.fecha || null,
+          lastCosechada: lastReading?.cosechada || 0,
         };
       });
 
@@ -368,7 +371,9 @@ export default function VigilanciaQueue() {
     const currentTDC = calcTDC(
       parseFloat(form.peso),
       sys.lastPeso,
-      daysSinceLastReading
+      daysSinceLastReading,
+      sys.lastCosechada,
+      0
     );
     const canSave = form.peso && form.condicion;
 
@@ -418,6 +423,7 @@ export default function VigilanciaQueue() {
               total={form.peso}
               lastTotal={sys.lastPeso}
               daysSince={daysSinceLastReading}
+              lastCosechada={sys.lastCosechada}
             />
           ) : (
             <>
