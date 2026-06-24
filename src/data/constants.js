@@ -179,7 +179,7 @@ const CONDICION_EMOJIS = [
 
 
 // Bump this string whenever systems.js changes — forces all devices to reload from bundle
-const SYSTEMS_DATA_VERSION = '2026-05-19-b';
+const SYSTEMS_DATA_VERSION = '2026-06-15-a';
 
 // How many days between required peso readings. Change this one number to adjust the cadence.
 const READING_CADENCE_DAYS = 2;
