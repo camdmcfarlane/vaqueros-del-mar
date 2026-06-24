@@ -27,6 +27,7 @@ import {
   SEED_EVALUATIONS, SEED_ASSIGNED_TASKS,
 } from "./data/seed";
 import { USERS } from "./data/users";
+import { calcHoras } from "./data/helpers";
 import { T } from "./data/translations";
 import { S, AUTH_ISTYLE, AUTH_LSTYLE } from "./styles";
 import SyncTest from "./components/SyncTest";
