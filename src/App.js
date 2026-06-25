@@ -2921,9 +2921,9 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
 //                 Capitán task inbox, Plan Semanal assignee name
 // ═══════════════════════════════════════════════════════════════════════════════
 function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
-  weeklyIncidents, timecards, setTimecards, lang, canEdit, user, navigateTo=()=>{} }) {
+  weeklyIncidents, timecards, setTimecards, lang, canEdit, user, navigateTo=()=>{}, crew=CREW }) {
 
-  const member   = CREW.find(c => c.initials === initials);
+  const member   = crew.find(c => c.initials === initials);
   const today    = new Date().toISOString().slice(0,10);
   const todayName= ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][new Date().getDay()];
 
@@ -3253,7 +3253,7 @@ function hasBuceador(sys, initials) {
 
 function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecards, setTimecards, systems, readings, lang, user, navigateTo=()=>{}, selectedPerson=null, setSelectedPerson=()=>{} }) {
 
-  const canManage = ["admin","consultor","director","supervisor"].includes(user?.role);
+  const canManage = ["admin","consultor","director","farm_manager","supervisor"].includes(user?.role);
 
   // Dynamic users from Supabase usuarios table
   const [dynamicUsers, setDynamicUsers]   = useState([]);
@@ -3261,6 +3261,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   const [addSaving, setAddSaving]         = useState(false);
   const [addError, setAddError]           = useState('');
   const [addForm, setAddForm]             = useState({ name:'', initials:'', username:'', password:'1234', role:'vaquero' });
+  const [taskFilter, setTaskFilter]       = useState('week');
   const [promotingId, setPromotingId]     = useState(null); // initials of person being promoted
   const [promoteRole, setPromoteRole]     = useState('');
 
@@ -3321,9 +3322,9 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   const staticInits = new Set(CREW.map(c=>c.initials));
   const allCrew = [...CREW, ...dynamicUsers.filter(u=>!staticInits.has(u.initials))];
 
-  const ROLE_BADGE = { admin:'rgba(245,158,11,.15)', consultor:'rgba(139,92,246,.15)', director:'rgba(13,148,136,.15)', supervisor:'rgba(20,184,166,.15)', capitan:'rgba(74,222,128,.15)', vaquero:'rgba(148,163,184,.1)' };
-  const ROLE_COLOR = { admin:'#f59e0b', consultor:'#a78bfa', director:'#0d9488', supervisor:'#14b8a6', capitan:'#4ade80', vaquero:'#94a3b8' };
-  const ROLE_LABEL = { admin:'Admin', consultor:'Consultor', director:'Director', supervisor:'Supervisor', capitan:'Capitán', vaquero:'Vaquero' };
+  const ROLE_BADGE = { admin:'rgba(245,158,11,.15)', consultor:'rgba(139,92,246,.15)', director:'rgba(13,148,136,.15)', farm_manager:'rgba(20,184,166,.15)', supervisor:'rgba(20,184,166,.15)', capitan:'rgba(74,222,128,.15)', vaquero:'rgba(148,163,184,.1)' };
+  const ROLE_COLOR = { admin:'#f59e0b', consultor:'#a78bfa', director:'#0d9488', farm_manager:'#14b8a6', supervisor:'#14b8a6', capitan:'#4ade80', vaquero:'#94a3b8' };
+  const ROLE_LABEL = { admin:'Admin', consultor:'Consultor', director:'Director', farm_manager:'Farm Manager', supervisor:'Supervisor', capitan:'Capitán', vaquero:'Vaquero' };
 
   const person = selectedPerson
     ? (CREW.find(c=>c.initials===selectedPerson) || dynamicUsers.find(u=>u.initials===selectedPerson) || null)
@@ -3331,8 +3332,11 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
   const personDynamic = selectedPerson ? dynamicUsers.find(u=>u.initials===selectedPerson) : null;
 
   if (person) {
+    const supportSysIds = new Set(
+      assignedTasks.filter(t=>(t.supportCrew||[]).includes(person.initials)).map(t=>t.sistema).filter(Boolean)
+    );
     const mySystems = systems.filter(s =>
-      (getCapitan(s) === person.initials || hasBuceador(s, person.initials)) && s.estado === "Activo"
+      (getCapitan(s) === person.initials || hasBuceador(s, person.initials) || supportSysIds.has(s.id)) && s.estado === "Activo"
     );
     const sysWithRate = mySystems.map(s => {
       // Credit only readings logged by this person — coverage/absence tracked here
@@ -3378,7 +3382,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               </span>
               {promotingId===personDynamic.initials ? (
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {['vaquero','capitan','director','supervisor'].filter(r=>r!==personDynamic.role).map(r=>(
+                  {['vaquero','capitan','director','farm_manager','supervisor'].filter(r=>r!==personDynamic.role).map(r=>(
                     <button key={r} onClick={()=>promoteUser(personDynamic.initials, r)}
                       style={{padding:"4px 12px",borderRadius:20,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:ROLE_BADGE[r],color:ROLE_COLOR[r]}}>
                       → {ROLE_LABEL[r]}
@@ -3425,6 +3429,60 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
             })}
           </>
         )}
+
+        {/* ── Tasks ─────────────────────────────────────────────────────────── */}
+        {(()=>{
+          const weekDayNames = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+          const d = new Date(); const day = d.getDay();
+          const mon = new Date(d); mon.setDate(d.getDate()-((day+6)%7));
+          const weekDates = Array.from({length:6},(_,i)=>{ const x=new Date(mon); x.setDate(mon.getDate()+i); return x.toISOString().slice(0,10); });
+          const leadTasks    = assignedTasks.filter(t=>t.assignedTo===person.initials);
+          const supportTasks = assignedTasks.filter(t=>t.assignedTo!==person.initials&&(t.supportCrew||[]).includes(person.initials));
+          const allTasks = [...leadTasks.map(t=>({...t,_role:'lead'})),...supportTasks.map(t=>({...t,_role:'apoyo'}))];
+          if (!allTasks.length) return null;
+          const filtered = taskFilter==='week'
+            ? allTasks.filter(t=>weekDates.includes(t.date)||weekDayNames.includes(t.day))
+            : allTasks;
+          return (
+            <div style={{marginTop:16}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
+                  Tareas — {filtered.length}
+                </div>
+                <div style={{display:"flex",gap:4}}>
+                  {['week','all'].map(f=>(
+                    <button key={f} onClick={()=>setTaskFilter(f)}
+                      style={{fontSize:11,padding:"3px 10px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,
+                        background:taskFilter===f?"#0d9488":"rgba(255,255,255,0.06)",
+                        color:taskFilter===f?"#fff":"#64748b"}}>
+                      {f==='week'?"Esta semana":"Todas"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filtered.length===0 && (
+                <div style={{...S.card,textAlign:"center",padding:16,color:"#475569",fontSize:12}}>
+                  Sin tareas esta semana
+                </div>
+              )}
+              {filtered.map(t=>(
+                <div key={t.id+t._role} style={{...S.card,marginBottom:6}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{t.taskType||t.tipo||"Tarea"}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{t.sistema} · {t.date||t.day||""}</div>
+                    </div>
+                    <span style={{fontSize:9,padding:"2px 7px",borderRadius:6,fontWeight:700,flexShrink:0,
+                      background:t._role==='lead'?"rgba(13,148,136,0.2)":"rgba(251,146,60,0.2)",
+                      color:t._role==='lead'?"#0d9488":"#fb923c"}}>
+                      {t._role==='lead'?"Lead":"Apoyo"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     );
   }

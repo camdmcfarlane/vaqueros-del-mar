@@ -68,8 +68,10 @@ const CREW = [
   { initials:"HC", name:"Henry Crump",     role:"Pasante",  username:"henry_crump" },
   { initials:"CK", name:"Caleb Kim",       role:"Pasante",  username:"caleb_kim" },
   { initials:"KG", name:"Kaiden Griffin",  role:"Pasante",  username:"kaiden_griffin" },
-  { initials:"JV", name:"Joel Valdés",     role:"Lead",     username:"joel_valdes" },
-  { initials:"EV", name:"Eduardo Valdés",  role:"Lead",     username:"eduardo_valdes" },
+  { initials:"JV", name:"Joel Valdés",     role:"Lead",         username:"joel_valdes" },
+  { initials:"EV", name:"Eduardo Valdés",  role:"Lead",         username:"eduardo_valdes" },
+  { initials:"MA", name:"Miguel Avila",    role:"Farm Manager", username:"miguel_avila" },
+  { initials:"FS", name:"Fyto",            role:"Farm Manager", username:"fyto" },
 ];
 
 

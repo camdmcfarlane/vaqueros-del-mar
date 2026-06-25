@@ -6,6 +6,7 @@ export const ROLES = {
   admin: 'admin',
   consultor: 'consultor',
   director: 'director',
+  farm_manager: 'farm_manager',
   supervisor: 'supervisor',
   capitan: 'capitan',
   vaquero: 'vaquero',
@@ -13,13 +14,13 @@ export const ROLES = {
 
 // Route access by role
 const ROUTE_ACCESS = {
-  '/dashboard': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor],
-  '/sistemas': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
-  '/mapa': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan],
-  '/usuarios': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor],
+  '/dashboard': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor],
+  '/sistemas': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
+  '/mapa': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan],
+  '/usuarios': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor],
   '/configuracion': [ROLES.admin, ROLES.consultor],
-  '/perfil': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
-  '/vigilancia': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
+  '/perfil': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
+  '/vigilancia': [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan, ROLES.vaquero],
 };
 
 // Default landing page per role after login
@@ -27,6 +28,7 @@ export const DEFAULT_ROUTE = {
   [ROLES.admin]: '/dashboard',
   [ROLES.consultor]: '/dashboard',
   [ROLES.director]: '/dashboard',
+  [ROLES.farm_manager]: '/dashboard',
   [ROLES.supervisor]: '/dashboard',
   [ROLES.capitan]: '/sistemas',
   [ROLES.vaquero]: '/vigilancia',
@@ -35,21 +37,21 @@ export const DEFAULT_ROUTE = {
 // Permission checks
 export const PERMISSIONS = {
   canEditReadings: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canDeleteSystems: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canDeleteReadings: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canCreateSystems: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canAssignTasks: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan].includes(role),
   canViewDashboard: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canViewAllSystems: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor].includes(role),
   canPostAnnouncements: (role) =>
-    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.supervisor, ROLES.capitan].includes(role),
+    [ROLES.admin, ROLES.consultor, ROLES.director, ROLES.farm_manager, ROLES.supervisor, ROLES.capitan].includes(role),
 };
 
 // Check if a role can access a given route
