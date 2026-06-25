@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import LongLineBuoyInput from './LongLineBuoyInput';
+import CanastaTieInput from './CanastaTieInput';
 import ConditionAssessment from '../systems/ConditionAssessment';
 import GrowthChart from '../protocol/GrowthChart';
 
@@ -292,6 +293,7 @@ export default function VigilanciaQueue() {
       notas: '',
       foto: null,
       buoys: Array(10).fill(''),
+      ties: Array(6).fill(''),
     });
   }
 
@@ -305,6 +307,15 @@ export default function VigilanciaQueue() {
       buoys[index] = value;
       const total = buoys.reduce((sum, b) => sum + (parseFloat(b) || 0), 0);
       return { ...prev, buoys, peso: total > 0 ? String(Math.round(total)) : '' };
+    });
+  }
+
+  function updateTie(index, value) {
+    setForm((prev) => {
+      const ties = [...prev.ties];
+      ties[index] = value;
+      const total = ties.reduce((sum, t) => sum + (parseFloat(t) || 0), 0);
+      return { ...prev, ties, peso: total > 0 ? String(Math.round(total)) : '' };
     });
   }
 
@@ -368,6 +379,7 @@ export default function VigilanciaQueue() {
   if (activeSystem) {
     const sys = activeSystem;
     const isLongLine = sys.tipo === 'Long Line';
+    const isCanasta  = sys.tipo === 'Canasta' || sys.tipo === 'Redes tubulares';
     const daysSinceLastReading = daysSince(sys.lastDate);
     const currentTDC = calcTDC(
       parseFloat(form.peso),
@@ -416,7 +428,7 @@ export default function VigilanciaQueue() {
           ))}
         </div>
 
-        {/* Peso section — branching for Long Line vs Canasta */}
+        {/* Peso section — branching by tipo */}
         <div style={s.section}>
           <div style={s.sectionLabel}>Peso</div>
           {isLongLine ? (
@@ -429,6 +441,31 @@ export default function VigilanciaQueue() {
               lastCosechada={sys.lastCosechada}
               lastSueltos={sys.lastSueltos}
             />
+          ) : isCanasta ? (
+            <>
+              <CanastaTieInput
+                ties={form.ties}
+                onTieChange={updateTie}
+                total={form.peso}
+                lastTotal={sys.lastPeso}
+                daysSince={daysSinceLastReading}
+                lastCosechada={sys.lastCosechada}
+                lastSueltos={sys.lastSueltos}
+              />
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                  Sueltos (g)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={form.sueltos}
+                  onChange={(e) => updateForm('sueltos', e.target.value)}
+                  style={{ ...s.inputLarge, fontSize: '18px' }}
+                  placeholder="0"
+                />
+              </div>
+            </>
           ) : (
             <>
               <div style={{ display: 'flex', gap: '12px' }}>

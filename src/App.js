@@ -2928,10 +2928,34 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
   const todayName= ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"][new Date().getDay()];
 
   // ── Tasks ──────────────────────────────────────────────────────────────────
-  const myTasks   = assignedTasks.filter(t => t.assignedTo === initials);
-  const todayTasks= myTasks.filter(t => t.day === todayName || t.date === today);
-  const done      = myTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
-  const pct       = myTasks.length ? Math.round((done/myTasks.length)*100) : 0;
+  const [taskFilter, setTaskFilter] = useState('week');
+
+  // Current week Mon–Sat dates
+  const weekDates = (() => {
+    const d = new Date(); const day = d.getDay();
+    const mon = new Date(d); mon.setDate(d.getDate() - ((day + 6) % 7));
+    return Array.from({ length: 6 }, (_, i) => {
+      const x = new Date(mon); x.setDate(mon.getDate() + i);
+      return x.toISOString().slice(0, 10);
+    });
+  })();
+  const weekDayNames = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+  const leadTasks    = assignedTasks.filter(t => t.assignedTo === initials);
+  const supportTasks = assignedTasks.filter(t =>
+    t.assignedTo !== initials && (t.supportCrew || []).includes(initials)
+  );
+  const allMyTasks = [
+    ...leadTasks.map(t => ({ ...t, _role: 'lead' })),
+    ...supportTasks.map(t => ({ ...t, _role: 'apoyo' })),
+  ];
+
+  const filteredTasks = taskFilter === 'week'
+    ? allMyTasks.filter(t => weekDates.includes(t.date) || weekDayNames.includes(t.day))
+    : allMyTasks;
+
+  const done = leadTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
+  const pct  = leadTasks.length ? Math.round((done/leadTasks.length)*100) : 0;
 
   // ── Systems ────────────────────────────────────────────────────────────────
   const mySystems = systems.filter(s =>
@@ -3007,7 +3031,7 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:26,fontWeight:900,color:"#0d9488",fontFamily:"monospace"}}>{pct}%</div>
-            <div style={{fontSize:10,color:"#64748b"}}>{done}/{myTasks.length} {lang==="es"?"tareas":"tasks"}</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{done}/{leadTasks.length} {lang==="es"?"tareas":"tasks"}</div>
           </div>
         </div>
         {S.scoreBar(pct/100, pct===100?"#4ade80":pct>=70?"#fb923c":"#f87171")}
@@ -3076,22 +3100,43 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
         )}
       </div>
 
-      {/* ── TODAY'S TASKS ────────────────────────────────────────────────────── */}
-      <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,margin:"0 0 8px",
-        textTransform:"uppercase",letterSpacing:1}}>
-        {lang==="es"?"Tareas de hoy":"Today's tasks"} — {todayTasks.length}
+      {/* ── TASKS ───────────────────────────────────────────────────────────── */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,
+          textTransform:"uppercase",letterSpacing:1}}>
+          {lang==="es"?"Tareas":"Tasks"} — {filteredTasks.length}
+        </div>
+        <div style={{display:"flex",gap:4}}>
+          {['week','all'].map(f=>(
+            <button key={f} onClick={()=>setTaskFilter(f)}
+              style={{fontSize:11,padding:"3px 10px",borderRadius:8,border:"none",cursor:"pointer",
+                fontWeight:700,
+                background:taskFilter===f?"#0d9488":"rgba(255,255,255,0.06)",
+                color:taskFilter===f?"#fff":"#64748b"}}>
+              {f==='week'?(lang==="es"?"Esta semana":"This week"):(lang==="es"?"Todas":"All")}
+            </button>
+          ))}
+        </div>
       </div>
-      {todayTasks.length===0 ? (
+      {filteredTasks.length===0 ? (
         <div style={{...S.card,textAlign:"center",padding:20,marginBottom:14}}>
           <p style={{color:"#475569",fontSize:12,margin:0}}>
-            {lang==="es"?"Sin tareas asignadas para hoy":"No tasks assigned for today"}
+            {lang==="es"?"Sin tareas esta semana":"No tasks this week"}
           </p>
         </div>
       ) : (
         <div style={{marginBottom:14}}>
-          {todayTasks.map(t=>(
-            <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
-              onComplete={()=>{}} canEdit={false}/>
+          {filteredTasks.map(t=>(
+            <div key={t.id+t._role} style={{position:"relative"}}>
+              <TaskLogCard task={t} systems={systems} lang={lang}
+                onComplete={()=>{}} canEdit={false}/>
+              <span style={{position:"absolute",top:10,right:10,
+                fontSize:9,padding:"2px 7px",borderRadius:6,fontWeight:700,
+                background:t._role==='lead'?"rgba(13,148,136,0.2)":"rgba(251,146,60,0.2)",
+                color:t._role==='lead'?"#0d9488":"#fb923c"}}>
+                {t._role==='lead'?"Lead":"Apoyo"}
+              </span>
+            </div>
           ))}
         </div>
       )}

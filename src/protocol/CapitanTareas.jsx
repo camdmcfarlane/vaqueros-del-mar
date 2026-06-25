@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import ConditionAssessment from '../systems/ConditionAssessment';
+import CanastaTieInput from '../components/CanastaTieInput';
 import { READING_CADENCE_DAYS, CREW } from '../data/constants';
 
 // Panama is UTC-5 year-round (no DST). Before 4am Panama time, stamp readings as yesterday.
@@ -161,7 +162,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     condicion: null,
     cosechada_sueltos:'', cosechada_infectada:'',
     reseed_to:'', reseed_kg:'', seed_source:'', salio_de_finca: null,
-    sembrado:'', notas:'', buoys: Array(10).fill(''),
+    sembrado:'', notas:'', buoys: Array(10).fill(''), ties: Array(6).fill(''),
   });
 
   function updateForm(key, val) { setForm(p => ({ ...p, [key]: val })); }
@@ -170,6 +171,13 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       const buoys = [...p.buoys]; buoys[i] = val;
       const total = buoys.reduce((s, b) => s + (parseFloat(b) || 0), 0);
       return { ...p, buoys, peso: total > 0 ? String(Math.round(total)) : '' };
+    });
+  }
+  function updateTie(i, val) {
+    setForm(p => {
+      const ties = [...p.ties]; ties[i] = val;
+      const total = ties.reduce((s, t) => s + (parseFloat(t) || 0), 0);
+      return { ...p, ties, peso: total > 0 ? String(Math.round(total)) : '' };
     });
   }
 
@@ -197,7 +205,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       condicion: null,
       cosechada_sueltos:'', cosechada_infectada:'',
       reseed_to:'', reseed_kg:'', seed_source:'', salio_de_finca: null,
-      sembrado:'', notas:'', buoys: Array(10).fill('') });
+      sembrado:'', notas:'', buoys: Array(10).fill(''), ties: Array(6).fill('') });
     setError('');
     setShowFormChart(false);
   }
@@ -718,6 +726,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   if (activeSystem) {
     const sys = activeSystem;
     const isLongLine = sys.tipo === 'Long Line';
+    const isCanasta  = sys.tipo === 'Canasta' || sys.tipo === 'Redes tubulares';
     const last = lastReading(readings, sys.id);
     const dias = last ? daysSince(last.fecha) : null;
     const lastCosechadaForm = last
@@ -883,6 +892,27 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                   Total: {parseInt(form.peso).toLocaleString()}g
                 </div>
               )}
+            </>
+          ) : isCanasta ? (
+            /* Canasta / Redes tubulares: per-tie weight grid */
+            <>
+              <CanastaTieInput
+                ties={form.ties}
+                onTieChange={updateTie}
+                total={form.peso}
+                lastTotal={last?.peso || null}
+                daysSince={dias}
+                lastCosechada={lastCosechadaForm}
+                lastSueltos={last?.sueltos || 0}
+              />
+              <div style={{ marginTop:'12px' }}>
+                <label style={{ fontSize:'12px', color:'#94a3b8', display:'block', marginBottom:'4px' }}>
+                  Sueltos (g)
+                </label>
+                <input type="number" inputMode="numeric" value={form.sueltos}
+                  onChange={e => updateForm('sueltos', e.target.value)}
+                  style={{ ...s.inputLarge, fontSize:'16px' }} placeholder="0" />
+              </div>
             </>
           ) : (
             <div style={{ display:'flex', gap:'12px' }}>
