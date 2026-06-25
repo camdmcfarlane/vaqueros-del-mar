@@ -71,7 +71,8 @@ const CREW = [
   { initials:"JV", name:"Joel Valdés",     role:"Lead",         username:"joel_valdes" },
   { initials:"EV", name:"Eduardo Valdés",  role:"Lead",         username:"eduardo_valdes" },
   { initials:"MA", name:"Miguel Avila",    role:"Farm Manager", username:"miguel_avila" },
-  { initials:"FS", name:"Fyto",            role:"Farm Manager", username:"fyto" },
+  { initials:"FS", name:"Fyto Sandoval",   role:"Farm Manager", username:"fyto_sandoval" },
+  { initials:"AG", name:"Alain Garcia",    role:"Director",     username:"alain_garcia" },
 ];
 
 
