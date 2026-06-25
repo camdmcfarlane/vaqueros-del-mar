@@ -251,16 +251,30 @@ export default function VigilanciaQueue() {
         .select('sistema, fecha, peso, sueltos, cosechada')
         .order('fecha', { ascending: false });
 
-      // Build system objects with task + last reading info
+      // Build system objects with task + last two readings for TDC
       const systemsWithMeta = (sysData || []).map((sys) => {
         const sysTasks = (taskData || [])
           .filter((t) => t.sistema === sys.id)
           .map((t) => t.tipo);
-        
-        // Always include lectura if no specific tasks assigned
+
         if (sysTasks.length === 0) sysTasks.push('lectura');
 
-        const lastReading = (lastReadings || []).find((r) => r.sistema === sys.id);
+        const sysReadings = (lastReadings || [])
+          .filter((r) => r.sistema === sys.id && r.peso)
+          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+        const lastReading = sysReadings[0] || null;
+        const prevReading = sysReadings[1] || null;
+
+        let lastTDC = null;
+        if (lastReading && prevReading) {
+          const days = Math.max(1, (new Date(lastReading.fecha + 'T12:00:00') - new Date(prevReading.fecha + 'T12:00:00')) / (1000 * 60 * 60 * 24));
+          const adjNow  = (lastReading.peso || 0) + (lastReading.sueltos || 0);
+          const adjPrev = (prevReading.peso || 0) + (prevReading.sueltos || 0) - (prevReading.cosechada || 0);
+          if (adjNow > 0 && adjPrev > 0) {
+            lastTDC = parseFloat((Math.log(adjNow / adjPrev) / days * 100).toFixed(2));
+          }
+        }
 
         return {
           ...sys,
@@ -269,6 +283,7 @@ export default function VigilanciaQueue() {
           lastDate: lastReading?.fecha || null,
           lastCosechada: lastReading?.cosechada || 0,
           lastSueltos: lastReading?.sueltos || 0,
+          lastTDC,
         };
       });
 
@@ -600,6 +615,10 @@ export default function VigilanciaQueue() {
   const totalTasks = systems.reduce((a, sys) => a + (sys.tasks?.length || 1), 0);
   const pct = total > 0 ? Math.round((doneN / total) * 100) : 0;
 
+  const tdcRates = systems.map(s => s.lastTDC).filter(r => r !== null);
+  const avgTDC   = tdcRates.length ? (tdcRates.reduce((a, b) => a + b, 0) / tdcRates.length).toFixed(2) : null;
+  const avgTDCColor = avgTDC === null ? '#94a3b8' : parseFloat(avgTDC) >= 2.5 ? '#4ade80' : parseFloat(avgTDC) >= 0 ? '#fb923c' : '#f87171';
+
   return (
     <div style={s.page}>
       <div style={s.header}>
@@ -608,6 +627,18 @@ export default function VigilanciaQueue() {
           {doneN}/{total} sistemas · {totalTasks} tareas
         </div>
       </div>
+      {avgTDC !== null && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '8px 14px', marginBottom: '8px',
+          background: 'rgba(255,255,255,0.04)', borderRadius: '10px',
+          border: '0.5px solid rgba(255,255,255,0.08)' }}>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Crecimiento promedio</span>
+          <span style={{ fontSize: '18px', fontWeight: '700', color: avgTDCColor, fontFamily: 'monospace' }}>
+            {parseFloat(avgTDC) >= 0 ? '+' : ''}{avgTDC}%/día
+          </span>
+          <span style={{ fontSize: '11px', color: '#475569' }}>({tdcRates.length} sistemas)</span>
+        </div>
+      )}
       <div style={s.subtitle}>
         {new Date().toLocaleDateString('es-PA', {
           weekday: 'long',
@@ -660,9 +691,16 @@ export default function VigilanciaQueue() {
                   <div style={{ fontSize: '14px', fontWeight: '500' }}>
                     {sys.lastPeso ? `${sys.lastPeso.toLocaleString()}g` : '—'}
                   </div>
-                  <div style={{ fontSize: '11px', color: urgent ? '#ef4444' : '#94a3b8' }}>
-                    {d !== null ? `hace ${d}d` : 'sin datos'}
-                  </div>
+                  {sys.lastTDC !== null ? (
+                    <div style={{ fontSize: '12px', fontWeight: '700', fontFamily: 'monospace',
+                      color: sys.lastTDC >= 2.5 ? '#4ade80' : sys.lastTDC >= 0 ? '#fb923c' : '#f87171' }}>
+                      {sys.lastTDC >= 0 ? '+' : ''}{sys.lastTDC}%
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: urgent ? '#ef4444' : '#94a3b8' }}>
+                      {d !== null ? `hace ${d}d` : 'sin datos'}
+                    </div>
+                  )}
                 </div>
               </div>
 

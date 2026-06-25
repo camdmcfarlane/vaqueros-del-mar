@@ -2958,19 +2958,30 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
   const pct  = leadTasks.length ? Math.round((done/leadTasks.length)*100) : 0;
 
   // ── Systems ────────────────────────────────────────────────────────────────
+  // Include systems where this person is buceador/capitan OR appeared as support_crew on a task
+  const supportSystemIds = new Set(
+    assignedTasks
+      .filter(t => (t.supportCrew || []).includes(initials))
+      .map(t => t.sistema)
+      .filter(Boolean)
+  );
   const mySystems = systems.filter(s =>
-    (getCapitan(s) === initials || hasBuceador(s, initials)) && s.estado === "Activo"
+    (getCapitan(s) === initials || hasBuceador(s, initials) || supportSystemIds.has(s.id)) && s.estado === "Activo"
   );
 
   // Per-system growth
   const sysWithRate = mySystems.map(s => {
-    const sysReadings = readings.filter(r=>r.sistema===s.id).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const sysReadings = readings.filter(r=>r.sistema===s.id && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     const latest = sysReadings[sysReadings.length-1]||null;
     const prev   = sysReadings[sysReadings.length-2]||null;
     let rate = null;
-    if (latest && prev && prev.peso) {
-      const days = Math.max(1,(new Date(latest.fecha)-new Date(prev.fecha))/(1000*60*60*24));
-      rate = parseFloat(((Math.log(latest.peso/prev.peso)/days)*100).toFixed(2));
+    if (latest && prev) {
+      const days = Math.max(1,(new Date(latest.fecha+'T12:00:00')-new Date(prev.fecha+'T12:00:00'))/(1000*60*60*24));
+      const adjNow  = (latest.peso||0) + (latest.sueltos||0);
+      const adjPrev = (prev.peso||0) + (prev.sueltos||0) - (prev.cosechada||0);
+      if (adjNow > 0 && adjPrev > 0) {
+        rate = parseFloat(((Math.log(adjNow/adjPrev)/days)*100).toFixed(2));
+      }
     }
     return { ...s, latest, rate };
   });
