@@ -38,9 +38,9 @@ function daysSince(dateStr) {
   return Math.round((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 864e5);
 }
 
-function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0) {
-  const adjNow  = (pesoNuevo  || 0) - (sembradoNuevo    || 0);
-  const adjPrev = (pesoAnterior || 0) - (cosechadaAnterior || 0);
+function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0, sueltosNuevo = 0, sueltosAnterior = 0) {
+  const adjNow  = (pesoNuevo  || 0) + (sueltosNuevo    || 0) - (sembradoNuevo    || 0);
+  const adjPrev = (pesoAnterior || 0) + (sueltosAnterior || 0) - (cosechadaAnterior || 0);
   if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
   return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
 }
@@ -295,7 +295,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           : (last.cosechada || 0))
       : 0;
     const totalCosechada = (parseFloat(form.cosechada_sueltos) || 0) + (parseFloat(form.cosechada_infectada) || 0);
-    const tdc = calcTDC(parseFloat(form.peso), last?.peso, last ? daysSince(last.fecha) : null, lastCosechada, parseFloat(form.sembrado) || 0);
+    const tdc = calcTDC(parseFloat(form.peso), last?.peso, last ? daysSince(last.fecha) : null, lastCosechada, parseFloat(form.sembrado) || 0, parseFloat(form.sueltos) || 0, last?.sueltos || 0);
     const reading = {
       id: `${activeSystem.id}_${today}_${user?.initials || 'anon'}`,
       sistema: activeSystem.id,
@@ -339,7 +339,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   if (showChart) {
     const { sys, reading, last } = showChart;
     const dias = last ? daysSince(last.fecha) : null;
-    const tdc = calcTDC(reading.peso, last?.peso, dias, last?.cosechada, reading.sembrado || 0);
+    const tdc = calcTDC(reading.peso, last?.peso, dias, last?.cosechada, reading.sembrado || 0, reading.sueltos || 0, last?.sueltos || 0);
     const isBetter = tdc !== null && parseFloat(tdc) > 0;
 
     return (
@@ -385,7 +385,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   // ── Mandatory comment when growth declined ───────────────────────────────
   if (pendingReadingOnDecline) {
     const { reading, last } = pendingReadingOnDecline;
-    const tdc = calcTDC(reading.peso, last?.peso, last ? daysSince(last.fecha) : null, last?.cosechada, reading.sembrado || 0);
+    const tdc = calcTDC(reading.peso, last?.peso, last ? daysSince(last.fecha) : null, last?.cosechada, reading.sembrado || 0, reading.sueltos || 0, last?.sueltos || 0);
     return (
       <div style={s.page}>
         <div style={{ padding:'32px 20px' }}>
@@ -467,7 +467,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
     }
     const latest = sysR[sysR.length-1];
     const prev   = sysR[sysR.length-2];
-    const tdc    = latest && prev ? calcTDC(latest.peso, prev.peso, daysSince(prev.fecha), prev.cosechada, latest.sembrado) : null;
+    const tdc    = latest && prev ? calcTDC(latest.peso, prev.peso, daysSince(prev.fecha), prev.cosechada, latest.sembrado, latest.sueltos || 0, prev.sueltos || 0) : null;
     return (
       <div style={s.page}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
@@ -725,7 +725,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           ? (last.cosechada_sueltos || 0) + (last.cosechada_infectada || 0)
           : (last.cosechada || 0))
       : 0;
-    const tdc = calcTDC(parseFloat(form.peso), last?.peso, dias, lastCosechadaForm, parseFloat(form.sembrado) || 0);
+    const tdc = calcTDC(parseFloat(form.peso), last?.peso, dias, lastCosechadaForm, parseFloat(form.sembrado) || 0, parseFloat(form.sueltos) || 0, last?.sueltos || 0);
     const canSave = form.peso && form.condicion && !saving;
 
     return (
@@ -761,7 +761,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           if (!sysR.length) return null;
           const latest = sysR[sysR.length - 1];
           const prev   = sysR[sysR.length - 2];
-          const tdc    = latest && prev ? calcTDC(latest.peso, prev.peso, daysSince(prev.fecha), prev.cosechada, latest.sembrado) : null;
+          const tdc    = latest && prev ? calcTDC(latest.peso, prev.peso, daysSince(prev.fecha), prev.cosechada, latest.sembrado, latest.sueltos || 0, prev.sueltos || 0) : null;
           const tdcColor = tdc === null ? '#94a3b8'
             : parseFloat(tdc) >= 2.5 ? '#4ade80'
             : parseFloat(tdc) >= 0   ? '#0d9488'
@@ -825,7 +825,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                           strokeLinejoin="round" strokeLinecap="round"/>
                         {/* Dots — colored by TDC category */}
                         {sysR.map((r, i) => {
-                          const dotTdc = i > 0 ? calcTDC(r.peso, sysR[i-1].peso, daysSince(sysR[i-1].fecha), sysR[i-1].cosechada, r.sembrado) : null;
+                          const dotTdc = i > 0 ? calcTDC(r.peso, sysR[i-1].peso, daysSince(sysR[i-1].fecha), sysR[i-1].cosechada, r.sembrado, r.sueltos || 0, sysR[i-1].sueltos || 0) : null;
                           return (
                             <circle key={i} cx={toX(i)} cy={toY(r.peso)}
                               r={i === sysR.length - 1 ? 4.5 : 3}

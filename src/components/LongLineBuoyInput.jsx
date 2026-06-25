@@ -4,21 +4,21 @@
 
 import React from 'react';
 
-function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0) {
-  const adjNow  = pesoNuevo || 0;
-  const adjPrev = (pesoAnterior || 0) - (cosechadaAnterior || 0);
+function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sueltosNuevo = 0, sueltosAnterior = 0) {
+  const adjNow  = (pesoNuevo || 0) + (sueltosNuevo || 0);
+  const adjPrev = (pesoAnterior || 0) + (sueltosAnterior || 0) - (cosechadaAnterior || 0);
   if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
   return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
 }
 
-export default function LongLineBuoyInput({ buoys, onBuoyChange, total, lastTotal, daysSince, lastCosechada = 0 }) {
+export default function LongLineBuoyInput({ buoys, onBuoyChange, total, lastTotal, daysSince, lastCosechada = 0, lastSueltos = 0 }) {
   const filledCount = buoys.filter((b) => parseFloat(b) > 0).length;
   const numericTotal = parseFloat(total) || 0;
   const filledBuoys = buoys.filter((b) => parseFloat(b) > 0);
   const avg = filledCount > 0 ? Math.round(numericTotal / filledCount) : 0;
   const min = filledCount > 0 ? Math.min(...filledBuoys.map(Number)) : 0;
   const max = filledCount > 0 ? Math.max(...filledBuoys.map(Number)) : 0;
-  const tdc = calcTDC(numericTotal || null, lastTotal, daysSince, lastCosechada);
+  const tdc = calcTDC(numericTotal || null, lastTotal, daysSince, lastCosechada, 0, lastSueltos);
 
   return (
     <div>

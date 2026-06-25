@@ -3764,9 +3764,9 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   // TDC = (ln(adjNow / adjPrev) / days) * 100 — adjusted for harvest and seeding
   // r1 = previous reading, r2 = current reading (or their individual components)
-  const calcTDC = (peso1, fecha1, peso2, fecha2, cosechada1 = 0, sembrado2 = 0) => {
-    const adj1 = (peso1 || 0) - (cosechada1 || 0);
-    const adj2 = (peso2 || 0) - (sembrado2  || 0);
+  const calcTDC = (peso1, fecha1, peso2, fecha2, cosechada1 = 0, sembrado2 = 0, sueltos1 = 0, sueltos2 = 0) => {
+    const adj1 = (peso1 || 0) + (sueltos1 || 0) - (cosechada1 || 0);
+    const adj2 = (peso2 || 0) + (sueltos2 || 0) - (sembrado2  || 0);
     if (!adj1 || !adj2 || adj1 <= 0 || adj2 <= 0 || !fecha1 || !fecha2) return null;
     const days = (new Date(fecha2) - new Date(fecha1)) / (1000 * 60 * 60 * 24);
     if (days <= 0) return null;
@@ -3780,7 +3780,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
     const updated = sorted.map((r, i) => {
       const prev = sorted[i-1] || null;
-      const tdc = prev ? calcTDC(prev.peso, prev.fecha, r.peso, r.fecha, prev.cosechada, r.sembrado) : null;
+      const tdc = prev ? calcTDC(prev.peso, prev.fecha, r.peso, r.fecha, prev.cosechada, r.sembrado, prev.sueltos || 0, r.sueltos || 0) : null;
       return { ...r, tdc };
     });
     return allReadings.map(r => {
@@ -3813,7 +3813,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     const prev = prevReadings[0] || null;
     const tdc  = (isPeso && prev?.peso)
-      ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha, prev.cosechada, readingForm.cosechada ? parseFloat(readingForm.cosechada) : 0)
+      ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha, prev.cosechada, readingForm.cosechada ? parseFloat(readingForm.cosechada) : 0, prev.sueltos || 0, readingForm.sueltos ? parseFloat(readingForm.sueltos) : 0)
       : null;
 
     const newReading = {
@@ -4207,7 +4207,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                     </div>
                   )}
                   {readingForm.peso&&lastR?.peso&&(()=>{
-                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha,lastR.cosechada,readingForm.cosechada?parseFloat(readingForm.cosechada):0);
+                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha,lastR.cosechada,readingForm.cosechada?parseFloat(readingForm.cosechada):0,lastR.sueltos||0,readingForm.sueltos?parseFloat(readingForm.sueltos):0);
                     if(preview===null)return null;
                     const col=preview>=2.5?"#4ade80":preview>=0?"#0d9488":"#f87171";
                     return(

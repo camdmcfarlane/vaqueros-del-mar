@@ -5,9 +5,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0) {
-  const adjNow  = (pesoNuevo  || 0) - (sembradoNuevo    || 0);
-  const adjPrev = (pesoAnterior || 0) - (cosechadaAnterior || 0);
+function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoNuevo = 0, sueltosNuevo = 0, sueltosAnterior = 0) {
+  const adjNow  = (pesoNuevo  || 0) + (sueltosNuevo    || 0) - (sembradoNuevo    || 0);
+  const adjPrev = (pesoAnterior || 0) + (sueltosAnterior || 0) - (cosechadaAnterior || 0);
   if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
   return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
 }
@@ -29,7 +29,7 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
   async function loadReadings() {
     const { data } = await supabase
       .from('lecturas')
-      .select('fecha, peso, cosechada, sembrado')
+      .select('fecha, peso, sueltos, cosechada, sembrado')
       .eq('sistema', system.id)
       .not('peso', 'is', null)
       .order('fecha', { ascending: true })
@@ -38,6 +38,7 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
     const pts = (data || []).map((r) => ({
       date: new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-PA', { month: 'short', day: 'numeric' }),
       peso: r.peso,
+      sueltos: r.sueltos || 0,
       cosechada: r.cosechada || 0,
       sembrado: r.sembrado || 0,
     }));
@@ -46,6 +47,7 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
     pts.push({
       date: new Date().toLocaleDateString('es-PA', { month: 'short', day: 'numeric' }),
       peso: latestPeso,
+      sueltos: 0,
       cosechada: 0,
       sembrado: 0,
     });
@@ -61,7 +63,9 @@ export default function GrowthChart({ system, latestPeso, condicion, onNext, com
         prevReading.peso,
         Math.max(1, Math.round((Date.now() - new Date(system.lastDate + 'T12:00:00').getTime()) / (1000 * 60 * 60 * 24))),
         prevReading.cosechada,
-        0
+        0,
+        0,
+        prevReading.sueltos
       )
     : null;
 
