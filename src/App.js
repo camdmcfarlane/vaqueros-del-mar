@@ -2804,7 +2804,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
     if(editTask) {
       setAssignedTasks(prev=>prev.map(t=>t.id===editTask.id?{...t,...form,objetivo:parseFloat(form.objetivo)||null}:t));
     } else {
-      setAssignedTasks(prev=>[...prev,{...form,id:Date.now(),objetivo:parseFloat(form.objetivo)||null,actual:null,condicion:null,voiceNote:null,foto:null,confirmed:false,notas:form.notas||""}]);
+      setAssignedTasks(prev=>[...prev,{...form,id:crypto.randomUUID(),objetivo:parseFloat(form.objetivo)||null,actual:null,condicion:null,voiceNote:null,foto:null,confirmed:false,updatedAt:new Date().toISOString(),pendingSync:true,notas:form.notas||""}]);
     }
     setShowForm(false); setEditTask(null); setForm(emptyForm);
   };
@@ -6688,14 +6688,23 @@ export default function App() {
           const remoteIds = new Set(tasksRes.data.map(r => r.id));
           const fromRemote = tasksRes.data.map(r => {
             const local = localById[r.id];
+            // Use updated_at to resolve conflicts: whichever side is newer wins for confirmed.
+            // This prevents background pulls from clobbering a completion that hasn't landed
+            // in Supabase yet, AND prevents stale local state from overriding a remote reset.
+            const localTs  = local?.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+            const remoteTs = r.updated_at     ? new Date(r.updated_at).getTime()    : 0;
+            const localWins = localTs > remoteTs;
             return {
               id: r.id, assignedTo: r.assigned_to, day: r.day,
               taskType: r.task_type, sistema: r.sistema, region: r.region || "",
               objetivo: r.objetivo, date: r.date, actual: r.actual,
               condicion: r.condicion, voiceNote: null,
               foto: r.foto_url,
-              // Local confirmed wins — prevents pull from un-confirming a task mid-flight
-              confirmed: local?.confirmed || r.confirmed,
+              confirmed:   localWins ? local.confirmed  : r.confirmed,
+              confirmedBy: localWins ? local.confirmedBy : (r.confirmed_by || null),
+              confirmedAt: localWins ? local.confirmedAt : (r.confirmed_at || null),
+              updatedAt:   remoteTs > localTs ? r.updated_at : (local?.updatedAt || r.updated_at),
+              pendingSync: local?.pendingSync || false,
               notas: r.notas || "",
               supportCrew: r.support_crew ? r.support_crew.split(',').map(s => s.trim()).filter(Boolean) : [],
               comentarioVaquero: r.comentario_vaquero || null,
@@ -6941,23 +6950,30 @@ export default function App() {
   const syncAssignedTasks = (updater) => {
     setAssignedTasks(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
+      const now = new Date().toISOString();
       // Push upserts for new or changed tasks
-      next.forEach(task => {
+      const stamped = next.map(task => {
         const old = prev.find(t => t.id === task.id);
-        if (!old || JSON.stringify(old) !== JSON.stringify(task)) {
-          pushItem('assigned_tasks', 'upsert', {
-            id: task.id, assigned_to: task.assignedTo,
-            day: task.day, task_type: task.taskType,
-            sistema: task.sistema || null, region: task.region || null, objetivo: task.objetivo,
-            date: task.date, actual: task.actual,
-            condicion: task.condicion, confirmed: task.confirmed,
-            confirmed_by: task.confirmedBy || null,
-            confirmed_at: task.confirmedAt || null,
-            notas: task.notas || "",
-            support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
-            updated_at: new Date().toISOString(),
-          });
-        }
+        const changed = !old || JSON.stringify({...old, pendingSync:false, updatedAt:null}) !== JSON.stringify({...task, pendingSync:false, updatedAt:null});
+        if (!changed) return task;
+        const withTs = { ...task, updatedAt: now, pendingSync: true };
+        pushItem('assigned_tasks', 'upsert', {
+          id: task.id, assigned_to: task.assignedTo,
+          day: task.day, task_type: task.taskType,
+          sistema: task.sistema || null, region: task.region || null, objetivo: task.objetivo,
+          date: task.date, actual: task.actual,
+          condicion: task.condicion, confirmed: task.confirmed,
+          confirmed_by: task.confirmedBy || null,
+          confirmed_at: task.confirmedAt || null,
+          notas: task.notas || "",
+          support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
+          updated_at: now,
+        }).then(ok => {
+          if (ok) {
+            setAssignedTasks(cur => cur.map(t => t.id === task.id ? { ...t, pendingSync: false } : t));
+          }
+        });
+        return withTs;
       });
       // Push deletes for tasks removed from state
       prev.forEach(task => {
@@ -6965,7 +6981,7 @@ export default function App() {
           pushItem('assigned_tasks', 'delete', { id: task.id });
         }
       });
-      return next;
+      return stamped;
     });
   };
 

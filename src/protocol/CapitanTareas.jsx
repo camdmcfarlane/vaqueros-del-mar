@@ -131,13 +131,15 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const today2 = new Date().toISOString().split('T')[0];
 
   const markDone = (task, extra = {}) => {
+    const now = new Date().toISOString();
     if (setAssignedTasks) setAssignedTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, confirmed: true, actual: today2, ...extra } : t
+      t.id === task.id ? { ...t, confirmed: true, actual: today2, updatedAt: now, confirmedAt: now, confirmedBy: user?.initials, ...extra } : t
     ));
   };
   const undoTask = (task) => {
+    const now = new Date().toISOString();
     if (setAssignedTasks) setAssignedTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, confirmed: false, actual: null } : t
+      t.id === task.id ? { ...t, confirmed: false, actual: null, updatedAt: now } : t
     ));
   };
 
@@ -1320,6 +1322,9 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                   {t.objetivo && <span style={{ fontSize:'10px', color:'#64748b' }}>· obj: {t.objetivo}</span>}
                 </div>
               </div>
+              {t.pendingSync && (
+                <span title="Sincronizando..." style={{ fontSize:10, color:'#f59e0b', flexShrink:0 }}>⟳</span>
+              )}
               <button onClick={handleComplete}
                 style={{ fontSize:'11px', padding:'5px 12px', borderRadius:'7px', border:'none',
                   background: isDipping ? '#a855f7' : isParametros ? '#0ea5e9' : '#0d9488',
@@ -1378,6 +1383,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                   </div>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                  {tasks.some(t => t.pendingSync) && <span style={{ fontSize:10, color:'#f59e0b' }} title="Sincronizando...">⟳</span>}
                   {!allDone && <span style={{ fontSize:'10px', color: hasOverdue ? '#f87171' : '#64748b',
                     fontWeight:700 }}>{pendingCount}/{tasks.length}</span>}
                   {allDone && <span style={{ fontSize:'12px', color:'#4ade80' }}>✓</span>}
