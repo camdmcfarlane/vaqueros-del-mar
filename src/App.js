@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase as sbStatic } from './supabase';
 import ProtectedRoute from './components/ProtectedRoute';
 import VigilanciaQueue from './components/VigilanciaQueue';
@@ -7,6 +7,10 @@ import CapitanTareasComponent from './protocol/CapitanTareas';
 import { ReadingActionButtons, EditReading, DeleteReading } from './protocol/ReadingActions';
 import { AuthContext } from './contexts/AuthContext';
 import { getRedirectForRole } from './utils/roleGuard';
+import NotesFeed from './components/NotesFeed';
+import SystemNotes from './components/SystemNotes';
+import { logActivity } from './utils/activityLog';
+import ActivityFeed from './components/ActivityFeed';
 
 // ─── DATA LAYER ──────────────────────────────────────────────────────────────
 import { SYSTEMS_DATA } from "./data/systems";
@@ -1027,6 +1031,83 @@ function growthRate(latest, prev) {
 function daysAgo(dateStr) {
   return Math.round((new Date()-new Date(dateStr))/(1000*60*60*24));
 }
+
+// ─── ALERT THRESHOLDS ────────────────────────────────────────────────────────
+function computeAlerts(assignedTasks, readings, systems) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+  const archiveCutoff = new Date(today); archiveCutoff.setDate(archiveCutoff.getDate() - 7);
+  const archiveCutoffStr = archiveCutoff.toISOString().slice(0,10);
+  // Routine high-frequency tasks excluded from late alerts (weather-dependent, always recurring)
+  const ROUTINE_TASK_TYPES = new Set(['vigilancia','limpieza']);
+  const result = [];
+  for (const t of (assignedTasks||[])) {
+    if (!t.date || t.date >= todayStr) continue;
+    if (t.date < archiveCutoffStr) continue; // older than 7 days → weather/circumstance, ignore
+    if (ROUTINE_TASK_TYPES.has(t.taskType)) continue; // routine recurring work, not alerted
+    const isDone = t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null);
+    if (isDone) continue;
+    const daysLate = Math.round((today - new Date(t.date+'T00:00:00')) / 86400000);
+    const severity = daysLate >= 3 ? 'ceo' : daysLate >= 2 ? 'farm_manager' : 'ops_mgr';
+    result.push({ type:'task_late', severity, daysLate, assignedTo:t.assignedTo, taskType:t.taskType, sistema:t.sistema });
+  }
+  const activeSysIds = new Set((systems||[]).filter(s=>s.estado==='Activo').map(s=>s.id));
+  const bySys = {};
+  for (const r of (readings||[])) {
+    if (r.tipo !== 'peso' || !r.peso || !activeSysIds.has(r.sistema)) continue;
+    if (!bySys[r.sistema]) bySys[r.sistema] = [];
+    bySys[r.sistema].push(r);
+  }
+  for (const [sysId, sysR] of Object.entries(bySys)) {
+    sysR.sort((a,b) => a.fecha.localeCompare(b.fecha));
+    if (sysR.length < 2) continue;
+    const curr = sysR[sysR.length-1], prev = sysR[sysR.length-2];
+    if (!curr.peso || !prev.peso || curr.peso<=0 || prev.peso<=0) continue;
+    const days = Math.max(1, (new Date(curr.fecha)-new Date(prev.fecha))/86400000);
+    const adj1 = (prev.peso||0) + (prev.sueltos||0) - (prev.cosechada||0);
+    const adj2 = (curr.peso||0) + (curr.sueltos||0);
+    if (adj1 <= 0 || adj2 <= 0) continue;
+    const tdc = (Math.log(adj2/adj1)/days)*100;
+    if (tdc < 3) {
+      const severity = tdc < 0 ? 'ceo' : tdc < 1 ? 'farm_manager' : 'ops_mgr';
+      const sys = (systems||[]).find(s => s.id === sysId);
+      const daysSinceReading = Math.round((new Date() - new Date(curr.fecha+'T12:00:00')) / 86400000);
+      result.push({ type:tdc<0?'tdc_loss':'tdc_slow', severity, sistema:sysId, tdc:parseFloat(tdc.toFixed(2)), capitan:sys?.capitan||null, lastReadingDays:daysSinceReading });
+    }
+  }
+  return result;
+}
+const ROLE_ALERT_LEVEL = { vaquero:0, capitan:0, supervisor:1, director:2, farm_manager:2, consultor:3, admin:3 };
+const SEV_LEVEL = { ops_mgr:1, farm_manager:2, ceo:3 };
+function alertsForRole(alerts, role) {
+  const lvl = ROLE_ALERT_LEVEL[role]||0;
+  return (alerts||[]).filter(a => SEV_LEVEL[a.severity]<=lvl && lvl>=1);
+}
+function AlertBanner({ alerts, onOpenBell }) {
+  const ceo = alerts.filter(a=>a.severity==='ceo');
+  const fm  = alerts.filter(a=>a.severity==='farm_manager');
+  const om  = alerts.filter(a=>a.severity==='ops_mgr');
+  const highest = ceo.length ? 'ceo' : fm.length ? 'farm_manager' : om.length ? 'ops_mgr' : null;
+  if (!highest) return null;
+  const bg  = highest==='ceo' ? 'rgba(239,68,68,.12)' : highest==='farm_manager' ? 'rgba(249,115,22,.12)' : 'rgba(234,179,8,.1)';
+  const col = highest==='ceo' ? '#f87171' : highest==='farm_manager' ? '#fb923c' : '#fbbf24';
+  const icon = highest==='ceo' ? '🚨' : highest==='farm_manager' ? '⚠️' : '⏰';
+  const lossCount = alerts.filter(a=>a.type==='tdc_loss').length;
+  const slowCount = alerts.filter(a=>a.type==='tdc_slow').length;
+  const lateCount = alerts.filter(a=>a.type==='task_late').length;
+  const parts = [];
+  if (lossCount) parts.push(`${lossCount} pérdida${lossCount>1?'s':''}`);
+  if (slowCount) parts.push(`${slowCount} lenta${slowCount>1?'s':''}`);
+  if (lateCount) parts.push(`${lateCount} tarea${lateCount>1?'s':''} vencida${lateCount>1?'s':''}`);
+  return (
+    <div onClick={onOpenBell} style={{ background:bg, borderBottom:`1px solid ${col}30`, padding:'7px 16px', display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
+      <span style={{fontSize:14}}>{icon}</span>
+      <span style={{fontSize:12, color:col, fontWeight:700, flex:1}}>{parts.join(' · ')}</span>
+      <span style={{fontSize:10, color:col, opacity:.7}}>Ver →</span>
+    </div>
+  );
+}
+
 function growthColor(rate) {
   if(rate===null) return "#475569";
   if(rate >= 2.5) return "#4ade80";
@@ -2678,11 +2759,13 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const [selectedDay, setDay] = useState(defaultDay);
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState(null);
+  const [detailTask, setDetailTask] = useState(null);
+  const canManageTasks = ["admin","consultor","director","farm_manager"].includes(user?.role);
   const iStyle = S.input;
   const lStyle = S.label;
   const today = new Date().toISOString().slice(0,10);
 
-  const emptyForm = { assignedTo:"LA", taskType:"vigilancia", sistema:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
+  const emptyForm = { assignedTo:"LA", taskType:"vigilancia", sistema:"", region:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
   const [form, setForm] = useState(emptyForm);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
@@ -2727,7 +2810,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   };
 
   const handleDelete = (id) => setAssignedTasks(prev=>prev.filter(t=>t.id!==id));
-  const handleEdit = (t) => { setEditTask(t); setForm({assignedTo:t.assignedTo,taskType:t.taskType,sistema:t.sistema||"",objetivo:t.objetivo||"",date:t.date,day:t.day,notas:t.notas||"",supportCrew:t.supportCrew||[]}); setShowForm(true); };
+  const handleEdit = (t) => { setEditTask(t); setForm({assignedTo:t.assignedTo,taskType:t.taskType,sistema:t.sistema||"",region:t.region||"",objetivo:t.objetivo||"",date:t.date,day:t.day,notas:t.notas||"",supportCrew:t.supportCrew||[]}); setShowForm(true); };
 
   return (
     <div style={{padding:"16px 16px 100px"}}>
@@ -2771,7 +2854,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
         const sys=systems.find(s=>s.id===t.sistema);
         const done=t.actual!==null||(schema.yesno&&t.condicion!==null);
         return (
-          <div key={t.id} style={{...S.card,borderLeft:`3px solid ${done?"#4ade80":"rgba(148,163,184,.2)"}`}}>
+          <div key={t.id} onClick={()=>setDetailTask(t)} style={{...S.card,borderLeft:`3px solid ${done?"#4ade80":"rgba(148,163,184,.2)"}`,cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:24}}>{schema.icon}</span>
@@ -2785,10 +2868,10 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
                 <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:done?"rgba(74,222,128,.1)":"rgba(148,163,184,.06)",color:done?"#4ade80":"#64748b",fontWeight:600}}>{done?(lang==="es"?"Hecho":"Done"):(lang==="es"?"Pendiente":"Pending")}</span>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>handleEdit(t)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(13,148,136,.1)",color:"#0d9488",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
-                  <button onClick={()=>handleDelete(t.id)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
-                </div>
+                {canManageTasks&&<div style={{display:"flex",gap:6}}>
+                  <button onClick={e=>{e.stopPropagation();handleEdit(t);}} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(13,148,136,.1)",color:"#0d9488",fontSize:10,fontWeight:700,cursor:"pointer"}}>✏️</button>
+                  <button onClick={e=>{e.stopPropagation();handleDelete(t.id);}} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"rgba(248,113,113,.1)",color:"#f87171",fontSize:10,fontWeight:700,cursor:"pointer"}}>🗑️</button>
+                </div>}
               </div>
             </div>
             {/* Logged data if done */}
@@ -2803,6 +2886,80 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
           </div>
         );
       })}
+
+      {/* Task detail modal */}
+      {detailTask&&(()=>{
+        const dt=detailTask;
+        const dschema=TASK_SCHEMA[dt.taskType]||{icon:"📋",label:dt.taskType,labelEn:dt.taskType,unit:"",unitEn:""};
+        const dsys=systems.find(s=>s.id===dt.sistema);
+        const ddone=dt.actual!==null||(dschema.yesno&&dt.condicion!==null);
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setDetailTask(null)}>
+            <div style={{width:"100%",maxWidth:480,background:"#0f1724",borderRadius:"22px 22px 0 0",padding:"0 0 40px",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              <div style={{width:36,height:4,borderRadius:2,background:"rgba(148,163,184,.25)",margin:"14px auto 0"}}/>
+              <div style={{padding:"16px 20px 14px",borderBottom:"1px solid rgba(148,163,184,.08)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:36}}>{dschema.icon}</span>
+                  <div style={{flex:1}}>
+                    <h3 style={{margin:0,fontSize:17,fontWeight:800,color:"#e2e8f0"}}>{lang==="es"?dschema.label:dschema.labelEn}</h3>
+                    <div style={{fontSize:12,color:"#64748b",marginTop:3}}>
+                      {CREW.find(c=>c.initials===dt.assignedTo)?.name||dt.assignedTo}
+                      {dsys&&` · ${dsys.id}`}
+                      {dt.date&&` · ${dt.date}`}
+                    </div>
+                  </div>
+                  <span style={{fontSize:11,padding:"3px 10px",borderRadius:8,background:ddone?"rgba(74,222,128,.12)":"rgba(148,163,184,.06)",color:ddone?"#4ade80":"#64748b",fontWeight:700}}>
+                    {ddone?(lang==="es"?"✓ Hecho":"✓ Done"):(lang==="es"?"Pendiente":"Pending")}
+                  </span>
+                </div>
+              </div>
+              <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:10}}>
+                {dt.notas&&(
+                  <div style={{padding:"10px 12px",borderRadius:10,background:"rgba(251,191,36,.06)",border:"1px solid rgba(251,191,36,.2)"}}>
+                    <div style={{fontSize:10,color:"#b45309",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📌 Instrucciones</div>
+                    <div style={{fontSize:13,color:"#fbbf24"}}>{dt.notas}</div>
+                  </div>
+                )}
+                {dt.objetivo&&(
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",borderRadius:9,background:"rgba(255,255,255,.03)"}}>
+                    <span style={{fontSize:12,color:"#64748b"}}>{lang==="es"?"Objetivo":"Target"}</span>
+                    <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0",fontFamily:"monospace"}}>{dt.objetivo} {lang==="es"?dschema.unit:dschema.unitEn}</span>
+                  </div>
+                )}
+                {dt.supportCrew?.length>0&&(
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",borderRadius:9,background:"rgba(255,255,255,.03)"}}>
+                    <span style={{fontSize:12,color:"#64748b"}}>{lang==="es"?"Apoyo":"Support"}</span>
+                    <span style={{fontSize:13,color:"#94a3b8"}}>{dt.supportCrew.join(", ")}</span>
+                  </div>
+                )}
+                {dt.region&&(
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",borderRadius:9,background:"rgba(255,255,255,.03)"}}>
+                    <span style={{fontSize:12,color:"#64748b"}}>{lang==="es"?"Región":"Region"}</span>
+                    <span style={{fontSize:13,color:"#94a3b8"}}>{dt.region}</span>
+                  </div>
+                )}
+                {ddone&&(
+                  <div style={{padding:"10px 12px",borderRadius:10,background:"rgba(74,222,128,.06)",border:"1px solid rgba(74,222,128,.15)"}}>
+                    <div style={{fontSize:10,color:"#4ade80",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{lang==="es"?"Registrado":"Logged"}</div>
+                    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                      {dt.actual!==null&&<span style={{fontSize:18,fontWeight:800,color:"#4ade80",fontFamily:"monospace"}}>{dt.actual} {lang==="es"?dschema.unit:dschema.unitEn}</span>}
+                      {dt.condicion&&CONDICION_EMOJIS.find(c=>c.value===dt.condicion)&&<span style={{fontSize:22}}>{CONDICION_EMOJIS.find(c=>c.value===dt.condicion).emoji}</span>}
+                      {dt.foto&&<span style={{fontSize:12,color:"#0d9488"}}>📷</span>}
+                    </div>
+                    {dt.comentarioVaquero&&<div style={{fontSize:12,color:"#2dd4bf",fontStyle:"italic",marginTop:6}}>"{dt.comentarioVaquero}"</div>}
+                  </div>
+                )}
+                {canManageTasks&&(
+                  <div style={{display:"flex",gap:10,marginTop:4}}>
+                    <button onClick={()=>{setDetailTask(null);handleEdit(dt);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>✏️ {lang==="es"?"Editar":"Edit"}</button>
+                    <button onClick={()=>{setDetailTask(null);handleDelete(dt.id);}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Assign task modal */}
       {showForm&&(
@@ -2865,19 +3022,36 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
               </div>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-              <div>
-                <label style={lStyle}>{lang==="es"?"Sistema (opcional)":"System (optional)"}</label>
-                <select value={form.sistema} onChange={e=>F("sistema",e.target.value)} style={{...iStyle,appearance:"none"}}>
-                  <option value="">– {lang==="es"?"ninguno":"none"}</option>
-                  {systems.filter(s=>s.estado==="Activo").map(s=><option key={s.id} value={s.id}>{s.id} – {s.pueblo}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={lStyle}>{lang==="es"?"Objetivo":"Target"} ({TASK_SCHEMA[form.taskType]?.[lang==="es"?"unit":"unitEn"]||""})</label>
-                <input type="number" value={form.objetivo} onChange={e=>F("objetivo",e.target.value)} placeholder="0" style={iStyle}/>
-              </div>
-            </div>
+            {/* Region + System filters */}
+            {(() => {
+              const activeSystems = systems.filter(s => s.estado === "Activo");
+              const activeRegions = [...new Set(activeSystems.map(s => s.region))].sort();
+              const filteredSystems = form.region ? activeSystems.filter(s => s.region === form.region) : activeSystems;
+              return (
+                <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    <div>
+                      <label style={lStyle}>{lang==="es"?"Región (opcional)":"Region (optional)"}</label>
+                      <select value={form.region} onChange={e=>{F("region",e.target.value);F("sistema","");}} style={{...iStyle,appearance:"none"}}>
+                        <option value="">– {lang==="es"?"todas":"all"}</option>
+                        {activeRegions.map(r=><option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={lStyle}>{lang==="es"?"Sistema (opcional)":"System (optional)"}</label>
+                      <select value={form.sistema} onChange={e=>F("sistema",e.target.value)} style={{...iStyle,appearance:"none"}}>
+                        <option value="">– {lang==="es"?"ninguno":"none"}</option>
+                        {filteredSystems.map(s=><option key={s.id} value={s.id}>{s.id} – {s.pueblo}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:12}}>
+                    <label style={lStyle}>{lang==="es"?"Objetivo":"Target"} ({TASK_SCHEMA[form.taskType]?.[lang==="es"?"unit":"unitEn"]||""})</label>
+                    <input type="number" value={form.objetivo} onChange={e=>F("objetivo",e.target.value)} placeholder="0" style={iStyle}/>
+                  </div>
+                </>
+              );
+            })()}
 
             <div style={{marginBottom:12}}>
               <label style={lStyle}>{lang==="es"?"Instrucciones / Notas":"Instructions / Notes"}</label>
@@ -2950,9 +3124,10 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
     ...supportTasks.map(t => ({ ...t, _role: 'apoyo' })),
   ];
 
-  const filteredTasks = taskFilter === 'week'
-    ? allMyTasks.filter(t => weekDates.includes(t.date) || weekDayNames.includes(t.day))
-    : allMyTasks;
+  const filteredTasks = (taskFilter === 'week'
+    ? allMyTasks.filter(t => weekDates.includes(t.date))
+    : allMyTasks
+  ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const done = leadTasks.filter(t => t.actual !== null || (TASK_SCHEMA[t.taskType]?.yesno && t.condicion !== null)).length;
   const pct  = leadTasks.length ? Math.round((done/leadTasks.length)*100) : 0;
@@ -3440,9 +3615,10 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
           const supportTasks = assignedTasks.filter(t=>t.assignedTo!==person.initials&&(t.supportCrew||[]).includes(person.initials));
           const allTasks = [...leadTasks.map(t=>({...t,_role:'lead'})),...supportTasks.map(t=>({...t,_role:'apoyo'}))];
           if (!allTasks.length) return null;
-          const filtered = taskFilter==='week'
-            ? allTasks.filter(t=>weekDates.includes(t.date)||weekDayNames.includes(t.day))
-            : allTasks;
+          const filtered = (taskFilter==='week'
+            ? allTasks.filter(t=>weekDates.includes(t.date))
+            : allTasks
+          ).sort((a,b) => (b.date||'').localeCompare(a.date||''));
           return (
             <div style={{marginTop:16}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
@@ -3465,21 +3641,36 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
                   Sin tareas esta semana
                 </div>
               )}
-              {filtered.map(t=>(
-                <div key={t.id+t._role} style={{...S.card,marginBottom:6}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{t.taskType||t.tipo||"Tarea"}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{t.sistema} · {t.date||t.day||""}</div>
+              {filtered.map(t=>{
+                const schema = TASK_SCHEMA[t.taskType]||{icon:"📋",label:t.taskType};
+                const isDone = t.actual!==null||(schema.yesno&&t.condicion!==null);
+                return (
+                  <div key={t.id+t._role} style={{...S.card,marginBottom:6,borderLeft:`3px solid ${isDone?"#4ade80":t._role==='lead'?"#0d9488":"#fb923c"}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <span style={{fontSize:18,flexShrink:0}}>{schema.icon}</span>
+                        <div>
+                          <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{lang==="es"?schema.label:schema.labelEn||schema.label}</div>
+                          <div style={{fontSize:11,color:"#64748b"}}>{t.date||t.day||""}{t.sistema?` · ${t.sistema}`:""}</div>
+                          {t.objetivo&&<div style={{fontSize:10,color:"#475569"}}>Objetivo: {t.objetivo} {schema.unit}</div>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}}>
+                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:6,fontWeight:700,
+                          background:isDone?"rgba(74,222,128,.15)":"rgba(148,163,184,.08)",
+                          color:isDone?"#4ade80":"#64748b"}}>
+                          {isDone?"✓ Hecho":"Pendiente"}
+                        </span>
+                        <span style={{fontSize:9,padding:"1px 5px",borderRadius:5,fontWeight:700,
+                          background:t._role==='lead'?"rgba(13,148,136,0.15)":"rgba(251,146,60,0.15)",
+                          color:t._role==='lead'?"#0d9488":"#fb923c"}}>
+                          {t._role==='lead'?"Lead":"Apoyo"}
+                        </span>
+                      </div>
                     </div>
-                    <span style={{fontSize:9,padding:"2px 7px",borderRadius:6,fontWeight:700,flexShrink:0,
-                      background:t._role==='lead'?"rgba(13,148,136,0.2)":"rgba(251,146,60,0.2)",
-                      color:t._role==='lead'?"#0d9488":"#fb923c"}}>
-                      {t._role==='lead'?"Lead":"Apoyo"}
-                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           );
         })()}
@@ -3651,8 +3842,11 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   semillas=DEFAULT_SEMILLAS, setSemillas=()=>{},
   onChartUpload=null, addToast=()=>{}, deepLinkSystem=null, setDeepLinkSystem=()=>{}, navigateTo=()=>{} }) {
   const canAddSystem        = ["admin","consultor","director","capitan"].includes(user.role);
-  const canEditSystemDetails = ["admin","consultor","director"].includes(user.role);
+  const canEditSystemDetails = ["admin","consultor","director","farm_manager","supervisor"].includes(user.role);
   const [filterRegion, setFilterRegion] = useState("all");
+  const [sysSearch, setSysSearch]     = useState("");
+  const [sysSort, setSysSort]         = useState("region"); // region | biomass | tdc | name
+  const [sysSortDir, setSysSortDir]   = useState("desc");
   const [selected, setSelected] = useState(null);
 
   // Deep link: if App passes a system ID, auto-select it
@@ -3678,21 +3872,22 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [newCrewForm, setNewCrewForm]           = useState({ name:'', initials:'', role:'Buceador' });
   const [newCrewSaving, setNewCrewSaving]       = useState(false);
   const [readingForm, setReadingForm] = useState({
-    fecha:       new Date().toISOString().slice(0,10),
-    tipo:        "peso",
-    peso:        "",
-    sueltos:     "",
-    buoys:       Array(15).fill(""),
-    salt:        "",
-    ph:          "",
-    temp:        "",
-    salinidad:   "",
-    notas:       "",
-    foto:        null,
-    cosechada:   "",
-    sembrado:    "",
-    aguas:       "",
-    condiciones: "",
+    fecha:          new Date().toISOString().slice(0,10),
+    tipo:           "peso",
+    peso:           "",
+    sueltos:        "",
+    buoys:          Array(15).fill(""),
+    module_weights: Array(15).fill(""),
+    salt:           "",
+    ph:             "",
+    temp:           "",
+    salinidad:      "",
+    notas:          "",
+    foto:           null,
+    cosechada:      "",
+    sembrado:       "",
+    aguas:          "",
+    condiciones:    "",
   });
   const [editingReadingId, setEditingReadingId] = useState(null);
   const [editReadingForm, setEditReadingForm] = useState({
@@ -3702,7 +3897,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   });
   const regionColor = {"Bahía Azul":"#0d9488","Cayo de Agua":"#4ade80","Playa Roja":"#f87171","Isla de Tigre":"#fb923c"};
 
-  const canEditReadings = ["admin","consultor","director","capitan"].includes(user.role);
+  const canEditReadings = ["admin","consultor","director","farm_manager","supervisor","capitan"].includes(user.role);
   const canUpload = ["admin","consultor","director"].includes(user.role) && onChartUpload;
   const [editingViaModal, setEditingViaModal] = useState(null);
   const [deletingViaModal, setDeletingViaModal] = useState(null);
@@ -3905,7 +4100,18 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   const handleAddReading = (sistemaId) => {
     const isPeso = readingForm.tipo === "peso";
-    const peso   = isPeso ? parseFloat(readingForm.peso) : null;
+    const thisSystem = systems.find(s => s.id === sistemaId);
+    const isComercial = ["Comercial","Sistema 75m"].includes(thisSystem?.tipo);
+    // For commercial systems, compute peso from module weights
+    let peso = isPeso ? parseFloat(readingForm.peso) : null;
+    let moduleWeightsOut = null;
+    if (isPeso && isComercial) {
+      const filled = (readingForm.module_weights || []).map((v,i) => ({ i, v: parseFloat(v) })).filter(x => !isNaN(x.v) && x.v > 0);
+      if (filled.length < 4) return; // require minimum 4
+      const avg = filled.reduce((s,x) => s + x.v, 0) / filled.length;
+      peso = Math.round(avg * 15);
+      moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
+    }
     if (isPeso && (!peso || peso <= 0)) return;
     if (!isPeso && !readingForm.salt && !readingForm.ph && !readingForm.temp) return;
 
@@ -3947,17 +4153,38 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       foto:       (readingForm.foto && readingForm.foto !== true) ? readingForm.foto : null,
       cosechada:  readingForm.cosechada ? parseFloat(readingForm.cosechada) : null,
       sembrado:   readingForm.sembrado  ? parseFloat(readingForm.sembrado)  : null,
-      aguas:       readingForm.aguas       || "",
-      condiciones: readingForm.condiciones || "",
-      logged_by:   user?.initials || null,
+      aguas:          readingForm.aguas       || "",
+      condiciones:    readingForm.condiciones || "",
+      logged_by:      user?.initials || null,
+      module_weights: moduleWeightsOut,
     };
+    // Activity log
+    if (isPeso) {
+      const cosechada = newReading.cosechada || 0;
+      const pesoKg  = peso ? (peso/1000).toFixed(2) : null;
+      const prevKg  = prev?.peso ? (prev.peso/1000).toFixed(2) : null;
+      logActivity({
+        actor:    user?.initials,
+        action:   cosechada > 0 ? 'harvest' : 'reading_added',
+        sistema:  sistemaId,
+        field:    'peso',
+        oldValue: prevKg,
+        newValue: pesoKg,
+        note: cosechada > 0
+          ? `${sistemaId} cosecha: ${(cosechada/1000).toFixed(2)}kg removidos · nuevo peso: ${pesoKg}kg`
+          : `${sistemaId} lectura: ${pesoKg}kg${prevKg ? ` (ant: ${prevKg}kg)` : ''}`,
+      });
+      if (newReading.sembrado > 0) {
+        logActivity({ actor: user?.initials, action: 'seeding', sistema: sistemaId, field: 'sembrado', newValue: (newReading.sembrado/1000).toFixed(2), note: `${sistemaId} siembra: ${(newReading.sembrado/1000).toFixed(2)}kg agregados` });
+      }
+    }
     const withNew = [...readings, newReading];
     setReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
     setShowReadingForm(false);
     setShowGrowthChart(sistemaId); // Auto-show growth chart after save
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
-      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""),
+      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""), module_weights:Array(15).fill(""),
       salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:null,
       cosechada:"", sembrado:"", aguas:"", condiciones:"",
     });
@@ -3986,6 +4213,21 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         foto:        editReadingForm.foto      || r.foto || null,
       } : r
     );
+    // Activity log for edit
+    if (isPeso) {
+      const orig = readings.find(r => r.id === readingId);
+      if (orig && orig.peso !== peso) {
+        logActivity({
+          actor:    user?.initials,
+          action:   'reading_edited',
+          sistema:  sistemaId,
+          field:    'peso',
+          oldValue: orig.peso != null ? (orig.peso/1000).toFixed(2) : null,
+          newValue: (peso/1000).toFixed(2),
+          note: `${sistemaId} peso corregido: ${orig.peso != null ? (orig.peso/1000).toFixed(2) : '?'}kg → ${(peso/1000).toFixed(2)}kg (${orig.fecha})`,
+        });
+      }
+    }
     setReadings(isPeso ? recalcAllTDC(updated, sistemaId) : updated);
     setEditingReadingId(null);
   };
@@ -4017,11 +4259,34 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   }
 
   const filtered         = systems.filter(s=>(filterRegion==="all"||s.region===filterRegion));
-  const activeFiltered   = filtered.filter(s=>s.estado==="Activo");
+  const activeFiltered   = filtered.filter(s=>s.estado==="Activo").filter(s=>!sysSearch||(s.id+s.pueblo+s.region+s.capitan).toLowerCase().includes(sysSearch.toLowerCase()));
   const retiredFiltered  = filtered.filter(s=>s.estado==="Retirado");
   const archivedFiltered = filtered.filter(s=>s.estado==="Archivado");
+
+  // Augment active systems with latest biomass + TDC for sorting
+  const activeSorted = activeFiltered.map(s=>{
+    const lr = latestReading(readings, s.id);
+    const pr = prevReading(readings, s.id);
+    let tdc = null;
+    if (lr?.peso && pr?.peso) {
+      const adj1 = (pr.peso||0)+(pr.sueltos||0)-(pr.cosechada||0);
+      const adj2 = (lr.peso||0)+(lr.sueltos||0);
+      const days = Math.max(1,(new Date(lr.fecha)-new Date(pr.fecha))/86400000);
+      if (adj1>0&&adj2>0) tdc = parseFloat(((Math.log(adj2/adj1)/days)*100).toFixed(2));
+    }
+    return {...s, _biomass: lr?.peso||0, _tdc: tdc};
+  }).sort((a,b)=>{
+    const dir = sysSortDir==='asc' ? 1 : -1;
+    if (sysSort==='biomass') return dir*(a._biomass - b._biomass);
+    if (sysSort==='tdc') return dir*((a._tdc??-999) - (b._tdc??-999));
+    if (sysSort==='name') return dir*(a.id.localeCompare(b.id));
+    // 'region' default — group by region/polygon as before
+    return 0;
+  });
+
+  const useFlat = sysSort !== 'region';
   const grouped  = {};
-  activeFiltered.forEach(s=>{
+  (useFlat ? activeSorted : activeFiltered).forEach(s=>{
     if(!grouped[s.region]) grouped[s.region]={};
     const pk=`Polígono ${s.poligono}`;
     if(!grouped[s.region][pk]) grouped[s.region][pk]=[];
@@ -4269,7 +4534,43 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
               {/* PESO mode */}
               {readingForm.tipo==="peso" && (
                 <>
-                  {s.tipo==="Long Line" ? (
+                  {["Comercial","Sistema 75m"].includes(s.tipo) ? (
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
+                        {s.id} — Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
+                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                        {Array.from({length:15},(_,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
+                            <input type="number" placeholder="—"
+                              value={readingForm.module_weights?.[i]||""}
+                              onChange={e=>{
+                                const mw=[...(readingForm.module_weights||Array(15).fill(""))];
+                                mw[i]=e.target.value;
+                                const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                                const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
+                                const biomass=filled.length>=4?Math.round(avg*15):0;
+                                setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
+                              }}
+                              style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                          </div>
+                        ))}
+                      </div>
+                      {(()=>{
+                        const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                        const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
+                        const biomass=filled.length>=4?Math.round(avg*15):0;
+                        return filled.length>0&&(
+                          <div style={{borderRadius:8,padding:"6px 10px",marginBottom:8,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulo{filled.length!==1?"s":""} pesado{filled.length!==1?"s":""}{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
+                            {biomass>0&&<span style={{fontSize:14,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(biomass/1000).toFixed(2)} kg biomasa</span>}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : s.tipo==="Long Line" ? (
                     <div style={{marginBottom:8}}>
                       <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
                         {s.id} — B1–B{s.modulos||15} (g)
@@ -4486,7 +4787,36 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
                             {/* PESO mode */}
                             {editReadingForm.tipo==="peso"?(
                               <>
-                                {isLongLine ? (
+                                {["Comercial","Sistema 75m"].includes(s.tipo) ? (
+                                  <div style={{marginBottom:8}}>
+                                    <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:6}}>
+                                      Módulos M1–M15 (g) <span style={{fontWeight:400,color:"#334155"}}>— mín. 4 para calcular</span>
+                                    </div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:8}}>
+                                      {Array.from({length:15},(_,i)=>(
+                                        <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
+                                          <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
+                                          <input type="number" placeholder="0"
+                                            value={editReadingForm.module_weights?.[i]||""}
+                                            onChange={e=>{
+                                              const mw=[...(editReadingForm.module_weights||Array(15).fill(""))];
+                                              mw[i]=e.target.value;
+                                              const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15):0;
+                                              setEditReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):p.peso}));
+                                            }}
+                                            style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {editReadingForm.peso&&(
+                                      <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"rgba(13,148,136,.08)",marginBottom:8}}>
+                                        <span style={{fontSize:11,color:"#64748b"}}>Biomasa estimada</span>
+                                        <span style={{fontSize:13,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(parseFloat(editReadingForm.peso)/1000).toFixed(2)} kg</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : isLongLine ? (
                                   <div style={{marginBottom:8}}>
                                     <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
                                       {s.id} — Buoys 1–{buoyCount} (g)
@@ -4766,6 +5096,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         {editingViaModal && (
           <EditReading
             reading={editingViaModal}
+            sistema={s}
             onSaved={() => { setReadings(prev => prev.map(x => x.id === editingViaModal.id ? { ...x, ...editingViaModal } : x)); setEditingViaModal(null); }}
             onCancel={() => setEditingViaModal(null)}
           />
@@ -4777,11 +5108,14 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
             onCancel={() => setDeletingViaModal(null)}
           />
         )}
+        <div style={S.card}>
+          <SystemNotes sistemaId={s.id} region={s.region} userInitials={user?.initials} userName={user?.name} userRole={user?.role} canPost={user?.role !== "vaquero"}/>
+        </div>
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
         {canEditSystemDetails&&(
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button onClick={()=>{setForm({...s});setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
-            {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Archivar ${s.id}? El sistema quedará inactivo y desaparecerá de las vistas de capitanes.`:`Archive ${s.id}? The system will become inactive and disappear from captains' views.`)){setSystems(prev=>prev.map(x=>x.id===s.id?{...x,estado:"Archivado"}:x));setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
+            {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Archivar ${s.id}? El sistema quedará inactivo y desaparecerá de las vistas de capitanes.`:`Archive ${s.id}? The system will become inactive and disappear from captains' views.`)){setSystems(prev=>prev.map(x=>x.id===s.id?{...x,estado:"Archivado"}:x));logActivity({actor:user?.initials,action:'system_archived',sistema:s.id,note:`Sistema ${s.id} archivado (${s.tipo} · ${s.region})`});setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
           </div>
         )}
       </div>
@@ -4924,6 +5258,26 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         {retiredRegions.map(r=><button key={`retired-${r}`} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?"rgba(148,163,184,.35)":"rgba(148,163,184,.08)"}`,background:filterRegion===r?"rgba(148,163,184,.1)":"transparent",color:"#475569",fontWeight:600,fontSize:11,cursor:"pointer",textDecoration:"line-through",opacity:.65}}>{r}</button>)}
       </div>
 
+      {/* ── Search + Sort bar ─────────────────────────────────────────────── */}
+      <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
+        <input
+          value={sysSearch} onChange={e=>setSysSearch(e.target.value)}
+          placeholder={lang==="es"?"Buscar sistema, lugar, capitán…":"Search system, site, captain…"}
+          style={{...S.input,flex:1,fontSize:12,padding:"7px 12px"}}/>
+        <select value={sysSort} onChange={e=>{setSysSort(e.target.value);if(e.target.value!=='region'&&sysSortDir==='asc')setSysSortDir('desc');}}
+          style={{...S.input,appearance:"none",fontSize:11,padding:"7px 10px",flexShrink:0,width:"auto"}}>
+          <option value="region">{lang==="es"?"Región":"Region"}</option>
+          <option value="biomass">{lang==="es"?"Biomasa":"Biomass"}</option>
+          <option value="tdc">TDC</option>
+          <option value="name">{lang==="es"?"Nombre":"Name"}</option>
+        </select>
+        <button onClick={()=>setSysSortDir(d=>d==='desc'?'asc':'desc')}
+          title={sysSortDir==='desc'?"Ascendente":"Descendente"}
+          style={{padding:"7px 10px",borderRadius:9,border:"1px solid rgba(148,163,184,.15)",background:"rgba(255,255,255,.04)",color:"#94a3b8",fontSize:13,cursor:"pointer",flexShrink:0}}>
+          {sysSortDir==='desc'?"↓":"↑"}
+        </button>
+      </div>
+
       {/* ── TDC Excel Upload (supervisor/CEO/consultant only) ──────────────── */}
       {canUpload && (
         <div style={{...S.card, borderColor: uploadStatus==="done" ? "rgba(74,222,128,.25)" : uploadStatus==="error" ? "rgba(248,113,113,.25)" : "rgba(13,148,136,.15)", marginBottom:14}}>
@@ -4961,39 +5315,59 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         </div>
       )}
 
-      {Object.entries(grouped).map(([region,polygons])=>(
-        <div key={region} style={{marginBottom:18}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-            <div style={{width:10,height:10,borderRadius:"50%",background:regionColor[region]}}/>
-            <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{region}</span>
-          </div>
-          {Object.entries(polygons).sort().map(([pol,sysList])=>(
-            <div key={pol} style={{marginBottom:10}}>
-              <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.7}}>{pol} · Capitán: {sysList[0]?.capitan||"–"}</div>
-              {sysList.map(s=>(
-                <div key={s.id} style={{...S.card,borderLeft:`3px solid ${s.estado==="Activo"?regionColor[s.region]:"#334155"}`,cursor:"pointer"}} onClick={()=>setSelected(s.id)}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:36,height:36,borderRadius:10,background:`${regionColor[s.region]}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:regionColor[s.region]}}>{s.id}</span></div>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div>
-                        <div style={{fontSize:11,color:"#64748b"}}>{s.tipo} · {s.modulos} {lang==="es"?"módulos":"modules"} · {s.buceador||"–"}</div>
-                        <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
-                          {s.categoria && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(13,148,136,.15)":s.categoria==="semillero"?"rgba(74,222,128,.15)":"rgba(251,191,36,.15)",color:s.categoria==="comercial"?"#0d9488":s.categoria==="semillero"?"#4ade80":"#fbbf24",fontWeight:700}}>{s.categoria}</span>}
-                          {s.tamano && <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"rgba(148,163,184,.1)",color:"#94a3b8",fontWeight:600}}>{s.tamano}</span>}
-                          {s.categoria&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:s.categoria==="comercial"?"rgba(13,148,136,.08)":"rgba(74,222,128,.08)",color:s.categoria==="comercial"?"#0d9488":"#4ade80",fontWeight:700}}>{s.categoria}</span>}
+      {useFlat ? (
+        <div style={{marginBottom:18}}>
+          {activeSorted.map(s=>{
+            const rc = s._tdc===null?"#475569":s._tdc>=2.5?"#4ade80":s._tdc>=0?"#fb923c":"#f87171";
+            return (
+              <div key={s.id} style={{...S.card,borderLeft:`3px solid ${regionColor[s.region]||"#334155"}`,cursor:"pointer"}} onClick={()=>setSelected(s.id)}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:36,height:36,borderRadius:10,background:`${regionColor[s.region]||"#334155"}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:regionColor[s.region]||"#94a3b8"}}>{s.id}</span></div>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{s.region} · {s.capitan||"–"}</div>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:14,fontWeight:800,color:rc,fontFamily:"monospace"}}>{s._tdc!==null?`${s._tdc>=0?"+":""}${s._tdc}%`:"—"}</div>
+                    {s._biomass>0&&<div style={{fontSize:10,color:"#64748b"}}>{(s._biomass/1000).toFixed(2)}kg</div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        Object.entries(grouped).map(([region,polygons])=>(
+          <div key={region} style={{marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:regionColor[region]}}/>
+              <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{region}</span>
+            </div>
+            {Object.entries(polygons).sort().map(([pol,sysList])=>(
+              <div key={pol} style={{marginBottom:10}}>
+                <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.7}}>{pol} · Capitán: {sysList[0]?.capitan||"–"}</div>
+                {sysList.map(s=>(
+                  <div key={s.id} style={{...S.card,borderLeft:`3px solid ${regionColor[s.region]||"#334155"}`,cursor:"pointer"}} onClick={()=>setSelected(s.id)}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{width:36,height:36,borderRadius:10,background:`${regionColor[s.region]}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:regionColor[s.region]}}>{s.id}</span></div>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{s.pueblo}</div>
+                          <div style={{fontSize:11,color:"#64748b"}}>{s.tipo} · {s.modulos} {lang==="es"?"módulos":"modules"} · {s.buceador||"–"}</div>
                         </div>
                       </div>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:"rgba(74,222,128,.1)",color:"#4ade80",fontWeight:600}}>{s.estado}</span>
                     </div>
-                    <span style={{fontSize:10,padding:"2px 8px",borderRadius:8,background:s.estado==="Activo"?"rgba(74,222,128,.1)":"rgba(148,163,184,.06)",color:s.estado==="Activo"?"#4ade80":"#64748b",fontWeight:600}}>{s.estado}</span>
+                    {s.coordenadas&&<div style={{marginTop:5,fontSize:10,color:"#475569",fontFamily:"monospace"}}>{s.coordenadas}</div>}
                   </div>
-                  {s.coordenadas&&<div style={{marginTop:5,fontSize:10,color:"#475569",fontFamily:"monospace"}}>{s.coordenadas}</div>}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      ))}
+                ))}
+              </div>
+            ))}
+          </div>
+        ))
+      )}
 
       {/* ── Retired systems — collapsible ──────────────────────────────────── */}
       {retiredFiltered.length > 0 && (
@@ -5884,8 +6258,9 @@ function useDeviceType() {
 }
 
 // ─── BOTTOM NAV — role-aware ──────────────────────────────────────────────────
-function BottomNav({ tab, setTab, role, lang }) {
+function BottomNav({ tab, setTab, role, lang, unreadNotes = 0 }) {
   const deviceType = useDeviceType();
+  const bellTab = { id:"notas", icon:"bell", label:"Notas", badge: unreadNotes };
   const navConfig = {
     vaquero: [
       { id:"vigilancia",icon:"wave",    label: "Vigilancia" },
@@ -5893,12 +6268,14 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"score",    icon:"star",     label: lang==="es"?"Mi Puntaje":"My Score" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+      bellTab,
     ],
     capitan: [
       { id:"tareas",   icon:"task",     label: "Tareas" },
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+      bellTab,
     ],
     supervisor: [
       { id:"tareas",   icon:"task",     label: "Tareas" },
@@ -5907,6 +6284,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+      bellTab,
     ],
     director: [
       { id:"tareas",   icon:"task",     label: "Tareas" },
@@ -5915,6 +6293,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+      bellTab,
     ],
     default: [
       { id:"dashboard",icon:"chart",    label: "Dashboard" },
@@ -5922,6 +6301,7 @@ function BottomNav({ tab, setTab, role, lang }) {
       { id:"sistemas", icon:"grid",     label: "Sistemas" },
       { id:"equipo",   icon:"users",    label: "Equipo" },
       { id:"perfil",   icon:"user",     label: lang==="es"?"Perfil":"Profile" },
+      bellTab,
     ],
   };
   const tabs = navConfig[role] || navConfig.default;
@@ -5971,8 +6351,9 @@ function BottomNav({ tab, setTab, role, lang }) {
           role="tab" aria-selected={tab===item.id} aria-label={item.label}
           style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
             gap:4,background:"none",border:"none",cursor:"pointer",padding:"6px 0",
-            minWidth:44,minHeight:44}}>
+            minWidth:44,minHeight:44,position:"relative"}}>
           <Icon name={item.icon} size={24} color={tab===item.id?"#0d9488":"#475569"}/>
+          {item.badge>0&&<span style={{position:"absolute",top:2,right:"calc(50% - 18px)",background:"#f87171",color:"#fff",fontSize:8,fontWeight:800,borderRadius:8,padding:"1px 4px",lineHeight:1.4}}>{item.badge}</span>}
           <span style={{fontSize:10,color:tab===item.id?"#0d9488":"#475569",
             fontWeight:tab===item.id?700:400}}>{item.label}</span>
         </button>
@@ -6007,6 +6388,8 @@ export default function App() {
   );
   const [personalView, setPersonalView] = useState(null);
   const [deepLinkSystem, setDeepLinkSystem] = useState(null); // system ID to auto-select in SistemasTab
+  const [unreadNotes, setUnreadNotes] = useState(0);
+  const [notesSubView, setNotesSubView] = useState('notas'); // 'notas' | 'actividad'
 
   // ── Unified navigation — person ↔ tasks ↔ systems ─────────────────────────
   const navigateTo = useCallback((target, id) => {
@@ -6062,22 +6445,20 @@ export default function App() {
 
   const [systems,  setSystems]  = useState(() => {
     try {
-      const cached        = localStorage.getItem('aq_systems_cache');
-      const cachedVersion = localStorage.getItem('aq_systems_version');
-      if (cached && cachedVersion === SYSTEMS_DATA_VERSION) return JSON.parse(cached);
-      // Version mismatch — bundle has newer data; seed from bundle and stamp the version
-      localStorage.setItem('aq_systems_version', SYSTEMS_DATA_VERSION);
-      localStorage.setItem('aq_systems_cache', JSON.stringify(SYSTEMS_DATA));
+      const cached = localStorage.getItem('aq_systems_cache');
+      if (cached) return JSON.parse(cached);
       return SYSTEMS_DATA;
     } catch { return SYSTEMS_DATA; }
   });
   const [readings, setReadings] = useState(() => {
     try {
       const cached = localStorage.getItem('aq_readings_cache');
-      return cached ? JSON.parse(cached) : INITIAL_READINGS;
-    } catch { return INITIAL_READINGS; }
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
   });
   const [assignedTasks, setAssignedTasks]     = useState(SEED_ASSIGNED_TASKS);
+  const alerts        = useMemo(() => computeAlerts(assignedTasks, readings, systems), [assignedTasks, readings, systems]);
+  const visibleAlerts = useMemo(() => alertsForRole(alerts, user?.role), [alerts, user?.role]);
   const [evaluations, setEvaluations]         = useState(SEED_EVALUATIONS);
   const [profScores, setProfScores]           = useState(SEED_PROF_SCORES);
   const [weeklyIncidents, setWeeklyIncidents] = useState(SEED_WEEKLY_INCIDENTS);
@@ -6309,7 +6690,7 @@ export default function App() {
             const local = localById[r.id];
             return {
               id: r.id, assignedTo: r.assigned_to, day: r.day,
-              taskType: r.task_type, sistema: r.sistema,
+              taskType: r.task_type, sistema: r.sistema, region: r.region || "",
               objetivo: r.objetivo, date: r.date, actual: r.actual,
               condicion: r.condicion, voiceNote: null,
               foto: r.foto_url,
@@ -6459,6 +6840,13 @@ export default function App() {
       }
 
       setLastSync(new Date());
+
+      // Count unread notes since last bell visit
+      try {
+        const lastRead = localStorage.getItem(`notes_last_read_${user?.initials}`) || '1970-01-01';
+        const { count } = await sb.current.from('system_notes').select('id', { count: 'exact', head: true }).gt('created_at', lastRead);
+        if (count > 0) setUnreadNotes(count);
+      } catch {}
     } catch (e) {
       console.warn('Pull failed:', e.message);
     } finally {
@@ -6560,7 +6948,7 @@ export default function App() {
           pushItem('assigned_tasks', 'upsert', {
             id: task.id, assigned_to: task.assignedTo,
             day: task.day, task_type: task.taskType,
-            sistema: task.sistema, objetivo: task.objetivo,
+            sistema: task.sistema || null, region: task.region || null, objetivo: task.objetivo,
             date: task.date, actual: task.actual,
             condicion: task.condicion, confirmed: task.confirmed,
             confirmed_by: task.confirmedBy || null,
@@ -6652,8 +7040,9 @@ export default function App() {
               notas:       r.notas       ?? "",
               cosechada:   r.cosechada   ?? null,
               sembrado:    r.sembrado    ?? null,
-              buoys:       r.buoys       ?? null,
-              logged_by:   r.logged_by   ?? null,
+              buoys:          r.buoys          ?? null,
+              logged_by:      r.logged_by      ?? null,
+              module_weights: r.module_weights  ?? null,
             });
           });
           deleted.forEach(r => {
@@ -6890,13 +7279,17 @@ export default function App() {
                     : systems.filter(s => s.capitan === user.initials && s.estado === "Activo");
                 })()
               : systems;
+          const visibleAlerts = alertsForRole(alerts, user?.role);
           return (<>
+        {/* Alert banner — supervisor+ */}
+        {visibleAlerts.length > 0 && <AlertBanner alerts={visibleAlerts} onOpenBell={()=>setTab("notas")}/>}
         {/* Level 1 — Vaquero */}
         {isVaquero && tab==="vigilancia"&& <ProtectedRoute path="/vigilancia"><VigilanciaQueue /></ProtectedRoute>}
         {isVaquero && tab==="inicio"   && <VaqueroInicio assignedTasks={assignedTasks} setAssignedTasks={syncAssignedTasks} systems={mySystems} user={user} lang={lang} announcements={announcements}/>}
         {isVaquero && tab==="score"    && <VaqueroScore  assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} profScores={profScores} evaluations={evaluations} user={user} lang={lang}/>}
         {isVaquero && tab==="sistemas" && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isVaquero && tab==="perfil"   && <ProfileTab    user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+        {isVaquero && tab==="notas"    && <NotesFeed user={user} userSystems={mySystems.map(s=>s.id)} alerts={visibleAlerts} onNavigateToSystem={id=>{setDeepLinkSystem(id);setTab("sistemas");}} onNavigateToPlan={()=>setTab("plan")}/>}
 
         {/* Level 1.5 — Capitán */}
         {isCapitan && tab==="tareas"    && (()=>{
@@ -6909,6 +7302,7 @@ export default function App() {
         {isCapitan && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={mySystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo}/></ProtectedRoute>}
         {isCapitan && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isCapitan && tab==="perfil"    && <ProfileTab user={user} lang={lang} setLang={setLang} onLogout={doLogout}/>}
+        {isCapitan && tab==="notas"     && <NotesFeed user={user} userSystems={mySystems.map(s=>s.id)} alerts={visibleAlerts} onNavigateToSystem={id=>{setDeepLinkSystem(id);setTab("sistemas");}} onNavigateToPlan={()=>setTab("plan")}/>}
           </>);
         })()}
 
@@ -6925,6 +7319,7 @@ export default function App() {
         {isSup && tab==="sistemas"  && <ProtectedRoute path="/sistemas"><SistemasTab systems={visibleSystems} setSystems={syncSystems} readings={readings} setReadings={syncReadings} lang={lang} user={user} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas} addToast={addToast} deepLinkSystem={deepLinkSystem} setDeepLinkSystem={setDeepLinkSystem} navigateTo={navigateTo} onChartUpload={handleChartDataUpload}/></ProtectedRoute>}
         {isSup && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={visibleSystems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isSup && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isSup && tab==="notas"     && <div>{["admin","consultor","director","farm_manager"].includes(user.role)&&<div style={{display:"flex",gap:0,margin:"12px 16px 0",background:"rgba(255,255,255,.04)",borderRadius:10,padding:3}}>{[["notas","Notas"],["actividad","Actividad"]].map(([v,l])=><button key={v} onClick={()=>setNotesSubView(v)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",background:notesSubView===v?"rgba(13,148,136,.18)":"transparent",color:notesSubView===v?"#2dd4bf":"#64748b",fontWeight:700,fontSize:12,cursor:"pointer"}}>{l}</button>)}</div>}{notesSubView==="actividad"&&["admin","consultor","director","farm_manager"].includes(user.role)?<ActivityFeed user={user}/>:<NotesFeed user={user} alerts={visibleAlerts} onNavigateToSystem={id=>{setDeepLinkSystem(id);setTab("sistemas");}} onNavigateToPlan={()=>setTab("plan")}/>}</div>}
 
         {/* Level 3 — Admin + Consultor */}
         {isL3 && tab==="dashboard" && <ProtectedRoute path="/dashboard"><SupervisorDashboard assignedTasks={assignedTasks} systems={systems} readings={readings} lang={lang} announcements={announcements} setAnnouncements={syncAnnouncements} user={user} onNavigate={navigateTo} onViewPerson={(initials)=>navigateTo("persona", initials)} chartPruebas={chartPruebas} regions={regions} setRegions={setRegions}/></ProtectedRoute>}
@@ -6933,9 +7328,10 @@ export default function App() {
         {isL3 && tab==="equipo"    && <EquipoTab    assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} setWeeklyIncidents={syncWeeklyIncidents} timecards={timecards} setTimecards={setTimecards} systems={systems} readings={readings} lang={lang} user={user} navigateTo={navigateTo} selectedPerson={personalView} setSelectedPerson={setPersonalView}/>}
         {isL3 && tab==="rrhh"      && <RRHHTab evaluations={evaluations} setEvaluations={setEvaluations} profScores={profScores} setProfScores={setProfScores} assignedTasks={assignedTasks} weeklyIncidents={weeklyIncidents} readings={readings} systems={systems} lang={lang} user={user} chartTDC={chartTDC} chartPruebas={chartPruebas} chartBiomasa={chartBiomasa} onChartUpload={handleChartDataUpload}/>}
         {isL3 && tab==="perfil"    && <ProfileTab   user={user} lang={lang} setLang={setLang} onLogout={doLogout} regions={regions} setRegions={setRegions} retiredRegions={retiredRegions} setRetiredRegions={setRetiredRegions} tipos={tipos} setTipos={setTipos} materiales={materiales} setMateriales={setMateriales} semillas={semillas} setSemillas={setSemillas}/>}
+        {isL3 && tab==="notas"     && <div>{["admin","consultor","director","farm_manager"].includes(user.role)&&<div style={{display:"flex",gap:0,margin:"12px 16px 0",background:"rgba(255,255,255,.04)",borderRadius:10,padding:3}}>{[["notas","Notas"],["actividad","Actividad"]].map(([v,l])=><button key={v} onClick={()=>setNotesSubView(v)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",background:notesSubView===v?"rgba(13,148,136,.18)":"transparent",color:notesSubView===v?"#2dd4bf":"#64748b",fontWeight:700,fontSize:12,cursor:"pointer"}}>{l}</button>)}</div>}{notesSubView==="actividad"&&["admin","consultor","director","farm_manager"].includes(user.role)?<ActivityFeed user={user}/>:<NotesFeed user={user} alerts={visibleAlerts} onNavigateToSystem={id=>{setDeepLinkSystem(id);setTab("sistemas");}} onNavigateToPlan={()=>setTab("plan")}/>}</div>}
       </div>
 
-      <BottomNav tab={tab} setTab={setTab} role={user.role} lang={lang}/>
+      <BottomNav tab={tab} setTab={(t)=>{ if(t==="notas") setUnreadNotes(0); setTab(t); }} role={user.role} lang={lang} unreadNotes={unreadNotes}/>
     </div>
     </AuthContext.Provider>
   );

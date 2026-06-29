@@ -3,8 +3,8 @@
 
 const USERS = [
   // ── Level 3 — CEO / Consultant ──────────────────────────────────────────────
-  { username:"jason_heckathorn", password:"AGPanama1", role:"admin",     name:"Jason Heckathorn", initials:"JH",  assignedSystems: null },
-  { username:"cameron_mcfarlane",password:"AGPanama1", role:"consultor",  name:"Cameron McFarlane",initials:"CM",  assignedSystems: null },
+  { username:"jason_heckathorn", password:"AGPanama1", role:"admin",     name:"Jason Heckathorn", initials:"JH",  assignedSystems: null, email:"jason.heckathorn@algaspanamenas.com" },
+  { username:"cameron_mcfarlane",password:"AGPanama1", role:"consultor",  name:"Cameron McFarlane",initials:"CM",  assignedSystems: null, email:"cameron.mcfarlane@algaspanamenas.com" },
 
   // ── Level 2 — Director ───────────────────────────────────────────────────────
   { username:"eduardo_valdes",   password:"AGPanama1", role:"director",  name:"Eduardo Valdés",   initials:"EV",  assignedSystems: null },

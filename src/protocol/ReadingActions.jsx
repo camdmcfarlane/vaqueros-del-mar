@@ -78,9 +78,13 @@ const styles = {
 };
 
 // ── Edit Reading ──
-export function EditReading({ reading, onSaved, onCancel }) {
+export function EditReading({ reading, sistema, onSaved, onCancel }) {
   const { profile } = useAuth();
   const role = profile?.role || 'vaquero';
+  const isComercial = ['Comercial', 'Sistema 75m'].includes(sistema?.tipo);
+  const initModules = Array.isArray(reading.module_weights) && reading.module_weights.length === 15
+    ? reading.module_weights.map(v => v != null ? String(v) : '')
+    : Array(15).fill('');
   const [form, setForm] = useState({
     peso: reading.peso || '',
     sueltos: reading.sueltos || '',
@@ -90,6 +94,7 @@ export function EditReading({ reading, onSaved, onCancel }) {
     condiciones: reading.condiciones || '',
     cosechada: reading.cosechada || '',
     notas: reading.notas || '',
+    moduleWeights: initModules,
   });
   const [saving, setSaving] = useState(false);
 
@@ -111,6 +116,7 @@ export function EditReading({ reading, onSaved, onCancel }) {
         condiciones: form.condiciones || null,
         cosechada: parseFloat(form.cosechada) || null,
         notas: form.notas || null,
+        module_weights: isComercial ? form.moduleWeights.map(v => parseFloat(v) || null) : reading.module_weights || null,
         editado_por: profile?.id,
         editado_en: new Date().toISOString(),
       };
@@ -134,6 +140,37 @@ export function EditReading({ reading, onSaved, onCancel }) {
         Editar lectura — {reading.sistema} ({reading.fecha})
       </div>
 
+      {isComercial && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>
+            Módulos M1–M15 (g) <span style={{ fontWeight: 400, color: '#475569' }}>— mín. 4 para calcular</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 8 }}>
+            {Array.from({length: 15}, (_, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 10, color: '#64748b', width: 28, flexShrink: 0, fontFamily: 'monospace' }}>M{i+1}</span>
+                <input type="number" inputMode="numeric" placeholder="0"
+                  value={form.moduleWeights[i] || ''}
+                  onChange={e => {
+                    const mw = [...form.moduleWeights];
+                    mw[i] = e.target.value;
+                    const filled = mw.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+                    const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15) : 0;
+                    update('moduleWeights', mw);
+                    if (biomass > 0) update('peso', String(biomass));
+                  }}
+                  style={{ ...styles.input, fontSize: 11, padding: '4px 6px' }}/>
+              </div>
+            ))}
+          </div>
+          {form.peso && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 8, background: 'rgba(13,148,136,.08)', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: '#64748b' }}>Biomasa estimada</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#2dd4bf', fontFamily: 'monospace' }}>{(parseFloat(form.peso)/1000).toFixed(2)} kg</span>
+            </div>
+          )}
+        </div>
+      )}
       <div style={styles.fieldRow}>
         {[
           { key: 'peso', label: 'Peso (g)' },

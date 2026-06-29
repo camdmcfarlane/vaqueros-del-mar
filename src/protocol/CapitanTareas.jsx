@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import ConditionAssessment from '../systems/ConditionAssessment';
 import CanastaTieInput from '../components/CanastaTieInput';
 import { READING_CADENCE_DAYS, CREW } from '../data/constants';
+import { logActivity } from '../utils/activityLog';
 
 // Panama is UTC-5 year-round (no DST). Before 4am Panama time, stamp readings as yesterday.
 function getEffectiveDate() {
@@ -78,9 +79,15 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [sessionDone, setSessionDone] = useState(new Set());
   const pending = queue.filter(s => !sessionDone.has(s.id));
   const completedAll = [...done.map(s => s.id), ...sessionDone];
-  const pct = activeSystems.length > 0
-    ? Math.round((activeSystems.length - pending.length) / activeSystems.length * 100)
-    : 0;
+
+  // Progress bar: combines readings done + assigned tasks done
+  const myTasks = (assignedTasks || []).filter(t => t.assignedTo === user?.initials);
+  const myTasksDone = myTasks.filter(t => t.confirmed).length;
+  const myTasksTotal = myTasks.length;
+  const readingsDone = activeSystems.length - pending.length;
+  const totalItems = activeSystems.length + myTasksTotal;
+  const doneItems  = readingsDone + myTasksDone;
+  const pct = totalItems > 0 ? Math.round(doneItems / totalItems * 100) : 0;
 
   // Long Line systems with the same ID prefix (e.g. P80-1…P80-10) where ≥3 are pending → batch card
   const batchGroups = (() => {
@@ -109,6 +116,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [parametrosModal, setParametrosModal]     = useState(null);   // task open in parametros form
   const [parametrosForm, setParametrosForm]       = useState({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
   const [expandedSystems, setExpandedSystems]     = useState(new Set()); // system IDs with stacked tasks expanded
+  const [detailTask, setDetailTask]               = useState(null);      // task open in detail popup
   const [autoFillSource, setAutoFillSource]       = useState(null);
   const [activeBatch, setActiveBatch]             = useState(null);
   const [batchForm, setBatchForm]                 = useState({ weights:{}, ph:'', temp:'', salinidad:'', condicion:null, notas:'', cosechadaLines:{} });
@@ -118,7 +126,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   const [editSaving, setEditSaving]               = useState(false);
   const [localEdits, setLocalEdits]               = useState({});     // optimistic edit overrides keyed by reading id
 
-  const canEdit = ['admin','consultor','director'].includes(user?.role);
+  const canEdit = ['admin','consultor','director','farm_manager','supervisor'].includes(user?.role);
 
   const today2 = new Date().toISOString().split('T')[0];
 
@@ -205,7 +213,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       condicion: null,
       cosechada_sueltos:'', cosechada_infectada:'',
       reseed_to:'', reseed_kg:'', seed_source:'', salio_de_finca: null,
-      sembrado:'', notas:'', buoys: Array(10).fill(''), ties: Array(6).fill('') });
+      sembrado:'', notas:'', buoys: Array(10).fill(''), ties: Array(6).fill(''), moduleWeights: Array(15).fill('') });
     setError('');
     setShowFormChart(false);
   }
@@ -226,6 +234,24 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           : t
       ));
     }
+    // Log to activity feed
+    const cosechada = (reading.cosechada_sueltos || 0) + (reading.cosechada_infectada || 0);
+    const pesoKg = reading.peso ? (reading.peso / 1000).toFixed(2) : null;
+    const prevKg  = last?.peso   ? (last.peso   / 1000).toFixed(2) : null;
+    logActivity({
+      actor:    user?.initials,
+      action:   cosechada > 0 ? 'harvest' : 'reading_added',
+      sistema:  reading.sistema,
+      field:    'peso',
+      oldValue: prevKg,
+      newValue: pesoKg,
+      note: cosechada > 0
+        ? `${reading.sistema} cosecha: ${(cosechada/1000).toFixed(2)}kg removidos · nuevo peso: ${pesoKg}kg`
+        : `${reading.sistema} lectura: ${pesoKg}kg · ${reading.condiciones || ''}${last ? ` (ant: ${prevKg}kg)` : ''}`,
+    });
+    if (reading.sembrado > 0) {
+      logActivity({ actor: user?.initials, action: 'seeding', sistema: reading.sistema, field: 'sembrado', newValue: (reading.sembrado/1000).toFixed(2), note: `${reading.sistema} siembra: ${(reading.sembrado/1000).toFixed(2)}kg agregados` });
+    }
     if (onReadingSaved) onReadingSaved(reading);
     setSessionDone(p => new Set([...p, reading.sistema]));
     setShowChart({ sys: activeSystem, reading, last });
@@ -237,11 +263,23 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   function saveReadingEdit() {
     if (!editingReading || !editForm.peso) return;
     setEditSaving(true);
+    const isComercialEdit = ['Comercial','Sistema 75m'].includes(activeSystem?.tipo);
     const edited = {
       ...editingReading,
       peso: parseFloat(editForm.peso),
       condiciones: editForm.condicion || editingReading.condiciones,
+      module_weights: isComercialEdit && editForm.moduleWeights
+        ? editForm.moduleWeights.map(v => parseFloat(v) || null) : editingReading.module_weights,
     };
+    logActivity({
+      actor:    user?.initials,
+      action:   'reading_edited',
+      sistema:  editingReading.sistema,
+      field:    'peso',
+      oldValue: editingReading.peso != null ? (editingReading.peso/1000).toFixed(2) : null,
+      newValue: (parseFloat(editForm.peso)/1000).toFixed(2),
+      note: `${editingReading.sistema} peso corregido: ${editingReading.peso != null ? (editingReading.peso/1000).toFixed(2) : '?'}kg → ${(parseFloat(editForm.peso)/1000).toFixed(2)}kg (${editingReading.fecha})`,
+    });
     if (onReadingSaved) onReadingSaved(edited);
     setLocalEdits(p => ({ ...p, [edited.id]: edited }));
     setEditingReading(null);
@@ -330,6 +368,8 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       notas: form.notas || null,
       buoys: activeSystem.tipo === 'Long Line'
         ? form.buoys.map(b => parseFloat(b) || 0) : null,
+      module_weights: ['Comercial','Sistema 75m'].includes(activeSystem.tipo)
+        ? (form.moduleWeights || []).map(v => parseFloat(v) || null) : null,
       logged_by: user?.initials || null,
     };
 
@@ -524,7 +564,10 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                       onClick={() => {
                         if (isEditing) { setEditingReading(null); return; }
                         setEditingReading(r);
-                        setEditForm({ peso: String(displayR.peso || ''), condicion: displayR.condiciones || null });
+                        const mw = Array.isArray(displayR.module_weights) && displayR.module_weights.length === 15
+                          ? displayR.module_weights.map(v => v != null ? String(v) : '')
+                          : Array(15).fill('');
+                        setEditForm({ peso: String(displayR.peso || ''), condicion: displayR.condiciones || null, moduleWeights: mw });
                       }}
                       style={{ fontSize:11, padding:'2px 8px', borderRadius:6,
                         border:`0.5px solid ${isEditing ? '#0d9488' : 'rgba(148,163,184,.18)'}`,
@@ -537,12 +580,43 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                 {/* Inline edit form */}
                 {isEditing && (
                   <div style={{ paddingBottom:12 }}>
+                    {['Comercial','Sistema 75m'].includes(activeSystem?.tipo) ? (
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:10, color:'#94a3b8', fontWeight:700, marginBottom:6 }}>
+                          Módulos M1–M15 (g) <span style={{ color:'#475569', fontWeight:400 }}>— mín. 4 para calcular</span>
+                        </div>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5, marginBottom:8 }}>
+                          {Array.from({length:15},(_,i)=>(
+                            <div key={i} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                              <span style={{ fontSize:10, color:'#64748b', width:28, flexShrink:0, fontFamily:'monospace' }}>M{i+1}</span>
+                              <input type="number" inputMode="numeric" placeholder="0"
+                                value={editForm.moduleWeights?.[i] || ''}
+                                onChange={e => {
+                                  const mw = [...(editForm.moduleWeights || Array(15).fill(''))];
+                                  mw[i] = e.target.value;
+                                  const filled = mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                                  const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15) : 0;
+                                  setEditForm(p=>({...p, moduleWeights:mw, peso: biomass>0?String(biomass):p.peso}));
+                                }}
+                                style={{ ...s.inputSmall, fontSize:12, padding:'4px 6px' }}/>
+                            </div>
+                          ))}
+                        </div>
+                        {editForm.peso && (
+                          <div style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', borderRadius:8, background:'rgba(13,148,136,.08)', marginBottom:8 }}>
+                            <span style={{ fontSize:11, color:'#64748b' }}>Biomasa estimada</span>
+                            <span style={{ fontSize:13, fontWeight:800, color:'#2dd4bf', fontFamily:'monospace' }}>{(parseFloat(editForm.peso)/1000).toFixed(2)} kg</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
                     <div style={{ marginBottom:8 }}>
                       <label style={{ fontSize:10, color:'#94a3b8', display:'block', marginBottom:3 }}>Peso (g)</label>
                       <input type="number" inputMode="numeric" value={editForm.peso}
                         onChange={e => setEditForm(p => ({ ...p, peso: e.target.value }))}
                         style={{ ...s.inputSmall, height:40, fontSize:16 }} autoFocus />
                     </div>
+                    )}
                     <div style={{ fontSize:10, color:'#94a3b8', marginBottom:5 }}>Condición</div>
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5, marginBottom:8 }}>
                       {[
@@ -725,8 +799,9 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
   // ── Reading form ──────────────────────────────────────────────────────────
   if (activeSystem) {
     const sys = activeSystem;
-    const isLongLine = sys.tipo === 'Long Line';
-    const isCanasta  = sys.tipo === 'Canasta' || sys.tipo === 'Redes tubulares';
+    const isLongLine  = sys.tipo === 'Long Line';
+    const isComercial = ['Comercial', 'Sistema 75m'].includes(sys.tipo);
+    const isCanasta   = !isLongLine && !isComercial && (sys.tipo === 'Canasta' || sys.tipo === 'Redes tubulares' || sys.tipo === 'Linea');
     const last = lastReading(readings, sys.id);
     const dias = last ? daysSince(last.fecha) : null;
     const lastCosechadaForm = last
@@ -870,7 +945,50 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           <div style={{ fontSize:'14px', color:'#94a3b8', marginBottom:'10px', fontWeight:'500' }}>
             Peso
           </div>
-          {isLongLine ? (
+          {isComercial ? (
+            /* Comercial / 75m: M1–M15 module grid, avg × 15 */
+            <>
+              <div style={{ fontSize:'11px', color:'#64748b', marginBottom:8, fontWeight:600 }}>
+                {sys.id} — Módulos M1–M15 (g) · <span style={{ color:'#fbbf24' }}>mínimo 4</span>
+                <span style={{ fontSize:9, color:'#334155', marginLeft:6, fontWeight:400 }}>Biomasa = promedio × 15</span>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
+                {Array.from({ length:15 }, (_, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:'#64748b', width:28, flexShrink:0, fontFamily:'monospace' }}>M{i+1}</span>
+                    <input type="number" inputMode="numeric" placeholder="—"
+                      value={form.moduleWeights?.[i] || ''}
+                      onChange={e => {
+                        setForm(p => {
+                          const mw = [...(p.moduleWeights || Array(15).fill(''))];
+                          mw[i] = e.target.value;
+                          const filled = mw.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+                          const avg = filled.length ? filled.reduce((a,b) => a+b, 0) / filled.length : 0;
+                          const biomass = filled.length >= 4 ? Math.round(avg * 15) : 0;
+                          return { ...p, moduleWeights: mw, peso: biomass > 0 ? String(biomass) : '' };
+                        });
+                      }}
+                      style={{ ...s.inputSmall, height:40, fontSize:14, padding:'0 6px' }}
+                    />
+                  </div>
+                ))}
+              </div>
+              {(() => {
+                const filled = (form.moduleWeights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+                const avg = filled.length ? filled.reduce((a,b) => a+b,0) / filled.length : 0;
+                const biomass = filled.length >= 4 ? Math.round(avg * 15) : 0;
+                return filled.length > 0 && (
+                  <div style={{ borderRadius:8, padding:'6px 10px', background:'rgba(13,148,136,.08)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontSize:11, color:'#64748b' }}>
+                      {filled.length} módulo{filled.length !== 1 ? 's' : ''} pesado{filled.length !== 1 ? 's' : ''}
+                      {filled.length < 4 && <span style={{ color:'#f87171', marginLeft:4 }}>· faltan {4-filled.length}</span>}
+                    </span>
+                    {biomass > 0 && <span style={{ fontSize:14, fontWeight:800, color:'#2dd4bf', fontFamily:'monospace' }}>{(biomass/1000).toFixed(2)} kg biomasa</span>}
+                  </div>
+                );
+              })()}
+            </>
+          ) : isLongLine ? (
             /* Long Line: buoy-by-buoy grid */
             <>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'8px', marginBottom:'10px' }}>
@@ -1135,7 +1253,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'4px' }}>
         <div style={{ fontSize:'20px', fontWeight:'500' }}>Mis lecturas</div>
         <div style={{ fontSize:'13px', color:'#94a3b8' }}>
-          {activeSystems.length - pending.length}/{activeSystems.length} · cada {cadenceDays}d
+          {doneItems}/{totalItems} completado{totalItems !== 1 ? 's' : ''}
         </div>
       </div>
       <div style={{ fontSize:'12px', color:'#94a3b8', marginBottom:'14px' }}>
@@ -1152,48 +1270,58 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
 
       {/* Assigned tasks from plan */}
       {(() => {
-        const myTasks = (assignedTasks || []).filter(t => t.assignedTo === user?.initials);
-        if (!myTasks.length) return null;
-        const overdue  = myTasks.filter(t => t.date < today2 && !t.confirmed);
-        const todayT   = myTasks.filter(t => t.date === today2 && !t.confirmed);
-        const upcoming = myTasks.filter(t => t.date > today2 && !t.confirmed);
-        const archived = myTasks.filter(t => t.confirmed);
+        const myTasksLocal = (assignedTasks || []).filter(t => t.assignedTo === user?.initials);
+        if (!myTasksLocal.length) return null;
+        const overdue  = myTasksLocal.filter(t => t.date < today2 && !t.confirmed).sort((a,b) => b.date.localeCompare(a.date));
+        const todayT   = myTasksLocal.filter(t => t.date === today2 && !t.confirmed);
+        const upcoming = myTasksLocal.filter(t => t.date > today2 && !t.confirmed).sort((a,b) => a.date.localeCompare(b.date));
+        const archived = myTasksLocal.filter(t => t.confirmed).sort((a,b) => b.date.localeCompare(a.date));
         const TIPO_LABELS = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos', dipping:'Dipping AMPEP', parametros:'Parámetros' };
         const TIPO_COLORS = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8', dipping:'#a855f7', parametros:'#0ea5e9' };
 
         const TaskRow = ({ t, highlight, nested = false }) => {
           const isDipping    = t.taskType === 'dipping';
           const isParametros = t.taskType === 'parametros';
+          const accentColor  = highlight==='overdue' ? '#f87171' : highlight==='today' ? '#2dd4bf' : '#64748b';
+          const handleComplete = (e) => {
+            e.stopPropagation();
+            if (isDipping) {
+              setDippingForm({ concentration: t.objetivo ? String(t.objetivo) : '', notes:'', done:true });
+              setDippingModal(t);
+            } else if (isParametros) {
+              setParametrosForm({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
+              setParametrosModal(t);
+            } else {
+              markDone(t);
+            }
+          };
           return (
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px',
-              background: highlight==='overdue' ? 'rgba(248,113,113,.06)' : highlight==='today' ? 'rgba(13,148,136,.06)' : 'rgba(255,255,255,.02)',
-              border: nested ? 'none' : `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
-              borderRadius: nested ? 0 : '10px', marginBottom: nested ? 0 : '6px' }}>
+            <div onClick={() => setDetailTask(t)}
+              style={{ display:'flex', alignItems:'center', gap:'10px', padding:'11px 12px',
+                background: highlight==='overdue' ? 'rgba(248,113,113,.06)' : highlight==='today' ? 'rgba(13,148,136,.06)' : 'rgba(255,255,255,.02)',
+                border: nested ? 'none' : `0.5px solid ${highlight==='overdue' ? 'rgba(248,113,113,.25)' : highlight==='today' ? 'rgba(13,148,136,.2)' : 'rgba(255,255,255,.06)'}`,
+                borderRadius: nested ? 0 : '10px', marginBottom: nested ? 0 : '6px', cursor:'pointer' }}>
               <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background: TIPO_COLORS[t.taskType] || '#64748b' }}/>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:'13px', fontWeight:'600', color:'#e2e8f0' }}>
-                  {!nested && t.sistema ? `${t.sistema} — ` : ''}{TIPO_LABELS[t.taskType] || t.taskType}
+                {/* Primary line: notas (the real task) or task type if no notas */}
+                <div style={{ fontSize:'14px', fontWeight:'700', color:'#e2e8f0', lineHeight:1.3,
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {t.notas || (TIPO_LABELS[t.taskType] || t.taskType)}
                 </div>
-                <div style={{ fontSize:'11px', color: highlight==='overdue' ? '#f87171' : '#64748b' }}>
-                  {highlight==='overdue' ? `⚠ PENDIENTE — vencida ${t.date}` : t.date}
-                  {t.objetivo ? ` · ${t.objetivo}%` : ''}
-                  {t.supportCrew?.length > 0 ? ` · +${t.supportCrew.join(',')}` : ''}
+                {/* Secondary line: task type + sistema + date */}
+                <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:'11px', fontWeight:600, color: accentColor }}>
+                    {TIPO_LABELS[t.taskType] || t.taskType}
+                  </span>
+                  {t.sistema && <span style={{ fontSize:'11px', color:'#475569' }}>· {t.sistema}</span>}
+                  <span style={{ fontSize:'10px', color: highlight==='overdue' ? '#f87171' : '#475569' }}>
+                    · {highlight==='overdue' ? `⚠ ${t.date}` : t.date}
+                  </span>
+                  {t.objetivo && <span style={{ fontSize:'10px', color:'#64748b' }}>· obj: {t.objetivo}</span>}
                 </div>
-                {t.notas ? <div style={{ fontSize:'10px', color:'#475569', fontStyle:'italic', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.notas}</div> : null}
               </div>
-              <button
-                onClick={() => {
-                  if (isDipping) {
-                    setDippingForm({ concentration: t.objetivo ? String(t.objetivo) : '', notes:'', done:true });
-                    setDippingModal(t);
-                  } else if (isParametros) {
-                    setParametrosForm({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
-                    setParametrosModal(t);
-                  } else {
-                    markDone(t);
-                  }
-                }}
-                style={{ fontSize:'11px', padding:'4px 10px', borderRadius:'7px', border:'none',
+              <button onClick={handleComplete}
+                style={{ fontSize:'11px', padding:'5px 12px', borderRadius:'7px', border:'none',
                   background: isDipping ? '#a855f7' : isParametros ? '#0ea5e9' : '#0d9488',
                   color:'#fff', fontWeight:'700', cursor:'pointer', flexShrink:0 }}>
                 {isDipping ? '🧪' : isParametros ? '📊' : '✓'}
@@ -1202,8 +1330,8 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
           );
         };
 
-        // Group active (overdue + today) tasks by sistema for stacked display
-        const activeTasks = [...overdue, ...todayT];
+        // Group active tasks: today first, then upcoming, then overdue
+        const activeTasks = [...todayT, ...upcoming, ...overdue];
         const sysGroups = {};
         const noSysTasks = [];
         activeTasks.forEach(t => {
@@ -1276,14 +1404,13 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
               Tareas asignadas {overdue.length > 0 && <span style={{color:'#f87171'}}>· {overdue.length} pendiente{overdue.length>1?'s':''}</span>}
             </div>
             {/* No-system tasks always flat */}
-            {noSysTasks.map(t => <TaskRow key={t.id} t={t} highlight={t.date < today2 ? 'overdue' : 'today'}/>)}
+            {noSysTasks.map(t => <TaskRow key={t.id} t={t} highlight={t.date < today2 ? 'overdue' : t.date === today2 ? 'today' : 'upcoming'}/>)}
             {/* System tasks: grouped if >1 task, flat if single */}
             {Object.entries(sysGroups).map(([sysId, tasks]) =>
               tasks.length > 1
                 ? <SystemGroup key={sysId} sysId={sysId} tasks={tasks}/>
-                : <TaskRow key={tasks[0].id} t={tasks[0]} highlight={tasks[0].date < today2 ? 'overdue' : 'today'}/>
+                : <TaskRow key={tasks[0].id} t={tasks[0]} highlight={tasks[0].date < today2 ? 'overdue' : tasks[0].date === today2 ? 'today' : 'upcoming'}/>
             )}
-            {upcoming.map(t => <TaskRow key={t.id} t={t} highlight="upcoming"/>)}
             {archived.length > 0 && (
               <>
                 <button onClick={() => setShowArchivedTasks(o=>!o)} style={{ display:'flex', alignItems:'center', gap:6, width:'100%', background:'rgba(74,222,128,.04)', border:'0.5px solid rgba(74,222,128,.12)', borderRadius:8, padding:'7px 12px', cursor:'pointer', color:'#4ade80', fontWeight:700, fontSize:11, marginTop:4 }}>
@@ -1356,6 +1483,75 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                 </div>
               );
             })}
+          </div>
+        );
+      })()}
+
+      {/* Task detail popup */}
+      {detailTask && (()=>{
+        const dt = detailTask;
+        const tLabels = { vigilancia:'Vigilancia', limpieza:'Limpieza', siembra:'Siembra', cosecha:'Cosecha', pesos:'Pesos', dipping:'Dipping AMPEP', parametros:'Parámetros', reubicar:'Reubicar', desplegar:'Desplegar', construir:'Construir canastas', motor:'Mant. Motor', seleccion:'Selec. Semilla', mantenimiento:'Mantenimiento', planificacion:'Planificación' };
+        const tColors = { vigilancia:'#0d9488', limpieza:'#8b5cf6', siembra:'#f59e0b', cosecha:'#4ade80', pesos:'#38bdf8', dipping:'#a855f7', parametros:'#0ea5e9' };
+        const isDipping2    = dt.taskType === 'dipping';
+        const isParametros2 = dt.taskType === 'parametros';
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.75)', zIndex:300,
+            display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+            onClick={() => setDetailTask(null)}>
+            <div style={{ width:'100%', maxWidth:480, background:'#0b1220',
+              borderRadius:'22px 22px 0 0', padding:'0 0 44px', maxHeight:'88vh', overflowY:'auto' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ width:36, height:4, borderRadius:2, background:'rgba(148,163,184,.25)', margin:'14px auto 0' }}/>
+              {/* Header */}
+              <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid rgba(148,163,184,.08)' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+                  <div style={{ width:10, height:10, borderRadius:'50%', background: tColors[dt.taskType]||'#64748b', marginTop:5, flexShrink:0 }}/>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color: tColors[dt.taskType]||'#64748b', textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>
+                      {tLabels[dt.taskType] || dt.taskType}
+                      {dt.sistema && <span style={{ color:'#475569', marginLeft:6 }}>· {dt.sistema}</span>}
+                    </div>
+                    <div style={{ fontSize:18, fontWeight:800, color:'#e2e8f0', lineHeight:1.3 }}>
+                      {dt.notas || tLabels[dt.taskType] || dt.taskType}
+                    </div>
+                    <div style={{ fontSize:11, color:'#475569', marginTop:6 }}>{dt.date}</div>
+                  </div>
+                </div>
+              </div>
+              {/* Details */}
+              <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:10 }}>
+                {dt.objetivo && (
+                  <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 12px', borderRadius:9, background:'rgba(255,255,255,.03)' }}>
+                    <span style={{ fontSize:12, color:'#64748b' }}>Objetivo</span>
+                    <span style={{ fontSize:14, fontWeight:800, color:'#e2e8f0', fontFamily:'monospace' }}>{dt.objetivo}</span>
+                  </div>
+                )}
+                {dt.supportCrew?.length > 0 && (
+                  <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 12px', borderRadius:9, background:'rgba(255,255,255,.03)' }}>
+                    <span style={{ fontSize:12, color:'#64748b' }}>Equipo de apoyo</span>
+                    <span style={{ fontSize:13, color:'#94a3b8' }}>{dt.supportCrew.join(', ')}</span>
+                  </div>
+                )}
+                {/* Complete button */}
+                <button
+                  onClick={() => {
+                    setDetailTask(null);
+                    if (isDipping2) {
+                      setDippingForm({ concentration: dt.objetivo ? String(dt.objetivo) : '', notes:'', done:true });
+                      setDippingModal(dt);
+                    } else if (isParametros2) {
+                      setParametrosForm({ ph:'', temp:'', salinidad:'', salt:'', notas:'' });
+                      setParametrosModal(dt);
+                    } else {
+                      markDone(dt);
+                    }
+                  }}
+                  style={{ width:'100%', padding:16, borderRadius:12, border:'none', fontSize:16, fontWeight:700, cursor:'pointer',
+                    background: isDipping2 ? '#a855f7' : isParametros2 ? '#0ea5e9' : '#0d9488', color:'#fff', marginTop:4 }}>
+                  {isDipping2 ? '🧪 Registrar dipping' : isParametros2 ? '📊 Registrar parámetros' : '✓ Marcar como hecho'}
+                </button>
+              </div>
+            </div>
           </div>
         );
       })()}

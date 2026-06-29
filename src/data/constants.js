@@ -20,7 +20,7 @@ const REGION_SUPERVISORS = {
 // ─── TASK CADENCES (days) ───────────────────────────────────────────────────
 // Vigilancia includes: readings, weights, parameters, algae condition check
 const TASK_CADENCES = {
-  vigilancia: 1,    // Every day — readings, weights, parameters, condition
+  vigilancia: 2,    // Every other day
   limpieza:   3,    // Every 3 days
   siembra:    30,   // Every 30 days
   cosecha:    45,   // Every 45 days (may be sooner for disease protocol)
