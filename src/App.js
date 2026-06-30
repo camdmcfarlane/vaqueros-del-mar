@@ -3834,7 +3834,7 @@ function AddableSelect({ value, onChange, options, onAddOption, lang, label, pla
   );
 }
 
-function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
+function SistemasTab({ systems, setSystems, readings, setReadings, lang, user, 
   regions=DEFAULT_REGIONS, setRegions=()=>{},
   retiredRegions=[],
   tipos=DEFAULT_TIPOS, setTipos=()=>{},
@@ -4274,9 +4274,16 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       const days = Math.max(1,(new Date(lr.fecha)-new Date(pr.fecha))/86400000);
       if (adj1>0&&adj2>0) tdc = parseFloat(((Math.log(adj2/adj1)/days)*100).toFixed(2));
     }
-    return {...s, _biomass: lr?.peso||0, _tdc: tdc};
+return {
+  ...s,
+  _biomass: lr?.peso || 0,
+  _tdc: tdc,
+  _lastReading: lr?.fecha ? new Date(lr.fecha).getTime() : 0
+};
+   
   }).sort((a,b)=>{
     const dir = sysSortDir==='asc' ? 1 : -1;
+    if (sysSort==='recent') return dir*(a._lastReading - b._lastReading);
     if (sysSort==='biomass') return dir*(a._biomass - b._biomass);
     if (sysSort==='tdc') return dir*((a._tdc??-999) - (b._tdc??-999));
     if (sysSort==='name') return dir*(a.id.localeCompare(b.id));
@@ -5267,6 +5274,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         <select value={sysSort} onChange={e=>{setSysSort(e.target.value);if(e.target.value!=='region'&&sysSortDir==='asc')setSysSortDir('desc');}}
           style={{...S.input,appearance:"none",fontSize:11,padding:"7px 10px",flexShrink:0,width:"auto"}}>
           <option value="region">{lang==="es"?"Región":"Region"}</option>
+          <option value="recent">{lang==="es"?"Lectura más reciente":"Most Recent Reading"}</option>
           <option value="biomass">{lang==="es"?"Biomasa":"Biomass"}</option>
           <option value="tdc">TDC</option>
           <option value="name">{lang==="es"?"Nombre":"Name"}</option>
