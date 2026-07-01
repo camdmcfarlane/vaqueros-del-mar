@@ -294,10 +294,13 @@ function LoginScreen({ onLogin, lang, setLang }) {
 }
 
 // ─── TASK LOG CARD — reusable ─────────────────────────────────────────────────
-function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
-  const schema = TASK_SCHEMA[task.taskType] || TASK_SCHEMA.parametros;
-  const sys    = systems.find(s=>s.id===task.sistema);
-  const done   = task.actual !== null || (schema.yesno && task.condicion !== null);
+function TaskLogCard({ task, systems, lang, onComplete, canEdit, userInitials }) {
+  const schema  = TASK_SCHEMA[task.taskType] || TASK_SCHEMA.parametros;
+  const sys     = systems.find(s=>s.id===task.sistema);
+  const isApoyo = task._role === 'apoyo';
+  const done    = isApoyo
+    ? (task.apoyo_completions?.[userInitials] !== undefined)
+    : (task.actual !== null || (schema.yesno && task.condicion !== null));
   const statusColor = done ? "#4ade80" : canEdit ? "#0d9488" : "#475569";
 
   return (
@@ -375,18 +378,21 @@ function TaskLogCard({ task, systems, lang, onComplete, canEdit }) {
 }
 
 // ─── TASK DETAIL / COMPLETION SHEET ──────────────────────────────────────────
-function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
-  const schema = TASK_SCHEMA[task.taskType] || TASK_SCHEMA.parametros;
-  const sys    = systems.find(s=>s.id===task.sistema);
-  const done   = task.actual !== null || (schema.yesno && task.condicion !== null);
+function TaskCompleteModal({ task, systems, lang, onSave, onClose, userInitials }) {
+  const schema   = TASK_SCHEMA[task.taskType] || TASK_SCHEMA.parametros;
+  const sys      = systems.find(s=>s.id===task.sistema);
+  const isApoyo  = task._role === 'apoyo';
+  const myCompletion = isApoyo ? (task.apoyo_completions?.[userInitials] || {}) : {};
+  const done   = isApoyo
+    ? (task.apoyo_completions?.[userInitials] !== undefined)
+    : (task.actual !== null || (schema.yesno && task.condicion !== null));
 
-  const [actual,             setActual]            = useState(task.actual ?? "");
-  const [condicion,          setCondicion]          = useState(task.condicion ?? "");
+  const [actual,             setActual]            = useState(isApoyo ? (myCompletion.actual ?? "") : (task.actual ?? ""));
+  const [condicion,          setCondicion]          = useState(isApoyo ? (myCompletion.condicion ?? "") : (task.condicion ?? ""));
   const [foto,               setFoto]               = useState(task.foto ?? null);
   const [voiceNote,          setVoiceNote]          = useState(task.voiceNote ?? null);
   const [comentarioVaquero,  setComentarioVaquero]  = useState(task.comentarioVaquero ?? "");
 
-  // For limpieza and vigilancia: completion = yes/no + optional photo
   const isConfirmType = ["limpieza","vigilancia","mantenimiento","seleccion"].includes(task.taskType);
 
   const canSave = schema.yesno
@@ -396,15 +402,26 @@ function TaskCompleteModal({ task, systems, lang, onSave, onClose }) {
       : String(actual).trim() !== "";
 
   const handleSave = () => {
-    onSave({
-      ...task,
-      actual:            schema.yesno || isConfirmType ? (actual||null) : parseFloat(actual)||0,
-      condicion:         condicion || null,
-      voiceNote,
-      foto: foto ? (typeof foto==="string"&&foto.startsWith("foto") ? foto : `foto_${Date.now()}.jpg`) : null,
-      comentarioVaquero: comentarioVaquero.trim() || null,
-      comentarioFecha:   comentarioVaquero.trim() ? new Date().toISOString() : null,
-    });
+    const completedActual = schema.yesno || isConfirmType ? (actual||null) : parseFloat(actual)||0;
+    if (isApoyo) {
+      onSave({
+        ...task,
+        apoyo_completions: {
+          ...(task.apoyo_completions || {}),
+          [userInitials]: { actual: completedActual, condicion: condicion || null, fecha: new Date().toISOString().slice(0,10) },
+        },
+      });
+    } else {
+      onSave({
+        ...task,
+        actual:            completedActual,
+        condicion:         condicion || null,
+        voiceNote,
+        foto: foto ? (typeof foto==="string"&&foto.startsWith("foto") ? foto : `foto_${Date.now()}.jpg`) : null,
+        comentarioVaquero: comentarioVaquero.trim() || null,
+        comentarioFecha:   comentarioVaquero.trim() ? new Date().toISOString() : null,
+      });
+    }
   };
 
   return (
@@ -781,7 +798,7 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
               </div>
             : todayTasks.map(t=>(
                 <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
-                  onComplete={setActiveTask} canEdit={true}/>
+                  onComplete={setActiveTask} canEdit={true} userInitials={user?.initials}/>
               ))
           }
         </div>
@@ -809,7 +826,7 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
                 {dayTasks.map(t=>(
                   <TaskLogCard key={t.id} task={t} systems={systems} lang={lang}
                     onComplete={setActiveTask}
-                    canEdit={isToday || t.actual===null}/>
+                    canEdit={isToday || t.actual===null} userInitials={user?.initials}/>
                 ))}
               </div>
             );
@@ -819,7 +836,7 @@ function VaqueroInicio({ assignedTasks, setAssignedTasks, systems, user, lang, a
 
       {activeTask && (
         <TaskCompleteModal task={activeTask} systems={systems} lang={lang}
-          onSave={handleComplete} onClose={()=>setActiveTask(null)}/>
+          onSave={handleComplete} onClose={()=>setActiveTask(null)} userInitials={user?.initials}/>
       )}
     </div>
   );
@@ -1013,7 +1030,7 @@ function VaqueroScore({ assignedTasks, weeklyIncidents, profScores, evaluations,
 
 // ─── BIOMASS HELPERS ─────────────────────────────────────────────────────────
 function getSystemReadings(readings, sysId) {
-  return readings.filter(r=>r.sistema===sysId && r.tipo==='peso' && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  return readings.filter(r=>r.sistema===sysId && (r.tipo==='peso'||r.tipo==='completo') && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 }
 function latestReading(readings, sysId) {
   const rs = getSystemReadings(readings, sysId);
@@ -1054,7 +1071,7 @@ function computeAlerts(assignedTasks, readings, systems) {
   const activeSysIds = new Set((systems||[]).filter(s=>s.estado==='Activo').map(s=>s.id));
   const bySys = {};
   for (const r of (readings||[])) {
-    if (r.tipo !== 'peso' || !r.peso || !activeSysIds.has(r.sistema)) continue;
+    if ((r.tipo !== 'peso' && r.tipo !== 'completo') || !r.peso || !activeSysIds.has(r.sistema)) continue;
     if (!bySys[r.sistema]) bySys[r.sistema] = [];
     bySys[r.sistema].push(r);
   }
@@ -1747,7 +1764,7 @@ function buildLiveTDCData(readings, systems) {
   const activeSysIds = new Set(
     (systems||[]).filter(s => s.estado === "Activo" && !isTestSystem(s)).map(s => s.id)
   );
-  const pesoR = (readings||[]).filter(r => activeSysIds.has(r.sistema) && r.tipo === 'peso' && r.peso);
+  const pesoR = (readings||[]).filter(r => activeSysIds.has(r.sistema) && (r.tipo === 'peso'||r.tipo === 'completo') && r.peso);
   if (!pesoR.length) return null;
 
   const mondayOf = (fecha) => {
@@ -1809,7 +1826,7 @@ function buildLivePruebas(readings, systems) {
   );
   if (!pruebaSysIds.size) return null;
 
-  const pesoR = (readings||[]).filter(r => pruebaSysIds.has(r.sistema) && r.tipo === 'peso' && r.peso);
+  const pesoR = (readings||[]).filter(r => pruebaSysIds.has(r.sistema) && (r.tipo === 'peso'||r.tipo === 'completo') && r.peso);
   if (!pesoR.length) return null;
 
   const mondayOf = (fecha) => {
@@ -2406,7 +2423,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
           const capitan = capEntry?.[0]||null;
           const onTargetCount = rSysActive.filter(s=>s.rate!==null&&s.rate>=2.5).length;
           const seedYieldRatio = seeded30d>0&&harvested30d>0 ? (harvested30d/seeded30d) : null;
-          const paramR = readings.filter(r=>sysIds.has(r.sistema)&&r.tipo==="parametros"&&r.fecha>=ago30);
+          const paramR = readings.filter(r=>sysIds.has(r.sistema)&&(r.tipo==="parametros"||r.tipo==="completo")&&r.fecha>=ago30);
           const phVals=paramR.map(r=>r.ph).filter(Boolean);
           const tempVals=paramR.map(r=>r.temp).filter(Boolean);
           const salVals=paramR.map(r=>r.salinidad).filter(Boolean);
@@ -2503,7 +2520,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         const nextHarvest = harvestDays.length ? Math.min(...harvestDays) : null;
         const onTargetCount = rSysActive.filter(s=>s.rate!==null&&s.rate>=2.5).length;
         const seedYieldRatio = seeded30d>0&&harvested30d>0 ? (harvested30d/seeded30d) : null;
-        const paramR = readings.filter(r=>sysIds.has(r.sistema)&&r.tipo==="parametros"&&r.fecha>=ago30);
+        const paramR = readings.filter(r=>sysIds.has(r.sistema)&&(r.tipo==="parametros"||r.tipo==="completo")&&r.fecha>=ago30);
         const phVals=paramR.map(r=>r.ph).filter(Boolean);
         const tempVals=paramR.map(r=>r.temp).filter(Boolean);
         const salVals=paramR.map(r=>r.salinidad).filter(Boolean);
@@ -2720,8 +2737,8 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
               .sort((a,b)=>b.fecha.localeCompare(a.fecha)||0)
               .slice(0,25)
               .map(r=>{
-                const isPeso = r.tipo==="peso";
-                const isParam = r.tipo==="parametros";
+                const isPeso = r.tipo==="peso" || r.tipo==="completo";
+                const isParam = r.tipo==="parametros" || r.tipo==="completo";
                 const icon = isParam?"📊":((r.cosechada_infectada||r.cosechada)&&r.peso===0)?"🌿":"⚖️";
                 const val  = isParam
                   ?[r.ph&&`pH ${r.ph}`,r.temp&&`${r.temp}°`,r.salinidad&&`${r.salinidad}‰`].filter(Boolean).join(" · ")
@@ -2765,7 +2782,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const lStyle = S.label;
   const today = new Date().toISOString().slice(0,10);
 
-  const emptyForm = { assignedTo:"LA", taskType:"vigilancia", sistema:"", region:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
+  const emptyForm = { assignedTo:"", taskType:"vigilancia", sistema:"", region:"", objetivo:"", date:today, day:selectedDay, notas:"", supportCrew:[] };
   const [form, setForm] = useState(emptyForm);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
@@ -3515,8 +3532,8 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     );
     const sysWithRate = mySystems.map(s => {
       // Credit only readings logged by this person — coverage/absence tracked here
-      const sysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso && (r.logged_by===person.initials||!r.logged_by)).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-      const allSysR = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      const sysR = readings.filter(r=>r.sistema===s.id && (r.tipo==="peso"||r.tipo==="completo") && r.peso && (r.logged_by===person.initials||!r.logged_by)).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      const allSysR = readings.filter(r=>r.sistema===s.id && (r.tipo==="peso"||r.tipo==="completo") && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
       const latest = sysR[sysR.length-1]||null;
       const prev = sysR[sysR.length-2]||null;
       const daysMissed = allSysR.filter(r=>r.logged_by && r.logged_by!==person.initials).length;
@@ -3754,7 +3771,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
         const roleKey = dynUser?.role || (c.role==='Capitán'?'capitan':c.role==='Supervisor'?'director':null);
         const mySys = systems.filter(s=>(getCapitan(s)===c.initials||hasBuceador(s,c.initials))&&s.estado==="Activo");
         const sysR = mySys.flatMap(s => {
-          const rs = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+          const rs = readings.filter(r=>r.sistema===s.id && (r.tipo==="peso"||r.tipo==="completo") && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
           const lat = rs[rs.length-1], prev = rs[rs.length-2];
           if (lat && prev && prev.peso) {
             const days = Math.max(1,(new Date(lat.fecha)-new Date(prev.fecha))/(1000*60*60*24));
@@ -4099,40 +4116,45 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   };
 
   const handleAddReading = (sistemaId) => {
-    const isPeso = readingForm.tipo === "peso";
     const thisSystem = systems.find(s => s.id === sistemaId);
     const isComercial = ["Comercial","Sistema 75m"].includes(thisSystem?.tipo);
-    // For commercial systems, compute peso from module weights
-    let peso = isPeso ? parseFloat(readingForm.peso) : null;
-    let moduleWeightsOut = null;
-    if (isPeso && isComercial) {
-      const filled = (readingForm.module_weights || []).map((v,i) => ({ i, v: parseFloat(v) })).filter(x => !isNaN(x.v) && x.v > 0);
-      if (filled.length < 4) return; // require minimum 4
-      const avg = filled.reduce((s,x) => s + x.v, 0) / filled.length;
-      peso = Math.round(avg * 15);
-      moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
-    }
-    if (isPeso && (!peso || peso <= 0)) return;
-    if (!isPeso && !readingForm.salt && !readingForm.ph && !readingForm.temp) return;
 
-    // ── Duplicate detection: same sistema + fecha + tipo ──
+    // Determine what the worker actually filled in
+    let peso = parseFloat(readingForm.peso) || null;
+    let moduleWeightsOut = null;
+    if (isComercial) {
+      const filled = (readingForm.module_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+      if (filled.length >= 4) {
+        const avg = filled.reduce((s,v) => s + v, 0) / filled.length;
+        peso = Math.round(avg * 15);
+        moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
+      } else if (filled.length > 0) {
+        return; // started commercial entry but < 4 modules — block save
+      }
+    }
+    const hasParams = !!(readingForm.salt || readingForm.ph || readingForm.temp || readingForm.salinidad);
+    const hasPeso   = !!(peso && peso > 0);
+    if (!hasPeso && !hasParams) return; // nothing entered
+    const tipo = hasPeso && hasParams ? 'completo' : hasPeso ? 'peso' : 'parametros';
+
+    // ── Duplicate detection ──
     const dup = readings.find(r =>
       r.sistema === sistemaId &&
       r.fecha === readingForm.fecha &&
-      (r.tipo || "peso") === readingForm.tipo
+      (r.tipo === tipo || (tipo === 'completo' && (r.tipo === 'peso' || r.tipo === 'parametros' || r.tipo === 'completo')))
     );
     if (dup) {
       addToast(
-        `⚠ ${sistemaId} ya tiene una lectura ${readingForm.tipo} para ${readingForm.fecha}${dup.updated_by ? ` (por ${dup.updated_by})` : ""}. Se guardó como nueva entrada.`,
+        `⚠ ${sistemaId} ya tiene una lectura para ${readingForm.fecha}. Se guardó como nueva entrada.`,
         "warning"
       );
     }
 
     const prevReadings = readings
-      .filter(r => r.sistema === sistemaId)
+      .filter(r => r.sistema === sistemaId && (r.tipo === 'peso' || r.tipo === 'completo') && r.peso)
       .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     const prev = prevReadings[0] || null;
-    const tdc  = (isPeso && prev?.peso)
+    const tdc  = (hasPeso && prev?.peso)
       ? calcTDC(prev.peso, prev.fecha, peso, readingForm.fecha, prev.cosechada, readingForm.cosechada ? parseFloat(readingForm.cosechada) : 0, prev.sueltos || 0, readingForm.sueltos ? parseFloat(readingForm.sueltos) : 0)
       : null;
 
@@ -4140,8 +4162,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       id:         `${sistemaId}_${readingForm.fecha}_${user?.initials||'CM'}`,
       sistema:    sistemaId,
       fecha:      readingForm.fecha,
-      tipo:       readingForm.tipo,
-      peso:       peso,
+      tipo,
+      peso:       hasPeso ? peso : null,
       sueltos:    readingForm.sueltos ? parseFloat(readingForm.sueltos) : null,
       buoys:      readingForm.buoys?.some(b=>b) ? readingForm.buoys.map(b=>parseFloat(b)||0) : null,
       tdc,
@@ -4159,7 +4181,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       module_weights: moduleWeightsOut,
     };
     // Activity log
-    if (isPeso) {
+    if (hasPeso) {
       const cosechada = newReading.cosechada || 0;
       const pesoKg  = peso ? (peso/1000).toFixed(2) : null;
       const prevKg  = prev?.peso ? (prev.peso/1000).toFixed(2) : null;
@@ -4179,7 +4201,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       }
     }
     const withNew = [...readings, newReading];
-    setReadings(isPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
+    setReadings(hasPeso ? recalcAllTDC(withNew, sistemaId) : withNew);
     setShowReadingForm(false);
     setShowGrowthChart(sistemaId); // Auto-show growth chart after save
     setReadingForm({
@@ -4451,7 +4473,7 @@ return {
         </div>
         {/* ── Inline Growth Chart (Crecimiento) ─────────────────────────── */}
         {(()=>{
-          const sysReadings = readings.filter(r=>r.sistema===s.id && r.tipo==="peso" && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+          const sysReadings = readings.filter(r=>r.sistema===s.id && (r.tipo==="peso"||r.tipo==="completo") && r.peso).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
           if(sysReadings.length < 2) return null;
           const isOpen = showGrowthChart === s.id;
           const data = sysReadings.map(r=>({fecha:r.fecha, peso:r.peso, tdc:r.tdc}));
@@ -4519,187 +4541,157 @@ return {
             )}
           </div>
 
-          {/* New reading form */}
-          {showReadingForm && canEditReadings && (
+          {/* New reading form — unified peso + parámetros */}
+          {showReadingForm && canEditReadings && (()=>{
+            const isComercialSys = ["Comercial","Sistema 75m"].includes(s.tipo);
+            const isLongLineSys  = s.tipo === "Long Line";
+            const hasAnything = !!(readingForm.peso || readingForm.ph || readingForm.temp || readingForm.salinidad || readingForm.salt);
+            return (
             <div style={{background:"rgba(13,148,136,.06)",border:"1px solid rgba(13,148,136,.15)",borderRadius:10,padding:12,marginBottom:12}}>
-              {/* Type toggle */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                {[["peso",lang==="es"?"⚖️ Peso":"⚖️ Weight"],["parametros",lang==="es"?"🌊 Parámetros":"🌊 Parameters"]].map(([t,label])=>(
-                  <button key={t} onClick={()=>setReadingForm(p=>({...p,tipo:t}))}
-                    style={{padding:"8px 0",borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer",border:"none",
-                      background:readingForm.tipo===t?"rgba(13,148,136,.25)":"rgba(255,255,255,.03)",
-                      color:readingForm.tipo===t?"#2dd4bf":"#64748b"}}>{label}</button>
-                ))}
-              </div>
               {/* Date */}
-              <div style={{marginBottom:8}}>
+              <div style={{marginBottom:10}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Fecha":"Date"}</div>
                 <input type="date" value={readingForm.fecha}
                   onChange={e=>setReadingForm(p=>({...p,fecha:e.target.value}))}
                   style={{...S.input,colorScheme:"dark",fontSize:12}}/>
               </div>
-              {/* PESO mode */}
-              {readingForm.tipo==="peso" && (
-                <>
-                  {["Comercial","Sistema 75m"].includes(s.tipo) ? (
-                    <div style={{marginBottom:8}}>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
-                        {s.id} — Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
-                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
+              {/* ── PESO SECTION ── */}
+              <div style={{fontSize:10,color:"#2dd4bf",fontWeight:700,textTransform:"uppercase",letterSpacing:.6,marginBottom:6}}>⚖️ {lang==="es"?"Peso":"Weight"}</div>
+              {isComercialSys ? (
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
+                    Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
+                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                    {Array.from({length:15},(_,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
+                        <input type="number" placeholder="—"
+                          value={readingForm.module_weights?.[i]||""}
+                          onChange={e=>{
+                            const mw=[...(readingForm.module_weights||Array(15).fill(""))];
+                            mw[i]=e.target.value;
+                            const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                            const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
+                            const biomass=filled.length>=4?Math.round(avg*15):0;
+                            setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
+                          }}
+                          style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-                        {Array.from({length:15},(_,i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
-                            <input type="number" placeholder="—"
-                              value={readingForm.module_weights?.[i]||""}
-                              onChange={e=>{
-                                const mw=[...(readingForm.module_weights||Array(15).fill(""))];
-                                mw[i]=e.target.value;
-                                const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                                const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                                const biomass=filled.length>=4?Math.round(avg*15):0;
-                                setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
-                              }}
-                              style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
-                          </div>
-                        ))}
-                      </div>
-                      {(()=>{
-                        const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                        const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                        const biomass=filled.length>=4?Math.round(avg*15):0;
-                        return filled.length>0&&(
-                          <div style={{borderRadius:8,padding:"6px 10px",marginBottom:8,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulo{filled.length!==1?"s":""} pesado{filled.length!==1?"s":""}{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
-                            {biomass>0&&<span style={{fontSize:14,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(biomass/1000).toFixed(2)} kg biomasa</span>}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  ) : s.tipo==="Long Line" ? (
-                    <div style={{marginBottom:8}}>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
-                        {s.id} — B1–B{s.modulos||15} (g)
-                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Total = sum</span>
-                      </div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-                        {Array.from({length:s.modulos||15},(_,i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>B{i+1}</span>
-                            <input type="number" placeholder="0"
-                              value={readingForm.buoys?.[i]||""}
-                              onChange={e=>{
-                                const buoys=[...(readingForm.buoys||Array(15).fill(""))];
-                                buoys[i]=e.target.value;
-                                const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);
-                                setReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));
-                              }}
-                              style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
-                          </div>
-                        ))}
-                      </div>
-                      {readingForm.peso&&(
-                        <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",
-                          borderRadius:8,background:"rgba(13,148,136,.08)",marginBottom:8}}>
-                          <span style={{fontSize:11,color:"#64748b"}}>Total (all buoys)</span>
-                          <span style={{fontSize:14,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>
-                            {(parseFloat(readingForm.peso)/1000).toFixed(3)} kg
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                      <div>
-                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
-                        <input type="number" placeholder="ej. 8500" value={readingForm.peso}
-                          onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
-                          style={{...S.input,fontSize:12}}/>
-                      </div>
-                      <div>
-                        <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
-                          {lang==="es"?"Alga suelta (g)":"Free seaweed (g)"}
-                          <span style={{fontSize:9,color:"#334155",marginLeft:3}}>(sueltos)</span>
-                        </div>
-                        <input type="number" placeholder="0" value={readingForm.sueltos}
-                          onChange={e=>setReadingForm(p=>({...p,sueltos:e.target.value}))}
-                          style={{...S.input,fontSize:12}}/>
-                      </div>
-                    </div>
-                  )}
-                  {readingForm.peso&&lastR?.peso&&(()=>{
-                    const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha,lastR.cosechada,readingForm.cosechada?parseFloat(readingForm.cosechada):0,lastR.sueltos||0,readingForm.sueltos?parseFloat(readingForm.sueltos):0);
-                    if(preview===null)return null;
-                    const col=preview>=2.5?"#4ade80":preview>=0?"#0d9488":"#f87171";
-                    return(
-                      <div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span style={{fontSize:11,color:"#64748b"}}>TDC vs lectura anterior</span>
-                        <span style={{fontSize:14,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview>=0?"+":""}{preview}%/día</span>
+                    ))}
+                  </div>
+                  {(()=>{
+                    const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                    const biomass=filled.length>=4?Math.round(filled.reduce((s,v)=>s+v,0)/filled.length*15):0;
+                    return filled.length>0&&(
+                      <div style={{borderRadius:8,padding:"6px 10px",marginBottom:6,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulos{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
+                        {biomass>0&&<span style={{fontSize:13,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(biomass/1000).toFixed(2)} kg</span>}
                       </div>
                     );
                   })()}
-                </>
-              )}
-              {/* PARAMETROS mode — sal% last */}
-              {readingForm.tipo==="parametros"&&(
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  {[["ph","pH","9.2"],["temp",lang==="es"?"Temp °C":"Temp °C","27"],["salinidad",lang==="es"?"Salinidad":"Salinity","19"],["salt",lang==="es"?"Sal %":"Salt %","2.5"]].map(([key,label,ph])=>(
-                    <div key={key}>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
-                      <input type="number" step="0.1" placeholder={ph} value={readingForm[key]}
-                        onChange={e=>setReadingForm(p=>({...p,[key]:e.target.value}))}
-                        style={{...S.input,fontSize:12}}/>
-                    </div>
-                  ))}
+                </div>
+              ) : isLongLineSys ? (
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
+                    B1–B{s.modulos||15} (g) <span style={{fontSize:9,fontWeight:400,color:"#334155",marginLeft:4}}>Total = sum</span>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                    {Array.from({length:s.modulos||15},(_,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>B{i+1}</span>
+                        <input type="number" placeholder="0"
+                          value={readingForm.buoys?.[i]||""}
+                          onChange={e=>{
+                            const buoys=[...(readingForm.buoys||Array(15).fill(""))];
+                            buoys[i]=e.target.value;
+                            const total=buoys.reduce((sum,v)=>sum+(parseFloat(v)||0),0);
+                            setReadingForm(p=>({...p,buoys,peso:total>0?String(Math.round(total)):""}));
+                          }}
+                          style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
+                      </div>
+                    ))}
+                  </div>
+                  {readingForm.peso&&<div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"rgba(13,148,136,.08)",marginBottom:6}}>
+                    <span style={{fontSize:11,color:"#64748b"}}>Total</span>
+                    <span style={{fontSize:13,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(parseFloat(readingForm.peso)/1000).toFixed(3)} kg</span>
+                  </div>}
+                </div>
+              ) : (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  <div>
+                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Peso total (g)":"Total weight (g)"}</div>
+                    <input type="number" placeholder="ej. 8500" value={readingForm.peso}
+                      onChange={e=>setReadingForm(p=>({...p,peso:e.target.value}))}
+                      style={{...S.input,fontSize:12}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Alga suelta (g)":"Loose (g)"}</div>
+                    <input type="number" placeholder="0" value={readingForm.sueltos}
+                      onChange={e=>setReadingForm(p=>({...p,sueltos:e.target.value}))}
+                      style={{...S.input,fontSize:12}}/>
+                  </div>
                 </div>
               )}
-              {/* Harvest + conditions (peso mode) */}
-              {readingForm.tipo==="peso"&&(
-                <>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                    <div>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Cosechada (g)":"Harvested (g)"}</div>
-                      <input type="number" placeholder="0" value={readingForm.cosechada||""}
-                        onChange={e=>setReadingForm(p=>({...p,cosechada:e.target.value}))}
-                        style={{...S.input,fontSize:12,borderColor:readingForm.cosechada?"rgba(74,222,128,.4)":"rgba(148,163,184,.12)"}}/>
-                    </div>
-                    <div>
-                      <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Condiciones":"Conditions"}</div>
-                      <select value={readingForm.condiciones||""} onChange={e=>setReadingForm(p=>({...p,condiciones:e.target.value}))}
-                        style={{...S.input,fontSize:12,appearance:"none"}}>
-                        <option value="">–</option>
-                        <option value="Saludables">Saludables</option>
-                        <option value="Epifitas">Epifitas</option>
-                        <option value="Ice-ice">Ice-ice</option>
-                        <option value="Decoloración">Decoloración</option>
-                        <option value="Excelente">Excelente</option>
-                      </select>
-                    </div>
+              {/* TDC preview */}
+              {readingForm.peso&&lastR?.peso&&(()=>{
+                const preview=calcTDC(lastR.peso,lastR.fecha,parseFloat(readingForm.peso),readingForm.fecha,lastR.cosechada,readingForm.cosechada?parseFloat(readingForm.cosechada):0,lastR.sueltos||0,readingForm.sueltos?parseFloat(readingForm.sueltos):0);
+                if(preview===null)return null;
+                const col=preview>=2.5?"#4ade80":preview>=0?"#0d9488":"#f87171";
+                return(<div style={{background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:11,color:"#64748b"}}>TDC vs lectura anterior</span>
+                  <span style={{fontSize:13,fontWeight:800,color:col,fontFamily:"monospace"}}>{preview>=0?"+":""}{preview}%/día</span>
+                </div>);
+              })()}
+              {/* Harvest + conditions */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Cosechada (g)":"Harvested (g)"}</div>
+                  <input type="number" placeholder="0" value={readingForm.cosechada||""}
+                    onChange={e=>setReadingForm(p=>({...p,cosechada:e.target.value}))}
+                    style={{...S.input,fontSize:12,borderColor:readingForm.cosechada?"rgba(74,222,128,.4)":"rgba(148,163,184,.12)"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Condiciones":"Conditions"}</div>
+                  <select value={readingForm.condiciones||""} onChange={e=>setReadingForm(p=>({...p,condiciones:e.target.value}))}
+                    style={{...S.input,fontSize:12,appearance:"none"}}>
+                    <option value="">–</option>
+                    <option value="Saludables">Saludables</option>
+                    <option value="Epifitas">Epifitas</option>
+                    <option value="Ice-ice">Ice-ice</option>
+                    <option value="Decoloración">Decoloración</option>
+                    <option value="Excelente">Excelente</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Aguas":"Water clarity"}</div>
+                <select value={readingForm.aguas||""} onChange={e=>setReadingForm(p=>({...p,aguas:e.target.value}))}
+                  style={{...S.input,fontSize:12,appearance:"none"}}>
+                  <option value="">–</option>
+                  <option value="Claras">Claras</option>
+                  <option value="Transparente">Transparente</option>
+                  <option value="Turbia">Turbia</option>
+                </select>
+              </div>
+              {/* ── PARÁMETROS SECTION ── */}
+              <div style={{height:1,background:"rgba(148,163,184,.1)",margin:"10px 0 10px"}}/>
+              <div style={{fontSize:10,color:"#38bdf8",fontWeight:700,textTransform:"uppercase",letterSpacing:.6,marginBottom:6}}>🌊 {lang==="es"?"Parámetros (opcional)":"Parameters (optional)"}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                {[["ph","pH","9.2"],["temp","Temp °C","27"],["salinidad","Salinidad ‰","19"],["salt","Sal %","2.5"]].map(([key,label,ph])=>(
+                  <div key={key}>
+                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{label}</div>
+                    <input type="number" step="0.1" placeholder={ph} value={readingForm[key]}
+                      onChange={e=>setReadingForm(p=>({...p,[key]:e.target.value}))}
+                      style={{...S.input,fontSize:12}}/>
                   </div>
-                  <div style={{marginBottom:8}}>
-                    <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>{lang==="es"?"Aguas":"Water clarity"}</div>
-                    <select value={readingForm.aguas||""} onChange={e=>setReadingForm(p=>({...p,aguas:e.target.value}))}
-                      style={{...S.input,fontSize:12,appearance:"none"}}>
-                      <option value="">–</option>
-                      <option value="Claras">Claras</option>
-                      <option value="Transparente">Transparente</option>
-                      <option value="Turbia">Turbia</option>
-                    </select>
-                  </div>
-                </>
-              )}
-              {/* Photo capture — real camera on mobile, file picker on desktop */}
+                ))}
+              </div>
+              {/* Photo + comments */}
               <div style={{marginBottom:8}}>
                 <input type="file" accept="image/*" capture="environment" id="new-reading-foto" style={{display:"none"}}
-                  onChange={e=>{
-                    const file=e.target.files?.[0];
-                    if(file){
-                      const reader=new FileReader();
-                      reader.onload=ev=>setReadingForm(p=>({...p,foto:ev.target.result}));
-                      reader.readAsDataURL(file);
-                    }
-                  }}/>
+                  onChange={e=>{const file=e.target.files?.[0];if(file){const reader=new FileReader();reader.onload=ev=>setReadingForm(p=>({...p,foto:ev.target.result}));reader.readAsDataURL(file);}}}/>
                 <button onClick={()=>document.getElementById('new-reading-foto')?.click()}
                   style={{width:"100%",padding:"9px 12px",borderRadius:9,cursor:"pointer",
                     border:`1.5px dashed ${readingForm.foto&&readingForm.foto!==true?"rgba(74,222,128,.5)":"rgba(148,163,184,.2)"}`,
@@ -4710,23 +4702,22 @@ return {
                   {readingForm.foto&&readingForm.foto!==true?(lang==="es"?"✓ Foto capturada":"✓ Photo captured"):(lang==="es"?"Tomar foto / elegir imagen":"Take photo / choose image")}
                 </button>
               </div>
-              {/* Comments */}
-              <div style={{marginBottom:8}}>
+              <div style={{marginBottom:10}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>💬 {lang==="es"?"Comentarios (opcional)":"Comments (optional)"}</div>
                 <input placeholder={lang==="es"?"Ej: Epifitas, agua turbia...":"E.g. Epiphytes, turbid water..."}
                   value={readingForm.notas} onChange={e=>setReadingForm(p=>({...p,notas:e.target.value}))}
                   style={{...S.input,fontSize:12,borderColor:readingForm.notas.trim()?"rgba(13,148,136,.4)":"rgba(148,163,184,.12)"}}/>
               </div>
               <button onClick={()=>handleAddReading(s.id)}
-                disabled={readingForm.tipo==="peso"?!readingForm.peso:(!readingForm.ph&&!readingForm.temp&&!readingForm.salinidad&&!readingForm.salt)}
+                disabled={!hasAnything}
                 style={{width:"100%",padding:10,borderRadius:9,border:"none",
-                  background:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.ph||readingForm.temp||readingForm.salinidad||readingForm.salt))?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",
-                  color:(readingForm.tipo==="peso"?readingForm.peso:(readingForm.ph||readingForm.temp||readingForm.salinidad||readingForm.salt))?"#fff":"#475569",
+                  background:hasAnything?"linear-gradient(135deg,#0d9488,#0f766e)":"rgba(148,163,184,.1)",
+                  color:hasAnything?"#fff":"#475569",
                   fontWeight:700,fontSize:13,cursor:"pointer"}}>
                 {lang==="es"?"Guardar Lectura":"Save Reading"}
               </button>
             </div>
-          )}
+          );})()}
 
           {/* Reading history — header renamed to Lecturas, grouped by date */}
           {(()=>{
@@ -6715,6 +6706,7 @@ export default function App() {
               pendingSync: local?.pendingSync || false,
               notas: r.notas || "",
               supportCrew: r.support_crew ? r.support_crew.split(',').map(s => s.trim()).filter(Boolean) : [],
+              apoyo_completions: r.apoyo_completions || {},
               comentarioVaquero: r.comentario_vaquero || null,
               comentarioFecha:   r.comentario_fecha   || null,
             };
@@ -6975,6 +6967,7 @@ export default function App() {
           confirmed_at: task.confirmedAt || null,
           notas: task.notas || "",
           support_crew: Array.isArray(task.supportCrew) ? task.supportCrew.join(',') : (task.supportCrew || null),
+          apoyo_completions: task.apoyo_completions || null,
           updated_at: now,
         }).then(ok => {
           if (ok) {
