@@ -155,7 +155,7 @@ export function EditReading({ reading, sistema, onSaved, onCancel }) {
                     const mw = [...form.moduleWeights];
                     mw[i] = e.target.value;
                     const filled = mw.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
-                    const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15) : 0;
+                    const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15*(sistema?.lineas||1)) : 0;
                     update('moduleWeights', mw);
                     if (biomass > 0) update('peso', String(biomass));
                   }}

@@ -4126,7 +4126,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       const filled = (readingForm.module_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
       if (filled.length >= 4) {
         const avg = filled.reduce((s,v) => s + v, 0) / filled.length;
-        peso = Math.round(avg * 15);
+        peso = Math.round(avg * 15 * (thisSystem?.lineas || 1));
         moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
       } else if (filled.length > 0) {
         return; // started commercial entry but < 4 modules — block save
@@ -4254,7 +4254,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     setEditingReadingId(null);
   };
 
-  const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,notas:""};
+  const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,lineas:1,notas:""};
   const [form, setForm] = useState(EMPTY);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
@@ -4561,7 +4561,7 @@ return {
                 <div style={{marginBottom:10}}>
                   <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
                     Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
-                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
+                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15{(s.lineas||1)>1?` × ${s.lineas} líneas`:""}</span>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
                     {Array.from({length:15},(_,i)=>(
@@ -4574,7 +4574,7 @@ return {
                             mw[i]=e.target.value;
                             const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
                             const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                            const biomass=filled.length>=4?Math.round(avg*15):0;
+                            const biomass=filled.length>=4?Math.round(avg*15*(s.lineas||1)):0;
                             setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
                           }}
                           style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -4583,7 +4583,7 @@ return {
                   </div>
                   {(()=>{
                     const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                    const biomass=filled.length>=4?Math.round(filled.reduce((s,v)=>s+v,0)/filled.length*15):0;
+                    const biomass=filled.length>=4?Math.round(filled.reduce((a,v)=>a+v,0)/filled.length*15*(s.lineas||1)):0;
                     return filled.length>0&&(
                       <div style={{borderRadius:8,padding:"6px 10px",marginBottom:6,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulos{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
@@ -4800,7 +4800,7 @@ return {
                                               const mw=[...(editReadingForm.module_weights||Array(15).fill(""))];
                                               mw[i]=e.target.value;
                                               const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15):0;
+                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15*(s.lineas||1)):0;
                                               setEditReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):p.peso}));
                                             }}
                                             style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -5151,6 +5151,7 @@ return {
                 onAddOption={v=>setTipos(prev=>[...prev,v])} lang={lang}/>
             </div>
             <div><label style={S.label}>{lang==="es"?"Módulos":"Modules"}</label><select value={form.modulos} onChange={e=>F("modulos",parseInt(e.target.value))} style={{...S.input,appearance:"none"}}>{Array.from({length:16},(_,i)=><option key={i} value={i}>{i}</option>)}</select></div>
+            {["Comercial","Sistema 75m"].includes(form.tipo)&&<div><label style={S.label}>{lang==="es"?"Líneas por módulo":"Lines per module"}</label><select value={form.lineas||1} onChange={e=>F("lineas",parseInt(e.target.value))} style={{...S.input,appearance:"none"}}>{Array.from({length:10},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}</select></div>}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><label style={S.label}>{lang==="es"?"Profundidad":"Depth"}</label><input value={form.profundidad} onChange={e=>F("profundidad",e.target.value)} placeholder="30cm" style={S.input}/></div>
@@ -6830,6 +6831,7 @@ export default function App() {
           capitan:           r.capitan           || "",
           buceador:          r.buceador          || "",
           modulos:           r.modulos           ?? 0,
+          lineas:            r.lineas            ?? 1,
           tamano:            r.tamano            || "",
           categoria:         r.categoria         || "",
           fechaCosecha:      r.fecha_cosecha     || null,
@@ -7119,6 +7121,7 @@ export default function App() {
               capitan:           s.capitan            || null,
               buceador:          s.buceador           || null,
               modulos:           s.modulos            ?? 0,
+              lineas:            s.lineas             ?? 1,
               tamano:            s.tamano             || null,
               categoria:         s.categoria          || null,
               fecha_cosecha:     s.fechaCosecha       || null,
