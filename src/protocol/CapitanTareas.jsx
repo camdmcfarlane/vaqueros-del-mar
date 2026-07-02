@@ -597,7 +597,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                                   const mw = [...(editForm.moduleWeights || Array(15).fill(''))];
                                   mw[i] = e.target.value;
                                   const filled = mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                                  const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15) : 0;
+                                  const biomass = filled.length >= 4 ? Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15*(activeSystem?.lineas||1)) : 0;
                                   setEditForm(p=>({...p, moduleWeights:mw, peso: biomass>0?String(biomass):p.peso}));
                                 }}
                                 style={{ ...s.inputSmall, fontSize:12, padding:'4px 6px' }}/>
@@ -952,7 +952,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
             <>
               <div style={{ fontSize:'11px', color:'#64748b', marginBottom:8, fontWeight:600 }}>
                 {sys.id} — Módulos M1–M15 (g) · <span style={{ color:'#fbbf24' }}>mínimo 4</span>
-                <span style={{ fontSize:9, color:'#334155', marginLeft:6, fontWeight:400 }}>Biomasa = promedio × 15</span>
+                <span style={{ fontSize:9, color:'#334155', marginLeft:6, fontWeight:400 }}>Biomasa = promedio × 15{(sys.lineas||1)>1?` × ${sys.lineas} líneas`:''}</span>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
                 {Array.from({ length:15 }, (_, i) => (
@@ -966,7 +966,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
                           mw[i] = e.target.value;
                           const filled = mw.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
                           const avg = filled.length ? filled.reduce((a,b) => a+b, 0) / filled.length : 0;
-                          const biomass = filled.length >= 4 ? Math.round(avg * 15) : 0;
+                          const biomass = filled.length >= 4 ? Math.round(avg * 15 * (sys.lineas||1)) : 0;
                           return { ...p, moduleWeights: mw, peso: biomass > 0 ? String(biomass) : '' };
                         });
                       }}
@@ -978,7 +978,7 @@ export default function CapitanTareas({ systems, readings, user, lang, onReading
               {(() => {
                 const filled = (form.moduleWeights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
                 const avg = filled.length ? filled.reduce((a,b) => a+b,0) / filled.length : 0;
-                const biomass = filled.length >= 4 ? Math.round(avg * 15) : 0;
+                const biomass = filled.length >= 4 ? Math.round(avg * 15 * (sys.lineas||1)) : 0;
                 return filled.length > 0 && (
                   <div style={{ borderRadius:8, padding:'6px 10px', background:'rgba(13,148,136,.08)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontSize:11, color:'#64748b' }}>
