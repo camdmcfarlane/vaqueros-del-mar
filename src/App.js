@@ -4122,16 +4122,50 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     // Determine what the worker actually filled in
     let peso = parseFloat(readingForm.peso) || null;
     let moduleWeightsOut = null;
-    if (isComercial) {
+    /*if (isComercial) {
       const filled = (readingForm.module_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
       if (filled.length >= 4) {
         const avg = filled.reduce((s,v) => s + v, 0) / filled.length;
-        peso = Math.round(avg * 15);
+        peso = Math.round(avg * (readingForm.lines_per_module || 0) * 15);
         moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
       } else if (filled.length > 0) {
         return; // started commercial entry but < 4 modules — block save
       }
+    }*/
+   if (isComercial) {
+  const filled = (readingForm.module_weights || [])
+    .map(v => parseFloat(v))
+    .filter(v => !isNaN(v) && v > 0);
+
+  if (filled.length >= 4) {
+
+    // ✅ VALIDACIÓN NUEVA (VA AQUÍ)
+    /*if (!readingForm.lines_per_module) {
+      alert("Falta número de líneas por módulo");
+      return;
     }
+
+    const avg = filled.reduce((s, v) => s + v, 0) / filled.length;
+
+    // ✅ NUEVA FÓRMULA
+    peso = Math.round(avg * readingForm.lines_per_module * 15);*/
+const lines = parseFloat(readingForm.lines_per_module);
+
+if (!lines || lines <= 0) {
+    alert("Falta número de líneas por módulo");
+    return;
+}
+
+const avg = filled.reduce((s, v) => s + v, 0) / filled.length;
+
+peso = Math.round(avg * lines * 15);
+
+    moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
+
+  } else if (filled.length > 0) {
+    return;
+  }
+}
     const hasParams = !!(readingForm.salt || readingForm.ph || readingForm.temp || readingForm.salinidad);
     const hasPeso   = !!(peso && peso > 0);
     if (!hasPeso && !hasParams) return; // nothing entered
@@ -4179,7 +4213,9 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       condiciones:    readingForm.condiciones || "",
       logged_by:      user?.initials || null,
       module_weights: moduleWeightsOut,
+      lines_per_module: parseFloat(readingForm.lines_per_module) || null,
     };
+  
     // Activity log
     if (hasPeso) {
       const cosechada = newReading.cosechada || 0;
@@ -4206,9 +4242,11 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     setShowGrowthChart(sistemaId); // Auto-show growth chart after save
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
-      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""), module_weights:Array(15).fill(""),
+      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""), module_weights:Array(15).fill(""),lines_per_module:"",
       salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:null,
       cosechada:"", sembrado:"", aguas:"", condiciones:"",
+
+      
     });
   };
 
@@ -4224,6 +4262,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
         peso:        peso,
         sueltos:     editReadingForm.sueltos   ? parseFloat(editReadingForm.sueltos)   : null,
         buoys:       editReadingForm.buoys?.some(b=>b) ? editReadingForm.buoys.map(b=>parseFloat(b)||0) : r.buoys,
+        module_weights: editReadingForm.module_weights,
+        lines_per_module: parseFloat(editReadingForm.lines_per_module) || null,
         salt:        editReadingForm.salt      ? parseFloat(editReadingForm.salt)      : null,
         ph:          editReadingForm.ph        ? parseFloat(editReadingForm.ph)        : null,
         temp:        editReadingForm.temp      ? parseFloat(editReadingForm.temp)      : null,
@@ -4559,10 +4599,46 @@ return {
               <div style={{fontSize:10,color:"#2dd4bf",fontWeight:700,textTransform:"uppercase",letterSpacing:.6,marginBottom:6}}>⚖️ {lang==="es"?"Peso":"Weight"}</div>
               {isComercialSys ? (
                 <div style={{marginBottom:10}}>
+                 
                   <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
-                    Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
-                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
-                  </div>
+  Módulos 1–15 (g) ·{" "}
+  <span style={{color:"#fbbf24"}}>
+    {lang==="es" ? "mínimo 4" : "minimum 4"}
+  </span>
+
+  <div
+    style={{
+      fontSize:9,
+      color:"#334155",
+      fontWeight:400,
+      marginTop:4,
+      fontStyle:"italic"
+    }}
+  >
+    {lang==="es"
+      ? "📘 Biomasa = Promedio × Líneas × 15"
+      : "📘 Biomass = Average × Lines × 15"}
+  </div>
+</div>
+<div style={{marginBottom:8}}>
+  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
+    Número de líneas por módulo
+  </div>
+
+  <input
+    type="number"
+    min="1"
+    value={readingForm.lines_per_module || ""}
+    onChange={e =>
+      setReadingForm(p => ({
+        ...p,
+        lines_per_module: e.target.value
+      }))
+    }
+    style={S.input}
+  />
+</div>
+
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
                     {Array.from({length:15},(_,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
@@ -4572,10 +4648,25 @@ return {
                           onChange={e=>{
                             const mw=[...(readingForm.module_weights||Array(15).fill(""))];
                             mw[i]=e.target.value;
-                            const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                           /* const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
                             const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
                             const biomass=filled.length>=4?Math.round(avg*15):0;
-                            setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
+                            setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""})); */
+                            const filled = mw.map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
+const avg = filled.length ? filled.reduce((s,v)=>s+v,0) / filled.length : 0;
+
+const lines = parseFloat(readingForm.lines_per_module) || 0;
+
+const biomass =
+    filled.length >= 4 && lines > 0
+        ? Math.round(avg * lines * 15)
+        : 0;
+
+setReadingForm(p => ({
+    ...p,
+    module_weights: mw,
+    peso: biomass > 0 ? String(biomass) : ""
+}));
                           }}
                           style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
                       </div>
@@ -4583,7 +4674,16 @@ return {
                   </div>
                   {(()=>{
                     const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                    const biomass=filled.length>=4?Math.round(filled.reduce((s,v)=>s+v,0)/filled.length*15):0;
+                 /*  
+                  const biomass=filled.length>=4?Math.round(filled.reduce((s,v)=>s+v,0)/filled.length*15):0;*/
+                  const lines = parseFloat(readingForm.lines_per_module) || 0;
+
+const biomass =
+    filled.length >= 4 && lines > 0
+        ? Math.round(
+            (filled.reduce((s,v)=>s+v,0) / filled.length) * lines * 15
+          )
+        : 0;
                     return filled.length>0&&(
                       <div style={{borderRadius:8,padding:"6px 10px",marginBottom:6,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulos{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
@@ -4788,8 +4888,27 @@ return {
                                 {["Comercial","Sistema 75m"].includes(s.tipo) ? (
                                   <div style={{marginBottom:8}}>
                                     <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:6}}>
-                                      Módulos M1–M15 (g) <span style={{fontWeight:400,color:"#334155"}}>— mín. 4 para calcular</span>
+                                      Módulos M1–M15 (g)
+
+                                      
+                                      <span style={{fontWeight:400,color:"#334155"}}>— mín. 4 para calcular</span>
                                     </div>
+<div style={{marginBottom:8}}>
+  <div style={{fontSize:10,color:"#64748b",marginBottom:4}}>
+    Número de líneas por módulo
+  </div>
+
+  <input
+    type="number"
+    value={editReadingForm.lines_per_module || ""}
+    onChange={e=>setEditReadingForm(p=>({
+      ...p,
+      lines_per_module:e.target.value
+    }))}
+    style={{...S.input,fontSize:12}}
+  />
+</div>
+
                                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:8}}>
                                       {Array.from({length:15},(_,i)=>(
                                         <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
@@ -4800,7 +4919,19 @@ return {
                                               const mw=[...(editReadingForm.module_weights||Array(15).fill(""))];
                                               mw[i]=e.target.value;
                                               const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15):0;
+                                              const lines = parseFloat(editReadingForm.lines_per_module) || 0;
+
+
+
+                                  const avg = filled.reduce((a,b)=>a+b,0) / filled.length;
+
+const biomass =
+  filled.length >= 4 && lines > 0
+    ? Math.round(avg * lines * 15)
+    : 0;
+
+
+
                                               setEditReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):p.peso}));
                                             }}
                                             style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -5089,7 +5220,7 @@ return {
             <div style={{fontSize:12,color:"#475569",textAlign:"center",padding:"12px 0"}}>
               {lang==="es"?"Sin lecturas registradas":"No readings recorded"}
             </div>
-          )}
+          )
         </div>
         {editingViaModal && (
           <EditReading
@@ -7042,30 +7173,34 @@ export default function App() {
       if (changed.length > 0 || deleted.length > 0) {
         console.log(`[AquaOps] syncReadings: ${changed.length} changed, ${deleted.length} deleted`);
         setTimeout(() => {
-          changed.forEach(r => {
-            pushItem('lecturas', 'upsert', {
-              id:          r.id,
-              sistema:     r.sistema,
-              fecha:       r.fecha,
-              tipo:        r.tipo        ?? "vigilancia",
-              peso:        r.peso        ?? null,
-              sueltos:     r.sueltos     ?? null,
-              ph:          r.ph          ?? null,
-              temp:        r.temp        ?? null,
-              salinidad:   r.salinidad   ?? null,
-              condiciones: r.condiciones ?? null,
-              notas:       r.notas       ?? "",
-              cosechada:   r.cosechada   ?? null,
-              sembrado:    r.sembrado    ?? null,
-              buoys:          r.buoys          ?? null,
-              logged_by:      r.logged_by      ?? null,
-              module_weights: r.module_weights  ?? null,
-            });
-          });
-          deleted.forEach(r => {
-            pushItem('lecturas', 'delete', { id: r.id });
-          });
-        }, 0);
+  changed.forEach(r => {
+  pushItem('lecturas', 'upsert', {
+    id: r.id,
+    sistema: r.sistema,
+    fecha: r.fecha,
+    tipo: r.tipo ?? "vigilancia",
+    peso: r.peso ?? null,
+    sueltos: r.sueltos ?? null,
+    ph: r.ph ?? null,
+    temp: r.temp ?? null,
+    salinidad: r.salinidad ?? null,
+    condiciones: r.condiciones ?? null,
+    notas: r.notas ?? "",
+    cosechada: r.cosechada ?? null,
+    sembrado: r.sembrado ?? null,
+    buoys: r.buoys ?? null,
+    logged_by: r.logged_by ?? null,
+    module_weights: r.module_weights ?? null,
+    lines_per_module: r.lines_per_module ?? null,
+  });
+});
+
+deleted.forEach(r => {
+  // No sincronizar eliminaciones.
+  // pushItem('lecturas', 'delete', { id: r.id });
+});
+
+}, 0);
       } else {
         console.log('[AquaOps] syncReadings: no changes detected');
       }
