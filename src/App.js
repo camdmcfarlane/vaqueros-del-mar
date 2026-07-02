@@ -2769,8 +2769,27 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
 
 
 
+// Map a Supabase `usuarios` row to a crew-style entry for assignment dropdowns.
+// Admin/consultor accounts are excluded — they aren't field-assignable.
+const USUARIO_CREW_ROLE = { capitan:"Capitán", vaquero:"Buceador", supervisor:"Support", director:"Lead", farm_manager:"Farm Manager" };
+function eligibleUsuarios(usuarios) {
+  return (usuarios||[])
+    .filter(u => u.active !== false && u.initials && !["admin","consultor"].includes((u.role||"").toLowerCase()))
+    .map(u => ({ initials:u.initials, name:u.name||u.initials, role: USUARIO_CREW_ROLE[(u.role||"").toLowerCase()] || "Buceador", username:u.username }));
+}
+// Merge static CREW with dynamic usuarios, deduped by initials (CREW wins on name).
+function mergeAssignableCrew(usuarios) {
+  const seen = new Set();
+  return [...CREW, ...eligibleUsuarios(usuarios)].filter(c => {
+    if (!c.initials || seen.has(c.initials)) return false;
+    seen.add(c.initials); return true;
+  });
+}
+
 function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+  const [usuarios, setUsuarios] = useState([]);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*').eq('active',true); setUsuarios(data||[]); } catch{} })(); }, []);
   const todayDayIndex = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
   const defaultDay = todayDayIndex === 0 ? "Domingo" : days[todayDayIndex - 1];
   const [selectedDay, setDay] = useState(defaultDay);
@@ -2790,7 +2809,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const [addingCrewFor, setAddingCrewFor] = useState(false);
   const [newCrewForm, setNewCrewForm] = useState({ name:'', initials:'', role:'Buceador' });
   const [newCrewSaving, setNewCrewSaving] = useState(false);
-  const allCrewPlan = [...CREW, ...extraCrew.filter(ec=>!CREW.find(c=>c.initials===ec.initials))];
+  const allCrewPlan = mergeAssignableCrew(usuarios);
 
   async function saveNewCrewPlan() {
     if (!newCrewForm.name || !newCrewForm.initials) return;
@@ -3883,6 +3902,9 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [editingTeam, setEditingTeam]           = useState(null); // sistemaId or null
   const [teamForm, setTeamForm]                 = useState({capitan:'', buceadores:[]});
   const [extraCrew, setExtraCrew]               = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
+  const [usuarios, setUsuarios]                 = useState([]);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*').eq('active',true); setUsuarios(data||[]); } catch{} })(); }, []);
+  const assignableCrew = mergeAssignableCrew(usuarios);
   const [addingHire, setAddingHire]             = useState(false);
   const [hireForm, setHireForm]                 = useState({name:'', initials:'', role:'Buceador'});
   const [addingCrewFor, setAddingCrewFor]       = useState(null); // 'capitan' | 'buceador' | null
@@ -4393,7 +4415,7 @@ return {
                 <select value={teamForm.capitan} onChange={e=>setTeamForm(p=>({...p,capitan:e.target.value}))}
                   style={{...S.input,appearance:"none",fontSize:12}}>
                   <option value="">— {lang==="es"?"Regional por defecto":"Regional default"} —</option>
-                  {[...CREW, ...extraCrew].filter(c=>c.role==="Capitán").map(c=>(
+                  {assignableCrew.filter(c=>["Capitán","Lead"].includes(c.role)).map(c=>(
                     <option key={c.initials} value={c.initials}>{c.initials} – {c.name}</option>
                   ))}
                 </select>
@@ -4402,7 +4424,7 @@ return {
               <div style={{marginBottom:8}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>Buceadores</div>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                  {[...CREW, ...extraCrew].filter(c=>c.role==="Buceador").map(c=>{
+                  {assignableCrew.filter(c=>["Buceador","Support","Pasante"].includes(c.role)).map(c=>{
                     const checked = teamForm.buceadores.includes(c.initials);
                     return (
                       <label key={c.initials} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:7,background:checked?"rgba(13,148,136,.1)":"rgba(255,255,255,.02)",cursor:"pointer",fontSize:12,color:checked?"#0d9488":"#94a3b8"}}>
@@ -4456,7 +4478,7 @@ return {
               )}
             </div>
           ) : (()=>{
-            const allCrew = [...CREW, ...extraCrew];
+            const allCrew = assignableCrew;
             const cap = getCapitan(s);
             const bucs = getBuceadores(s);
             const team = [
@@ -5185,7 +5207,7 @@ return {
                   onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('capitan');setNewCrewForm({name:'',initials:'',role:'Capitán'});}else{F("capitan",e.target.value);setAddingCrewFor(null);}}}
                   style={{...S.input,appearance:"none"}}>
                   <option value="">–</option>
-                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  {assignableCrew.map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
                   <option value="__new__">+ Nuevo</option>
                 </select>
               </div>
@@ -5195,7 +5217,7 @@ return {
                   onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('buceador');setNewCrewForm({name:'',initials:'',role:'Buceador'});}else{F("buceador",e.target.value);setAddingCrewFor(null);}}}
                   style={{...S.input,appearance:"none"}}>
                   <option value="">–</option>
-                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  {assignableCrew.map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
                   <option value="__new__">+ Nuevo</option>
                 </select>
               </div>
