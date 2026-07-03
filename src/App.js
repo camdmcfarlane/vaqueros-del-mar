@@ -6576,6 +6576,17 @@ export default function App() {
   const [online, setOnline]     = useState(navigator.onLine);
   const [syncing, setSyncing]   = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Manual refresh: push any un-synced local work first, then pull latest.
+  // Never overwrites unsynced entries (pullRemoteData preserves queued+pending).
+  const manualRefresh = async () => {
+    if (!navigator.onLine || refreshing) return;
+    setRefreshing(true);
+    try {
+      if (offlineQueue.current.length > 0) await triggerSync();
+      await pullRemoteData();
+    } finally { setRefreshing(false); }
+  };
   const [pendingCount, setPendingCount] = useState(0);
   const offlineQueue     = useRef((() => {
     try { return JSON.parse(localStorage.getItem('aq_offline_queue') || '[]'); } catch { return []; }
@@ -6656,6 +6667,20 @@ export default function App() {
     }, 30000);
     return () => clearInterval(id);
   }, [online, user, sbReady]);
+
+  // ── Refresh when the app returns to the foreground (installed PWA on home screen) ──
+  // The OS pauses the 30s timer while backgrounded; this pulls the latest data the
+  // moment a worker re-opens the app after reconnecting to wifi. Uses the same
+  // push-first-then-pull pattern as the poll, so un-synced local entries are never lost.
+  useEffect(() => {
+    const onForeground = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine || !sbReady) return;
+      if (offlineQueue.current.length > 0) triggerSync();
+      else pullRemoteData();
+    };
+    document.addEventListener('visibilitychange', onForeground);
+    return () => document.removeEventListener('visibilitychange', onForeground);
+  }, [user, sbReady]);
 
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -7245,6 +7270,7 @@ export default function App() {
         @keyframes spin{to{transform:rotate(360deg)}}
         :focus-visible{outline:2px solid #0d9488!important;outline-offset:2px!important;}
         :focus:not(:focus-visible){outline:none;}
+        @keyframes vdmspin{to{transform:rotate(360deg)}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
         @media(min-width:600px){
           .vdm-root{max-width:600px!important;margin:0 auto!important;}
@@ -7266,6 +7292,14 @@ export default function App() {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:10,color:"#475569",background:"rgba(255,255,255,.04)",padding:"3px 8px",borderRadius:12}}>{user.name.split(" ")[0]}</span>
+          {online&&(
+            <button onClick={manualRefresh} disabled={refreshing}
+              title={lang==="es"?"Actualizar datos":"Refresh data"}
+              aria-label={lang==="es"?"Actualizar datos":"Refresh data"}
+              style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(148,163,184,.12)",borderRadius:8,color:"#94a3b8",fontSize:14,cursor:refreshing?"default":"pointer",padding:"2px 8px",lineHeight:1,display:"flex",alignItems:"center",opacity:refreshing?.6:1}}>
+              <span style={{display:"inline-block",animation:refreshing?"vdmspin .8s linear infinite":"none"}}>↻</span>
+            </button>
+          )}
           <SyncDot/>
         </div>
       </div>
