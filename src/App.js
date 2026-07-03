@@ -1048,6 +1048,19 @@ function growthRate(latest, prev) {
 function daysAgo(dateStr) {
   return Math.round((new Date()-new Date(dateStr))/(1000*60*60*24));
 }
+// ─── BIOMASS FRESHNESS RULES ─────────────────────────────────────────────────
+const BIOMASS_STALE_DAYS  = 14; // readings older than this are excluded from biomass totals
+const WEEKLY_CADENCE_DAYS = 7;  // every active system should be weighed at least this often
+function readingAgeDays(r) {
+  if (!r || !r.fecha) return Infinity;
+  return Math.floor((Date.now() - new Date(r.fecha + 'T12:00:00').getTime()) / 86400000);
+}
+// Live biomass for a system = latest peso + sueltos, but 0 if the reading is stale (>14d).
+function systemLiveBiomass(readings, sysId) {
+  const l = latestReading(readings, sysId);
+  if (!l || readingAgeDays(l) > BIOMASS_STALE_DAYS) return 0;
+  return (l.peso || 0) + (l.sueltos || 0);
+}
 
 // ─── ALERT THRESHOLDS ────────────────────────────────────────────────────────
 function computeAlerts(assignedTasks, readings, systems) {
@@ -1092,6 +1105,19 @@ function computeAlerts(assignedTasks, readings, systems) {
       result.push({ type:tdc<0?'tdc_loss':'tdc_slow', severity, sistema:sysId, tdc:parseFloat(tdc.toFixed(2)), capitan:sys?.capitan||null, lastReadingDays:daysSinceReading });
     }
   }
+  // Stale-reading alerts: active systems not weighed within the weekly cadence.
+  for (const s of (systems||[])) {
+    if (s.estado !== 'Activo') continue;
+    const sysR = (bySys[s.id] || []); // already filtered to peso/completo w/ peso above
+    const last = sysR.length ? sysR[sysR.length-1] : null;
+    const ageDays = last ? Math.floor((today - new Date(last.fecha+'T12:00:00'))/86400000) : null;
+    if (ageDays !== null && ageDays < WEEKLY_CADENCE_DAYS) continue; // weighed recently — ok
+    const excluded = ageDays === null || ageDays > BIOMASS_STALE_DAYS; // dropped from biomass total
+    result.push({
+      type:'stale_reading', severity: excluded ? 'farm_manager' : 'ops_mgr',
+      sistema:s.id, capitan:s.capitan||null, lastReadingDays:ageDays, excluded,
+    });
+  }
   return result;
 }
 const ROLE_ALERT_LEVEL = { vaquero:0, capitan:0, supervisor:1, director:2, farm_manager:2, consultor:3, admin:3 };
@@ -1112,10 +1138,12 @@ function AlertBanner({ alerts, onOpenBell }) {
   const lossCount = alerts.filter(a=>a.type==='tdc_loss').length;
   const slowCount = alerts.filter(a=>a.type==='tdc_slow').length;
   const lateCount = alerts.filter(a=>a.type==='task_late').length;
+  const staleCount = alerts.filter(a=>a.type==='stale_reading').length;
   const parts = [];
   if (lossCount) parts.push(`${lossCount} pérdida${lossCount>1?'s':''}`);
   if (slowCount) parts.push(`${slowCount} lenta${slowCount>1?'s':''}`);
   if (lateCount) parts.push(`${lateCount} tarea${lateCount>1?'s':''} vencida${lateCount>1?'s':''}`);
+  if (staleCount) parts.push(`${staleCount} sin pesar`);
   return (
     <div onClick={onOpenBell} style={{ background:bg, borderBottom:`1px solid ${col}30`, padding:'7px 16px', display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
       <span style={{fontSize:14}}>{icon}</span>
@@ -1918,7 +1946,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
   const slowGrowth  = systemMetrics.filter(s=>s.rate!==null&&s.rate>=1&&s.rate<2.5);
   const belowTarget = systemMetrics.filter(s=>s.rate!==null&&s.rate<1);
   const noData      = systemMetrics.filter(s=>s.rate===null);
-  const totalBiomass = active.reduce((sum,s)=>{ const l=latestReading(readings,s.id); return sum+(l?.peso||0); },0);
+  const totalBiomass = active.reduce((sum,s)=> sum + systemLiveBiomass(readings, s.id), 0);
   const dueHarvest  = systemMetrics.filter(s=>s.daysToHarvest!==null&&s.daysToHarvest<=7);
   const dueCleaning = systemMetrics.filter(s=>s.daysToCleaning!==null&&s.daysToCleaning<=5);
 
@@ -1928,7 +1956,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
     const mySystems = systemMetrics.filter(s=>s.buceador===c.initials);
     const rates = mySystems.map(s=>s.rate).filter(r=>r!==null);
     const avgRate = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
-    const totalKg = mySystems.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+    const totalKg = mySystems.reduce((sum,s)=>sum+systemLiveBiomass(readings,s.id),0);
     return { ...c, mySystems, avgRate, totalKg };
   });
 
@@ -2407,7 +2435,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         const regionStats = [...new Set(systems.map(s=>s.region).filter(Boolean))].map(rName=>{
           const rSysAll    = systems.filter(s=>s.region===rName);
           const rSysActive = systemMetrics.filter(s=>s.region===rName);
-          const totalBiomass = rSysActive.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+          const totalBiomass = rSysActive.reduce((sum,s)=>sum+systemLiveBiomass(readings,s.id),0);
           const rates = rSysActive.map(s=>s.rate).filter(r=>r!==null);
           const avgTDC = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
           const sysIds = new Set(rSysAll.map(s=>s.id));
@@ -3566,7 +3594,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     const rates = sysWithRate.map(s=>s.rate).filter(r=>r!==null);
     const avgRate = rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) : null;
     const rateCol = avgRate===null?"#475569":parseFloat(avgRate)>=2.5?"#4ade80":parseFloat(avgRate)>=0?"#0d9488":"#f87171";
-    const totalBio = sysWithRate.reduce((sum,s) => sum + (s.latest?.peso||0), 0);
+    const totalBio = sysWithRate.reduce((sum,s) => sum + systemLiveBiomass(readings,s.id), 0);
 
     return (
       <div style={{padding:"16px 16px 100px"}}>
