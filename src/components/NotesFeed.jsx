@@ -190,8 +190,9 @@ export default function NotesFeed({ user, userSystems = [], alerts = [], onNavig
 
   const biomassAlerts = alerts.filter(a => a.type === 'tdc_loss' || a.type === 'tdc_slow');
   const taskAlerts    = alerts.filter(a => a.type === 'task_late');
+  const staleAlerts   = alerts.filter(a => a.type === 'stale_reading');
   const visibleBiomass = biomassAlerts.filter(a => !snoozes[snoozeKey(a)]);
-  const hasAlerts = visibleBiomass.length > 0 || taskAlerts.length > 0;
+  const hasAlerts = visibleBiomass.length > 0 || taskAlerts.length > 0 || staleAlerts.length > 0;
 
   return (
     <div style={{ padding: '16px 16px 100px' }}>
@@ -213,7 +214,7 @@ export default function NotesFeed({ user, userSystems = [], alerts = [], onNavig
       {hasAlerts && (
         <div style={{ marginBottom:20 }}>
           <div style={{ fontSize:10, color:'#64748b', fontWeight:700, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>
-            Alertas activas · {visibleBiomass.length + taskAlerts.length}
+            Alertas activas · {visibleBiomass.length + taskAlerts.length + staleAlerts.length}
           </div>
 
           {/* Biomass alerts — full cards */}
@@ -251,6 +252,32 @@ export default function NotesFeed({ user, userSystems = [], alerts = [], onNavig
                   }}>{a.daysLate}d</span>
                   <span style={{ fontSize:11, color:'#94a3b8' }}>
                     {a.taskType}{a.sistema ? ` · ${a.sistema}` : ''}{a.assignedTo ? ` · ${a.assignedTo}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Stale-reading alerts — systems overdue for weighing */}
+          {staleAlerts.length > 0 && (
+            <div style={{
+              borderLeft:'2px solid rgba(148,163,184,.3)', paddingLeft:10, marginLeft:4, marginTop: (visibleBiomass.length||taskAlerts.length)?12:0,
+              display:'flex', flexDirection:'column', gap:4,
+            }}>
+              <div style={{ fontSize:10, color:'#94a3b8', fontWeight:700, marginBottom:2 }}>
+                ⚖️ Sin pesar (semanal) · {staleAlerts.length}
+              </div>
+              {staleAlerts.map((a, i) => (
+                <div
+                  key={i}
+                  onClick={() => onNavigateToSystem && onNavigateToSystem(a.sistema)}
+                  style={{ display:'flex', gap:6, alignItems:'baseline', cursor: onNavigateToSystem ? 'pointer' : 'default' }}
+                >
+                  <span style={{ fontSize:10, fontWeight:700, color: a.excluded ? '#fb923c' : '#fbbf24' }}>
+                    {a.lastReadingDays==null ? 'nunca' : `${a.lastReadingDays}d`}
+                  </span>
+                  <span style={{ fontSize:11, color:'#94a3b8' }}>
+                    {a.sistema}{a.capitan ? ` · ${a.capitan}` : ''}{a.excluded ? ' · excluido del total' : ''}
                   </span>
                 </div>
               ))}

@@ -1048,6 +1048,19 @@ function growthRate(latest, prev) {
 function daysAgo(dateStr) {
   return Math.round((new Date()-new Date(dateStr))/(1000*60*60*24));
 }
+// ─── BIOMASS FRESHNESS RULES ─────────────────────────────────────────────────
+const BIOMASS_STALE_DAYS  = 14; // readings older than this are excluded from biomass totals
+const WEEKLY_CADENCE_DAYS = 7;  // every active system should be weighed at least this often
+function readingAgeDays(r) {
+  if (!r || !r.fecha) return Infinity;
+  return Math.floor((Date.now() - new Date(r.fecha + 'T12:00:00').getTime()) / 86400000);
+}
+// Live biomass for a system = latest peso + sueltos, but 0 if the reading is stale (>14d).
+function systemLiveBiomass(readings, sysId) {
+  const l = latestReading(readings, sysId);
+  if (!l || readingAgeDays(l) > BIOMASS_STALE_DAYS) return 0;
+  return (l.peso || 0) + (l.sueltos || 0);
+}
 
 // ─── ALERT THRESHOLDS ────────────────────────────────────────────────────────
 function computeAlerts(assignedTasks, readings, systems) {
@@ -1092,6 +1105,19 @@ function computeAlerts(assignedTasks, readings, systems) {
       result.push({ type:tdc<0?'tdc_loss':'tdc_slow', severity, sistema:sysId, tdc:parseFloat(tdc.toFixed(2)), capitan:sys?.capitan||null, lastReadingDays:daysSinceReading });
     }
   }
+  // Stale-reading alerts: active systems not weighed within the weekly cadence.
+  for (const s of (systems||[])) {
+    if (s.estado !== 'Activo') continue;
+    const sysR = (bySys[s.id] || []); // already filtered to peso/completo w/ peso above
+    const last = sysR.length ? sysR[sysR.length-1] : null;
+    const ageDays = last ? Math.floor((today - new Date(last.fecha+'T12:00:00'))/86400000) : null;
+    if (ageDays !== null && ageDays < WEEKLY_CADENCE_DAYS) continue; // weighed recently — ok
+    const excluded = ageDays === null || ageDays > BIOMASS_STALE_DAYS; // dropped from biomass total
+    result.push({
+      type:'stale_reading', severity: excluded ? 'farm_manager' : 'ops_mgr',
+      sistema:s.id, capitan:s.capitan||null, lastReadingDays:ageDays, excluded,
+    });
+  }
   return result;
 }
 const ROLE_ALERT_LEVEL = { vaquero:0, capitan:0, supervisor:1, director:2, farm_manager:2, consultor:3, admin:3 };
@@ -1112,10 +1138,12 @@ function AlertBanner({ alerts, onOpenBell }) {
   const lossCount = alerts.filter(a=>a.type==='tdc_loss').length;
   const slowCount = alerts.filter(a=>a.type==='tdc_slow').length;
   const lateCount = alerts.filter(a=>a.type==='task_late').length;
+  const staleCount = alerts.filter(a=>a.type==='stale_reading').length;
   const parts = [];
   if (lossCount) parts.push(`${lossCount} pérdida${lossCount>1?'s':''}`);
   if (slowCount) parts.push(`${slowCount} lenta${slowCount>1?'s':''}`);
   if (lateCount) parts.push(`${lateCount} tarea${lateCount>1?'s':''} vencida${lateCount>1?'s':''}`);
+  if (staleCount) parts.push(`${staleCount} sin pesar`);
   return (
     <div onClick={onOpenBell} style={{ background:bg, borderBottom:`1px solid ${col}30`, padding:'7px 16px', display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
       <span style={{fontSize:14}}>{icon}</span>
@@ -1918,7 +1946,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
   const slowGrowth  = systemMetrics.filter(s=>s.rate!==null&&s.rate>=1&&s.rate<2.5);
   const belowTarget = systemMetrics.filter(s=>s.rate!==null&&s.rate<1);
   const noData      = systemMetrics.filter(s=>s.rate===null);
-  const totalBiomass = active.reduce((sum,s)=>{ const l=latestReading(readings,s.id); return sum+(l?.peso||0); },0);
+  const totalBiomass = active.reduce((sum,s)=> sum + systemLiveBiomass(readings, s.id), 0);
   const dueHarvest  = systemMetrics.filter(s=>s.daysToHarvest!==null&&s.daysToHarvest<=7);
   const dueCleaning = systemMetrics.filter(s=>s.daysToCleaning!==null&&s.daysToCleaning<=5);
 
@@ -1928,7 +1956,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
     const mySystems = systemMetrics.filter(s=>s.buceador===c.initials);
     const rates = mySystems.map(s=>s.rate).filter(r=>r!==null);
     const avgRate = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
-    const totalKg = mySystems.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+    const totalKg = mySystems.reduce((sum,s)=>sum+systemLiveBiomass(readings,s.id),0);
     return { ...c, mySystems, avgRate, totalKg };
   });
 
@@ -2407,7 +2435,7 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
         const regionStats = [...new Set(systems.map(s=>s.region).filter(Boolean))].map(rName=>{
           const rSysAll    = systems.filter(s=>s.region===rName);
           const rSysActive = systemMetrics.filter(s=>s.region===rName);
-          const totalBiomass = rSysActive.reduce((sum,s)=>sum+(s.latest?.peso||0),0);
+          const totalBiomass = rSysActive.reduce((sum,s)=>sum+systemLiveBiomass(readings,s.id),0);
           const rates = rSysActive.map(s=>s.rate).filter(r=>r!==null);
           const avgTDC = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
           const sysIds = new Set(rSysAll.map(s=>s.id));
@@ -2769,8 +2797,30 @@ function SupervisorDashboard({ assignedTasks, systems, readings, lang, announcem
 
 
 
+// Map a Supabase `usuarios` row to a crew-style entry for assignment dropdowns.
+// Admin/consultor accounts are excluded — they aren't field-assignable.
+const USUARIO_CREW_ROLE = { capitan:"Capitán", vaquero:"Buceador", supervisor:"Support", director:"Lead", farm_manager:"Farm Manager" };
+function eligibleUsuarios(usuarios) {
+  return (usuarios||[])
+    .filter(u => u.active !== false && u.initials && !["admin","consultor"].includes((u.role||"").toLowerCase()))
+    .map(u => ({ initials:u.initials, name:u.name||u.initials, role: USUARIO_CREW_ROLE[(u.role||"").toLowerCase()] || "Buceador", username:u.username }));
+}
+// Merge static CREW with dynamic usuarios, deduped by initials (CREW wins on name).
+// Any initials marked inactive in usuarios are excluded — even static CREW members —
+// so a director deactivating someone removes them from every assignment surface.
+function mergeAssignableCrew(usuarios) {
+  const inactive = new Set((usuarios||[]).filter(u => u.active === false && u.initials).map(u => u.initials));
+  const seen = new Set();
+  return [...CREW, ...eligibleUsuarios(usuarios)].filter(c => {
+    if (!c.initials || seen.has(c.initials) || inactive.has(c.initials)) return false;
+    seen.add(c.initials); return true;
+  });
+}
+
 function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+  const [usuarios, setUsuarios] = useState([]);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*'); setUsuarios(data||[]); } catch{} })(); }, []);
   const todayDayIndex = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
   const defaultDay = todayDayIndex === 0 ? "Domingo" : days[todayDayIndex - 1];
   const [selectedDay, setDay] = useState(defaultDay);
@@ -2790,7 +2840,7 @@ function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const [addingCrewFor, setAddingCrewFor] = useState(false);
   const [newCrewForm, setNewCrewForm] = useState({ name:'', initials:'', role:'Buceador' });
   const [newCrewSaving, setNewCrewSaving] = useState(false);
-  const allCrewPlan = [...CREW, ...extraCrew.filter(ec=>!CREW.find(c=>c.initials===ec.initials))];
+  const allCrewPlan = mergeAssignableCrew(usuarios);
 
   async function saveNewCrewPlan() {
     if (!newCrewForm.name || !newCrewForm.initials) return;
@@ -3510,6 +3560,20 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     } catch {}
   }
 
+  // Director+ only: deactivate a person. Sets usuarios.active=false, which removes them
+  // from login (dynamic path) and every assignment dropdown. History (logged_by) is kept.
+  const canRemove = ["admin","consultor","director","farm_manager"].includes(user?.role);
+  async function deactivateUser(initials, name) {
+    if (!window.confirm(lang==="es"
+      ? `¿Desactivar a ${name} (${initials})? Ya no podrá iniciar sesión ni ser asignado. Su historial de lecturas se conserva. NO reutilices sus iniciales para otra persona.`
+      : `Deactivate ${name} (${initials})? They can no longer log in or be assigned. Their reading history is kept. Do NOT reuse their initials for anyone else.`)) return;
+    try {
+      await sbStatic.from('usuarios').update({ active:false }).eq('initials', initials);
+      setDynamicUsers(prev => prev.filter(u => u.initials !== initials));
+      setSelectedPerson(null);
+    } catch {}
+  }
+
   // Merge static CREW + dynamic users (dedupe by initials)
   const staticInits = new Set(CREW.map(c=>c.initials));
   const allCrew = [...CREW, ...dynamicUsers.filter(u=>!staticInits.has(u.initials))];
@@ -3547,7 +3611,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     const rates = sysWithRate.map(s=>s.rate).filter(r=>r!==null);
     const avgRate = rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) : null;
     const rateCol = avgRate===null?"#475569":parseFloat(avgRate)>=2.5?"#4ade80":parseFloat(avgRate)>=0?"#0d9488":"#f87171";
-    const totalBio = sysWithRate.reduce((sum,s) => sum + (s.latest?.peso||0), 0);
+    const totalBio = sysWithRate.reduce((sum,s) => sum + systemLiveBiomass(readings,s.id), 0);
 
     return (
       <div style={{padding:"16px 16px 100px"}}>
@@ -3590,6 +3654,12 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               )}
             </div>
             <div style={{marginTop:8,fontSize:11,color:"#475569"}}>Usuario: <span style={{fontFamily:"monospace",color:"#94a3b8"}}>{personDynamic.username}</span></div>
+            {canRemove && personDynamic.initials !== user?.initials && (
+              <button onClick={()=>deactivateUser(personDynamic.initials, personDynamic.name)}
+                style={{marginTop:10,width:"100%",padding:"8px 0",borderRadius:9,border:"1px solid rgba(248,113,113,.35)",background:"rgba(248,113,113,.06)",color:"#f87171",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                {lang==="es"?"Desactivar del sistema":"Deactivate from system"}
+              </button>
+            )}
           </div>
         )}
         {sysWithRate.length > 0 && (
@@ -3883,6 +3953,9 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [editingTeam, setEditingTeam]           = useState(null); // sistemaId or null
   const [teamForm, setTeamForm]                 = useState({capitan:'', buceadores:[]});
   const [extraCrew, setExtraCrew]               = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
+  const [usuarios, setUsuarios]                 = useState([]);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*'); setUsuarios(data||[]); } catch{} })(); }, []);
+  const assignableCrew = mergeAssignableCrew(usuarios);
   const [addingHire, setAddingHire]             = useState(false);
   const [hireForm, setHireForm]                 = useState({name:'', initials:'', role:'Buceador'});
   const [addingCrewFor, setAddingCrewFor]       = useState(null); // 'capitan' | 'buceador' | null
@@ -3895,6 +3968,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     sueltos:        "",
     buoys:          Array(15).fill(""),
     module_weights: Array(15).fill(""),
+    lineas:         "",
     salt:           "",
     ph:             "",
     temp:           "",
@@ -4126,7 +4200,8 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       const filled = (readingForm.module_weights || []).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
       if (filled.length >= 4) {
         const avg = filled.reduce((s,v) => s + v, 0) / filled.length;
-        peso = Math.round(avg * 15 * (thisSystem?.lineas || 1));
+        const lineasUsed = parseInt(readingForm.lineas !== "" ? readingForm.lineas : (thisSystem?.lineas || 1)) || 1;
+        peso = Math.round(avg * 15 * lineasUsed);
         moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
       } else if (filled.length > 0) {
         return; // started commercial entry but < 4 modules — block save
@@ -4206,7 +4281,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     setShowGrowthChart(sistemaId); // Auto-show growth chart after save
     setReadingForm({
       fecha: new Date().toISOString().slice(0,10),
-      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""), module_weights:Array(15).fill(""),
+      tipo:"peso", peso:"", sueltos:"", buoys:Array(15).fill(""), module_weights:Array(15).fill(""), lineas:"",
       salt:"", ph:"", temp:"", salinidad:"", notas:"", foto:null,
       cosechada:"", sembrado:"", aguas:"", condiciones:"",
     });
@@ -4391,7 +4466,7 @@ return {
                 <select value={teamForm.capitan} onChange={e=>setTeamForm(p=>({...p,capitan:e.target.value}))}
                   style={{...S.input,appearance:"none",fontSize:12}}>
                   <option value="">— {lang==="es"?"Regional por defecto":"Regional default"} —</option>
-                  {[...CREW, ...extraCrew].filter(c=>c.role==="Capitán").map(c=>(
+                  {assignableCrew.filter(c=>["Capitán","Lead"].includes(c.role)).map(c=>(
                     <option key={c.initials} value={c.initials}>{c.initials} – {c.name}</option>
                   ))}
                 </select>
@@ -4400,7 +4475,7 @@ return {
               <div style={{marginBottom:8}}>
                 <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>Buceadores</div>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                  {[...CREW, ...extraCrew].filter(c=>c.role==="Buceador").map(c=>{
+                  {assignableCrew.filter(c=>["Buceador","Support","Pasante"].includes(c.role)).map(c=>{
                     const checked = teamForm.buceadores.includes(c.initials);
                     return (
                       <label key={c.initials} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:7,background:checked?"rgba(13,148,136,.1)":"rgba(255,255,255,.02)",cursor:"pointer",fontSize:12,color:checked?"#0d9488":"#94a3b8"}}>
@@ -4454,7 +4529,7 @@ return {
               )}
             </div>
           ) : (()=>{
-            const allCrew = [...CREW, ...extraCrew];
+            const allCrew = assignableCrew;
             const cap = getCapitan(s);
             const bucs = getBuceadores(s);
             const team = [
@@ -4561,7 +4636,20 @@ return {
                 <div style={{marginBottom:10}}>
                   <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
                     Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
-                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15{(s.lineas||1)>1?` × ${s.lineas} líneas`:""}</span>
+                    <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15 × líneas</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <span style={{fontSize:10,color:"#64748b",fontWeight:700}}>Líneas por módulo</span>
+                    <input type="number" min="1" inputMode="numeric"
+                      value={readingForm.lineas!==""?readingForm.lineas:(s.lineas||1)}
+                      onChange={e=>{
+                        const lin=e.target.value;
+                        const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
+                        const avg=filled.length?filled.reduce((a,v)=>a+v,0)/filled.length:0;
+                        const biomass=filled.length>=4?Math.round(avg*15*(parseInt(lin)||1)):0;
+                        setReadingForm(p=>({...p,lineas:lin,peso:biomass>0?String(biomass):p.peso}));
+                      }}
+                      style={{...S.input,fontSize:12,padding:"5px 8px",width:70}}/>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
                     {Array.from({length:15},(_,i)=>(
@@ -4574,7 +4662,7 @@ return {
                             mw[i]=e.target.value;
                             const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
                             const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                            const biomass=filled.length>=4?Math.round(avg*15*(s.lineas||1)):0;
+                            const biomass=filled.length>=4?Math.round(avg*15*(parseInt(readingForm.lineas!==""?readingForm.lineas:(s.lineas||1))||1)):0;
                             setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
                           }}
                           style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -4583,7 +4671,7 @@ return {
                   </div>
                   {(()=>{
                     const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                    const biomass=filled.length>=4?Math.round(filled.reduce((a,v)=>a+v,0)/filled.length*15*(s.lineas||1)):0;
+                    const biomass=filled.length>=4?Math.round(filled.reduce((a,v)=>a+v,0)/filled.length*15*(parseInt(readingForm.lineas!==""?readingForm.lineas:(s.lineas||1))||1)):0;
                     return filled.length>0&&(
                       <div style={{borderRadius:8,padding:"6px 10px",marginBottom:6,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulos{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
@@ -4737,7 +4825,7 @@ return {
             return Object.entries(dateGroups)
               .sort(([a],[b])=>b.localeCompare(a))
               .map(([fecha,tipoMap],groupIdx)=>{
-                const pesoReadings   = tipoMap["peso"]       ||[];
+                const pesoReadings   = [...(tipoMap["peso"]||[]), ...(tipoMap["completo"]||[])];
                 const paramReadings  = tipoMap["parametros"] ||[];
                 const allInGroup     = [...pesoReadings,...paramReadings];
 
@@ -5170,7 +5258,7 @@ return {
                   onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('capitan');setNewCrewForm({name:'',initials:'',role:'Capitán'});}else{F("capitan",e.target.value);setAddingCrewFor(null);}}}
                   style={{...S.input,appearance:"none"}}>
                   <option value="">–</option>
-                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  {assignableCrew.map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
                   <option value="__new__">+ Nuevo</option>
                 </select>
               </div>
@@ -5180,7 +5268,7 @@ return {
                   onChange={e=>{if(e.target.value==='__new__'){setAddingCrewFor('buceador');setNewCrewForm({name:'',initials:'',role:'Buceador'});}else{F("buceador",e.target.value);setAddingCrewFor(null);}}}
                   style={{...S.input,appearance:"none"}}>
                   <option value="">–</option>
-                  {[...CREW,...extraCrew].map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
+                  {assignableCrew.map(c=><option key={c.initials} value={c.initials}>{c.initials} – {c.name.split(" ")[0]}</option>)}
                   <option value="__new__">+ Nuevo</option>
                 </select>
               </div>
@@ -6511,6 +6599,17 @@ export default function App() {
   const [online, setOnline]     = useState(navigator.onLine);
   const [syncing, setSyncing]   = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Manual refresh: push any un-synced local work first, then pull latest.
+  // Never overwrites unsynced entries (pullRemoteData preserves queued+pending).
+  const manualRefresh = async () => {
+    if (!navigator.onLine || refreshing) return;
+    setRefreshing(true);
+    try {
+      if (offlineQueue.current.length > 0) await triggerSync();
+      await pullRemoteData();
+    } finally { setRefreshing(false); }
+  };
   const [pendingCount, setPendingCount] = useState(0);
   const offlineQueue     = useRef((() => {
     try { return JSON.parse(localStorage.getItem('aq_offline_queue') || '[]'); } catch { return []; }
@@ -6591,6 +6690,20 @@ export default function App() {
     }, 30000);
     return () => clearInterval(id);
   }, [online, user, sbReady]);
+
+  // ── Refresh when the app returns to the foreground (installed PWA on home screen) ──
+  // The OS pauses the 30s timer while backgrounded; this pulls the latest data the
+  // moment a worker re-opens the app after reconnecting to wifi. Uses the same
+  // push-first-then-pull pattern as the poll, so un-synced local entries are never lost.
+  useEffect(() => {
+    const onForeground = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine || !sbReady) return;
+      if (offlineQueue.current.length > 0) triggerSync();
+      else pullRemoteData();
+    };
+    document.addEventListener('visibilitychange', onForeground);
+    return () => document.removeEventListener('visibilitychange', onForeground);
+  }, [user, sbReady]);
 
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -7180,6 +7293,7 @@ export default function App() {
         @keyframes spin{to{transform:rotate(360deg)}}
         :focus-visible{outline:2px solid #0d9488!important;outline-offset:2px!important;}
         :focus:not(:focus-visible){outline:none;}
+        @keyframes vdmspin{to{transform:rotate(360deg)}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
         @media(min-width:600px){
           .vdm-root{max-width:600px!important;margin:0 auto!important;}
@@ -7201,6 +7315,14 @@ export default function App() {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:10,color:"#475569",background:"rgba(255,255,255,.04)",padding:"3px 8px",borderRadius:12}}>{user.name.split(" ")[0]}</span>
+          {online&&(
+            <button onClick={manualRefresh} disabled={refreshing}
+              title={lang==="es"?"Actualizar datos":"Refresh data"}
+              aria-label={lang==="es"?"Actualizar datos":"Refresh data"}
+              style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(148,163,184,.12)",borderRadius:8,color:"#94a3b8",fontSize:14,cursor:refreshing?"default":"pointer",padding:"2px 8px",lineHeight:1,display:"flex",alignItems:"center",opacity:refreshing?.6:1}}>
+              <span style={{display:"inline-block",animation:refreshing?"vdmspin .8s linear infinite":"none"}}>↻</span>
+            </button>
+          )}
           <SyncDot/>
         </div>
       </div>
