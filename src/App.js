@@ -2806,10 +2806,13 @@ function eligibleUsuarios(usuarios) {
     .map(u => ({ initials:u.initials, name:u.name||u.initials, role: USUARIO_CREW_ROLE[(u.role||"").toLowerCase()] || "Buceador", username:u.username }));
 }
 // Merge static CREW with dynamic usuarios, deduped by initials (CREW wins on name).
+// Any initials marked inactive in usuarios are excluded — even static CREW members —
+// so a director deactivating someone removes them from every assignment surface.
 function mergeAssignableCrew(usuarios) {
+  const inactive = new Set((usuarios||[]).filter(u => u.active === false && u.initials).map(u => u.initials));
   const seen = new Set();
   return [...CREW, ...eligibleUsuarios(usuarios)].filter(c => {
-    if (!c.initials || seen.has(c.initials)) return false;
+    if (!c.initials || seen.has(c.initials) || inactive.has(c.initials)) return false;
     seen.add(c.initials); return true;
   });
 }
@@ -2817,7 +2820,7 @@ function mergeAssignableCrew(usuarios) {
 function PlanSemanal({ assignedTasks, setAssignedTasks, systems, lang, user }) {
   const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
   const [usuarios, setUsuarios] = useState([]);
-  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*').eq('active',true); setUsuarios(data||[]); } catch{} })(); }, []);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*'); setUsuarios(data||[]); } catch{} })(); }, []);
   const todayDayIndex = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
   const defaultDay = todayDayIndex === 0 ? "Domingo" : days[todayDayIndex - 1];
   const [selectedDay, setDay] = useState(defaultDay);
@@ -3557,6 +3560,20 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
     } catch {}
   }
 
+  // Director+ only: deactivate a person. Sets usuarios.active=false, which removes them
+  // from login (dynamic path) and every assignment dropdown. History (logged_by) is kept.
+  const canRemove = ["admin","consultor","director","farm_manager"].includes(user?.role);
+  async function deactivateUser(initials, name) {
+    if (!window.confirm(lang==="es"
+      ? `¿Desactivar a ${name} (${initials})? Ya no podrá iniciar sesión ni ser asignado. Su historial de lecturas se conserva. NO reutilices sus iniciales para otra persona.`
+      : `Deactivate ${name} (${initials})? They can no longer log in or be assigned. Their reading history is kept. Do NOT reuse their initials for anyone else.`)) return;
+    try {
+      await sbStatic.from('usuarios').update({ active:false }).eq('initials', initials);
+      setDynamicUsers(prev => prev.filter(u => u.initials !== initials));
+      setSelectedPerson(null);
+    } catch {}
+  }
+
   // Merge static CREW + dynamic users (dedupe by initials)
   const staticInits = new Set(CREW.map(c=>c.initials));
   const allCrew = [...CREW, ...dynamicUsers.filter(u=>!staticInits.has(u.initials))];
@@ -3637,6 +3654,12 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
               )}
             </div>
             <div style={{marginTop:8,fontSize:11,color:"#475569"}}>Usuario: <span style={{fontFamily:"monospace",color:"#94a3b8"}}>{personDynamic.username}</span></div>
+            {canRemove && personDynamic.initials !== user?.initials && (
+              <button onClick={()=>deactivateUser(personDynamic.initials, personDynamic.name)}
+                style={{marginTop:10,width:"100%",padding:"8px 0",borderRadius:9,border:"1px solid rgba(248,113,113,.35)",background:"rgba(248,113,113,.06)",color:"#f87171",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                {lang==="es"?"Desactivar del sistema":"Deactivate from system"}
+              </button>
+            )}
           </div>
         )}
         {sysWithRate.length > 0 && (
@@ -3931,7 +3954,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
   const [teamForm, setTeamForm]                 = useState({capitan:'', buceadores:[]});
   const [extraCrew, setExtraCrew]               = useState(() => { try { return JSON.parse(localStorage.getItem('aq_extra_crew')||'[]'); } catch { return []; } });
   const [usuarios, setUsuarios]                 = useState([]);
-  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*').eq('active',true); setUsuarios(data||[]); } catch{} })(); }, []);
+  useEffect(() => { (async()=>{ try { const {data}=await sbStatic.from('usuarios').select('*'); setUsuarios(data||[]); } catch{} })(); }, []);
   const assignableCrew = mergeAssignableCrew(usuarios);
   const [addingHire, setAddingHire]             = useState(false);
   const [hireForm, setHireForm]                 = useState({name:'', initials:'', role:'Buceador'});
