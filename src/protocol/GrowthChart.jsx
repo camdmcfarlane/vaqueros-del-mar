@@ -9,7 +9,7 @@ function calcTDC(pesoNuevo, pesoAnterior, dias, cosechadaAnterior = 0, sembradoN
   const adjNow  = (pesoNuevo  || 0) + (sueltosNuevo    || 0) - (sembradoNuevo    || 0);
   const adjPrev = (pesoAnterior || 0) + (sueltosAnterior || 0) - (cosechadaAnterior || 0);
   if (!adjNow || !adjPrev || adjNow <= 0 || adjPrev <= 0 || !dias || dias <= 0) return null;
-  return (Math.log(adjNow / adjPrev) / dias * 100).toFixed(2);
+  return ((Math.pow(adjNow / adjPrev, 1 / dias) - 1) * 100).toFixed(2);
 }
 
 const COND_COLORS = {

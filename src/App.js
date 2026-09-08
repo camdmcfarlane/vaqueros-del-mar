@@ -1067,7 +1067,7 @@ function computeAlerts(assignedTasks, readings, systems) {
     const adj1 = (prev.peso||0) + (prev.sueltos||0) - (prev.cosechada||0);
     const adj2 = (curr.peso||0) + (curr.sueltos||0);
     if (adj1 <= 0 || adj2 <= 0) continue;
-    const tdc = (Math.log(adj2/adj1)/days)*100;
+    const tdc = (Math.pow(adj2/adj1, 1/days) - 1) * 100;
     if (tdc < 3) {
       const severity = tdc < 0 ? 'ceo' : tdc < 1 ? 'farm_manager' : 'ops_mgr';
       const sys = (systems||[]).find(s => s.id === sysId);
@@ -1843,7 +1843,7 @@ function buildLivePruebas(readings, systems) {
       const prevR = [...sysReadings].reverse().find(rd => mondayOf(rd.fecha) <= prevWk);
       if (!currR || !prevR || currR.id === prevR.id) continue;
       const days = Math.max(1, (new Date(currR.fecha) - new Date(prevR.fecha)) / 864e5);
-      const tdc = (Math.log(currR.peso / prevR.peso) / days) * 100;
+      const tdc = (Math.pow(currR.peso / prevR.peso, 1/days) - 1) * 100;
       if (tdc >= 6) b++;
       else if (tdc >= 3) v++;
       else if (tdc >= 0) a++;
@@ -3155,7 +3155,7 @@ function PersonalDashboard({ initials, onBack, assignedTasks, systems, readings,
       const adjNow  = (latest.peso||0) + (latest.sueltos||0);
       const adjPrev = (prev.peso||0) + (prev.sueltos||0) - (prev.cosechada||0);
       if (adjNow > 0 && adjPrev > 0) {
-        rate = parseFloat(((Math.log(adjNow/adjPrev)/days)*100).toFixed(2));
+        rate = parseFloat(((Math.pow(adjNow/adjPrev, 1/days) - 1)*100).toFixed(2));
       }
     }
     return { ...s, latest, rate };
@@ -3523,7 +3523,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
       let rate = null;
       if (latest && prev && prev.peso) {
         const days = Math.max(1,(new Date(latest.fecha)-new Date(prev.fecha))/(1000*60*60*24));
-        rate = parseFloat(((Math.log(latest.peso/prev.peso)/days)*100).toFixed(2));
+        rate = parseFloat(((Math.pow(latest.peso/prev.peso, 1/days) - 1)*100).toFixed(2));
       }
       return { ...s, latest, rate, daysMissed };
     });
@@ -3758,7 +3758,7 @@ function EquipoTab({ assignedTasks, weeklyIncidents, setWeeklyIncidents, timecar
           const lat = rs[rs.length-1], prev = rs[rs.length-2];
           if (lat && prev && prev.peso) {
             const days = Math.max(1,(new Date(lat.fecha)-new Date(prev.fecha))/(1000*60*60*24));
-            return [parseFloat(((Math.log(lat.peso/prev.peso)/days)*100).toFixed(2))];
+            return [parseFloat(((Math.pow(lat.peso/prev.peso, 1/days) - 1)*100).toFixed(2))];
           }
           return [];
         });
@@ -4079,7 +4079,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
     if (!adj1 || !adj2 || adj1 <= 0 || adj2 <= 0 || !fecha1 || !fecha2) return null;
     const days = (new Date(fecha2) - new Date(fecha1)) / (1000 * 60 * 60 * 24);
     if (days <= 0) return null;
-    return parseFloat(((Math.log(adj2 / adj1) / days) * 100).toFixed(4));
+    return parseFloat(((Math.pow(adj2/adj1, 1/days) - 1) * 100).toFixed(4));
   };
 
   // Recalculate TDC for all readings of a system after any edit
@@ -4109,10 +4109,20 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       const filled = (readingForm.module_weights || []).map((v,i) => ({ i, v: parseFloat(v) })).filter(x => !isNaN(x.v) && x.v > 0);
       if (filled.length < 4) return; // require minimum 4
       const avg = filled.reduce((s,x) => s + x.v, 0) / filled.length;
-      peso = Math.round(avg * 15);
+      peso = Math.round(avg * (thisSystem?.modulos || 15));
       moduleWeightsOut = readingForm.module_weights.map(v => parseFloat(v) || null);
     }
     if (isPeso && (!peso || peso <= 0)) return;
+
+    // ── Validación de peso anómalo ──
+    const MAX_PESO_G = 500_000; // 500 kg como límite máximo razonable
+    if (peso && peso > MAX_PESO_G) {
+      addToast(
+        `⚠ Peso ${(peso/1000).toFixed(1)} kg parece inusualmente alto. Verifica los módulos antes de guardar.`,
+        "warning"
+      );
+      return; // No guardar hasta que el usuario corrija
+    }
     if (!isPeso && !readingForm.salt && !readingForm.ph && !readingForm.temp) return;
 
     // ── Duplicate detection: same sistema + fecha + tipo ──
@@ -4234,6 +4244,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
 
   const EMPTY = {id:"",region:"Bahía Azul",poligono:1,pueblo:"",tipo:"Canasta",familia:"",profundidad:"",materiales:"Tie-tie",semillas:"Brazil",estado:"Activo",coordenadas:"",fechaInstalacion:new Date().toISOString().slice(0,10),capitan:"",buceador:"",modulos:0,notas:""};
   const [form, setForm] = useState(EMPTY);
+  const [originalId, setOriginalId] = useState(null);
   const F=(k,v)=>setForm(p=>({...p,[k]:v}));
 
   async function saveNewCrew() {
@@ -4272,7 +4283,7 @@ function SistemasTab({ systems, setSystems, readings, setReadings, lang, user,
       const adj1 = (pr.peso||0)+(pr.sueltos||0)-(pr.cosechada||0);
       const adj2 = (lr.peso||0)+(lr.sueltos||0);
       const days = Math.max(1,(new Date(lr.fecha)-new Date(pr.fecha))/86400000);
-      if (adj1>0&&adj2>0) tdc = parseFloat(((Math.log(adj2/adj1)/days)*100).toFixed(2));
+      if (adj1>0&&adj2>0) tdc = parseFloat(((Math.pow(adj2/adj1, 1/days) - 1)*100).toFixed(2));
     }
 return {
   ...s,
@@ -4302,14 +4313,39 @@ return {
 
   const handleSave = ()=>{
     if(!form.id) return;
-    const existing = systems.find(s=>s.id===form.id);
-    const isNew = !existing;
-    if (isNew && systems.some(s => s.id === form.id)) {
-      // Shouldn't reach here since isNew checks find() — but safety check
-      addToast(`⚠ Sistema ${form.id} ya existe — se actualizó.`, "warning");
+
+    const isRename = originalId && originalId !== form.id;
+    const isNew    = !originalId; // no originalId = truly new system
+
+    // If renaming: check the new ID doesn't already exist as a different system
+    if (isRename && systems.some(s => s.id === form.id)) {
+      addToast(`⚠ El ID ${form.id} ya existe. Elige un nombre diferente.`, "warning");
+      return;
     }
-    setSystems(prev=>{ const e=prev.find(s=>s.id===form.id); return e?prev.map(s=>s.id===form.id?form:s):[...prev,form]; });
-    if (isNew) addToast(`✓ Sistema ${form.id} creado`, "success");
+
+    setSystems(prev => {
+      if (isNew) {
+        // Creating a brand-new system
+        if (prev.some(s => s.id === form.id)) {
+          addToast(`⚠ Sistema ${form.id} ya existe.`, "warning");
+          return prev;
+        }
+        return [...prev, form];
+      }
+      if (isRename) {
+        // Rename: remove old entry, add updated entry with new id
+        // Also update all readings that reference the old id
+        setReadings(r => r.map(rd => rd.sistema === originalId ? { ...rd, sistema: form.id } : rd));
+        return prev.map(s => s.id === originalId ? { ...form } : s);
+      }
+      // Normal edit (same id)
+      return prev.map(s => s.id === form.id ? form : s);
+    });
+
+    if (isNew)    addToast(`✓ Sistema ${form.id} creado`, "success");
+    if (isRename) addToast(`✓ Sistema renombrado: ${originalId} → ${form.id}`, "success");
+
+    setOriginalId(null);
     setShowForm(false);
   };
 
@@ -4544,21 +4580,21 @@ return {
                   {["Comercial","Sistema 75m"].includes(s.tipo) ? (
                     <div style={{marginBottom:8}}>
                       <div style={{fontSize:10,color:"#64748b",marginBottom:6,fontWeight:700}}>
-                        {s.id} — Módulos 1–15 (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
-                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × 15</span>
+                        {s.id} — Módulos 1–{s.modulos || 15} (g) · <span style={{color:"#fbbf24"}}>mínimo 4</span>
+                        <span style={{fontSize:9,color:"#334155",marginLeft:6,fontWeight:400}}>Biomasa = promedio × {s.modulos || 15}</span>
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-                        {Array.from({length:15},(_,i)=>(
+                        {Array.from({length: s.modulos || 15},(_,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
                             <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
                             <input type="number" placeholder="—"
                               value={readingForm.module_weights?.[i]||""}
                               onChange={e=>{
-                                const mw=[...(readingForm.module_weights||Array(15).fill(""))];
+                                const mw=[...(readingForm.module_weights||Array(s.modulos||15).fill(""))];
                                 mw[i]=e.target.value;
                                 const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
                                 const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                                const biomass=filled.length>=4?Math.round(avg*15):0;
+                                const biomass=filled.length>=4?Math.round(avg*(s.modulos||15)):0;
                                 setReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):""}));
                               }}
                               style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -4566,13 +4602,44 @@ return {
                         ))}
                       </div>
                       {(()=>{
-                        const filled=(readingForm.module_weights||[]).map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                        const avg=filled.length?filled.reduce((s,v)=>s+v,0)/filled.length:0;
-                        const biomass=filled.length>=4?Math.round(avg*15):0;
-                        return filled.length>0&&(
-                          <div style={{borderRadius:8,padding:"6px 10px",marginBottom:8,background:"rgba(13,148,136,.08)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <span style={{fontSize:11,color:"#64748b"}}>{filled.length} módulo{filled.length!==1?"s":""} pesado{filled.length!==1?"s":""}{filled.length<4&&<span style={{color:"#f87171",marginLeft:4}}>· faltan {4-filled.length}</span>}</span>
-                            {biomass>0&&<span style={{fontSize:14,fontWeight:800,color:"#2dd4bf",fontFamily:"monospace"}}>{(biomass/1000).toFixed(2)} kg biomasa</span>}
+                        const totalMod = s.modulos || 15;
+                        const filledPairs=(readingForm.module_weights||[])
+                          .map((v,i)=>({m:i+1, v:parseFloat(v)}))
+                          .filter(x=>!isNaN(x.v)&&x.v>0);
+                        const filledCount=filledPairs.length;
+                        const avg=filledCount?filledPairs.reduce((s,x)=>s+x.v,0)/filledCount:0;
+                        const biomass=filledCount>=4?Math.round(avg*totalMod):0;
+                        const ready=filledCount>=4;
+                        if(filledCount===0) return null;
+                        return (
+                          <div style={{borderRadius:10,marginBottom:8,background:"rgba(15,23,42,.75)",border:"1px solid rgba(255,255,255,.08)",overflow:"hidden"}}>
+                            {/* Header */}
+                            <div style={{padding:"7px 12px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <span style={{fontSize:10,fontWeight:800,letterSpacing:.5,color:"#94a3b8"}}>ACUMULADO</span>
+                              <span style={{fontSize:10,fontWeight:700,fontFamily:"monospace",color:ready?"#2dd4bf":"#fbbf24"}}>{filledCount}/{totalMod} módulos pesados</span>
+                            </div>
+                            {/* Lista de módulos llenos */}
+                            <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:"5px 8px"}}>
+                              {filledPairs.map(x=>(
+                                <span key={x.m} style={{fontSize:10.5,fontFamily:"monospace",color:"#e2e8f0"}}>
+                                  <span style={{color:"#64748b"}}>M{x.m}:</span> {Math.round(x.v)}g
+                                </span>
+                              ))}
+                            </div>
+                            {/* Promedio + Biomasa o progreso */}
+                            {ready ? (
+                              <div style={{padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                                <span style={{fontSize:11,color:"#94a3b8"}}>Promedio: <b style={{color:"#e2e8f0",fontFamily:"monospace"}}>{Math.round(avg)}g</b></span>
+                                <span style={{fontSize:11,color:"#94a3b8"}}>Biomasa: <b style={{color:"#2dd4bf",fontFamily:"monospace",fontSize:14}}>{biomass.toLocaleString()}g</b> <b style={{color:"#2dd4bf",fontFamily:"monospace"}}>{(biomass/1000).toFixed(2)}kg</b></span>
+                              </div>
+                            ) : (
+                              <div style={{padding:"8px 12px"}}>
+                                <div style={{fontSize:11,color:"#fbbf24",fontWeight:700,marginBottom:5}}>Faltan {4-filledCount} módulo{(4-filledCount)!==1?"s":""} para el mínimo</div>
+                                <div style={{height:6,borderRadius:4,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
+                                  <div style={{height:"100%",width:`${Math.min(100,(filledCount/4)*100)}%`,background:"#f87171",borderRadius:4,transition:"width .2s"}}/>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
@@ -4797,19 +4864,19 @@ return {
                                 {["Comercial","Sistema 75m"].includes(s.tipo) ? (
                                   <div style={{marginBottom:8}}>
                                     <div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:6}}>
-                                      Módulos M1–M15 (g) <span style={{fontWeight:400,color:"#334155"}}>— mín. 4 para calcular</span>
+                                      Módulos M1–M{s.modulos || 15} (g) <span style={{fontWeight:400,color:"#334155"}}>— mín. 4 para calcular</span>
                                     </div>
                                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:8}}>
-                                      {Array.from({length:15},(_,i)=>(
+                                      {Array.from({length: s.modulos || 15},(_,i)=>(
                                         <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
                                           <span style={{fontSize:10,color:"#64748b",width:28,flexShrink:0,fontFamily:"monospace"}}>M{i+1}</span>
                                           <input type="number" placeholder="0"
                                             value={editReadingForm.module_weights?.[i]||""}
                                             onChange={e=>{
-                                              const mw=[...(editReadingForm.module_weights||Array(15).fill(""))];
+                                              const mw=[...(editReadingForm.module_weights||Array(s.modulos||15).fill(""))];
                                               mw[i]=e.target.value;
                                               const filled=mw.map(v=>parseFloat(v)).filter(v=>!isNaN(v)&&v>0);
-                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*15):0;
+                                              const biomass=filled.length>=4?Math.round((filled.reduce((a,b)=>a+b,0)/filled.length)*(s.modulos||15)):0;
                                               setEditReadingForm(p=>({...p,module_weights:mw,peso:biomass>0?String(biomass):p.peso}));
                                             }}
                                             style={{...S.input,fontSize:11,padding:"5px 8px"}}/>
@@ -5121,7 +5188,7 @@ return {
         {s.coordenadas&&<div style={S.card}><div style={{fontSize:10,color:"#64748b",marginBottom:4}}>GPS</div><div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{s.coordenadas}</div></div>}
         {canEditSystemDetails&&(
           <div style={{display:"flex",gap:8,marginTop:4}}>
-            <button onClick={()=>{setForm({...s});setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
+            <button onClick={()=>{setForm({...s});setOriginalId(s.id);setShowForm(true);}} style={{flex:1,padding:13,borderRadius:11,border:"1px solid rgba(13,148,136,.3)",background:"rgba(13,148,136,.06)",color:"#0d9488",fontWeight:700,fontSize:13,cursor:"pointer"}}>{lang==="es"?"✏️ Editar Sistema":"✏️ Edit System"}</button>
             {canEditReadings&&<button onClick={()=>{if(window.confirm(lang==="es"?`¿Archivar ${s.id}? El sistema quedará inactivo y desaparecerá de las vistas de capitanes.`:`Archive ${s.id}? The system will become inactive and disappear from captains' views.`)){setSystems(prev=>prev.map(x=>x.id===s.id?{...x,estado:"Archivado"}:x));logActivity({actor:user?.initials,action:'system_archived',sistema:s.id,note:`Sistema ${s.id} archivado (${s.tipo} · ${s.region})`});setSelected(null);}}} style={{padding:13,borderRadius:11,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.06)",color:"#f87171",fontWeight:700,fontSize:13,cursor:"pointer"}}>🗑️</button>}
           </div>
         )}
@@ -5258,7 +5325,7 @@ return {
           <h2 style={{color:"#e2e8f0",fontSize:22,fontWeight:800,margin:0}}>Sistemas</h2>
           <p style={{color:"#64748b",fontSize:12,margin:"4px 0 0"}}>{systems.filter(s=>s.estado==="Activo").length} {lang==="es"?"activos":"active"} · {archivedFiltered.length>0?`${archivedFiltered.length} archivados · `:""}{systems.length} total</p>
         </div>
-        {canAddSystem&&<button onClick={()=>{setForm(EMPTY);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
+        {canAddSystem&&<button onClick={()=>{setForm(EMPTY);setOriginalId(null);setShowForm(true);}} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#0d9488,#0f766e)",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={14} color="#fff"/>{lang==="es"?"Nuevo":"New"}</button>}
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,marginBottom:12}}>
         {["all",...regions].map(r=>{ const c=r==="all"?"#94a3b8":regionColor[r]||"#94a3b8"; return <button key={r} onClick={()=>setFilterRegion(r)} style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1px solid ${filterRegion===r?c:"rgba(148,163,184,.12)"}`,background:filterRegion===r?`${c}18`:"transparent",color:filterRegion===r?c:"#64748b",fontWeight:600,fontSize:11,cursor:"pointer"}}>{r==="all"?(lang==="es"?"Todas":"All"):r}</button>; })}
